@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,106 +28,39 @@ import {
 import { CreateOwnerModal } from "@/components/modals/CreateOwnerModal"
 import { CreateVehicleModal } from "@/components/modals/CreateVehicleModal"
 
-// Datos vanilla para demostración
-const mockVehiclesData = [
-  {
-    id: 1,
-    plate: "ABC-123",
-    brand: "Toyota",
-    model: "Hilux",
-    year: 2022,
-    type: "Camión",
-    status: "Activo",
-    driver: "Juan Pérez",
-    location: "Almacén Central",
-    odometer: 125000,
-    fuelType: "Diesel",
-    lastMaintenance: "2024-01-10",
-    nextMaintenance: "2024-04-10"
-  },
-  {
-    id: 2,
-    plate: "DEF-456",
-    brand: "Ford",
-    model: "Transit",
-    year: 2021,
-    type: "Van",
-    status: "En Mantenimiento",
-    driver: "María García",
-    location: "Taller",
-    odometer: 98000,
-    fuelType: "Diesel",
-    lastMaintenance: "2024-01-15",
-    nextMaintenance: "2024-04-15"
-  },
-  {
-    id: 3,
-    plate: "GHI-789",
-    brand: "Chevrolet",
-    model: "N300",
-    year: 2023,
-    type: "Camión",
-    status: "Activo",
-    driver: "Carlos López",
-    location: "Sucursal Norte",
-    odometer: 45000,
-    fuelType: "Diesel",
-    lastMaintenance: "2024-01-05",
-    nextMaintenance: "2024-04-05"
-  },
-  {
-    id: 4,
-    plate: "JKL-012",
-    brand: "Nissan",
-    model: "NP300",
-    year: 2020,
-    type: "Pickup",
-    status: "Inactivo",
-    driver: "Ana Martínez",
-    location: "Almacén Central",
-    odometer: 150000,
-    fuelType: "Gasolina",
-    lastMaintenance: "2023-12-20",
-    nextMaintenance: "2024-03-20"
+// Interfaces para los datos reales
+interface Vehicle {
+  id: string
+  plate: string
+  brand: string
+  model: string
+  year: number
+  type: string
+  status: string
+  driver?: string
+  location?: string
+  odometer: number
+  fuelType: string
+  lastMaintenance?: string
+  nextMaintenance?: string
+  isActive: boolean
+  owner?: {
+    id: string
+    document: string
+    firstName: string
+    lastName: string
+    isActive: boolean
   }
-]
+}
 
-// Datos vanilla para propietarios
-const mockOwnersData = [
-  {
-    id: 1,
-    name: "Transportes del Norte S.A.",
-    type: "Empresa",
-    document: "12345678-9",
-    contact: "contacto@transportesnorte.com",
-    phone: "+56 9 1234 5678",
-    address: "Av. Principal 123, Santiago",
-    vehicles: ["ABC-123", "DEF-456"],
-    status: "Activo"
-  },
-  {
-    id: 2,
-    name: "Juan Carlos Pérez",
-    type: "Persona Natural",
-    document: "12.345.678-9",
-    contact: "juan.perez@email.com",
-    phone: "+56 9 8765 4321",
-    address: "Calle Secundaria 456, Valparaíso",
-    vehicles: ["GHI-789"],
-    status: "Activo"
-  },
-  {
-    id: 3,
-    name: "Logística Integral Ltda.",
-    type: "Empresa",
-    document: "98765432-1",
-    contact: "admin@logisticaintegral.cl",
-    phone: "+56 9 5555 1234",
-    address: "Zona Industrial 789, Concepción",
-    vehicles: ["JKL-012"],
-    status: "Inactivo"
-  }
-]
+interface Owner {
+  id: string
+  document: string
+  firstName: string
+  lastName: string
+  isActive: boolean
+  vehicles: Vehicle[]
+}
 
 export default function VehiclesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -136,6 +69,47 @@ export default function VehiclesPage() {
   const [activeTab, setActiveTab] = useState<'vehicles' | 'owners'>('vehicles')
   const [isCreateOwnerModalOpen, setIsCreateOwnerModalOpen] = useState(false)
   const [isCreateVehicleModalOpen, setIsCreateVehicleModalOpen] = useState(false)
+  
+  // Estados para datos reales
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [owners, setOwners] = useState<Owner[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Función para cargar vehículos
+  const fetchVehicles = async () => {
+    try {
+      const response = await fetch('/api/vehicles')
+      if (response.ok) {
+        const data = await response.json()
+        setVehicles(data)
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error)
+    }
+  }
+
+  // Función para cargar propietarios
+  const fetchOwners = async () => {
+    try {
+      const response = await fetch('/api/owners')
+      if (response.ok) {
+        const data = await response.json()
+        setOwners(data)
+      }
+    } catch (error) {
+      console.error('Error fetching owners:', error)
+    }
+  }
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      await Promise.all([fetchVehicles(), fetchOwners()])
+      setIsLoading(false)
+    }
+    loadData()
+  }, [])
 
   // Función para descargar plantilla Excel
   const downloadTemplate = () => {
@@ -187,57 +161,66 @@ export default function VehiclesPage() {
   }
 
   // Filtrar vehículos por término de búsqueda
-  const filteredVehicles = mockVehiclesData.filter(vehicle =>
+  const filteredVehicles = vehicles.filter(vehicle =>
     vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase())
+    (vehicle.driver && vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   // Filtrar propietarios por término de búsqueda
-  const filteredOwners = mockOwnersData.filter(owner =>
-    owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    owner.document.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    owner.contact.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOwners = owners.filter(owner =>
+    `${owner.firstName} ${owner.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.document.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Calcular estadísticas
-  const totalVehicles = mockVehiclesData.length
-  const activeVehicles = mockVehiclesData.filter(v => v.status === 'Activo').length
-  const maintenanceVehicles = mockVehiclesData.filter(v => v.status === 'En Mantenimiento').length
-  const totalOdometer = mockVehiclesData.reduce((sum, vehicle) => sum + vehicle.odometer, 0)
-  const averageOdometer = totalOdometer / totalVehicles
+  const totalVehicles = vehicles.length
+  const activeVehicles = vehicles.filter(v => v.status === 'active' && v.isActive).length
+  const maintenanceVehicles = vehicles.filter(v => v.status === 'maintenance').length
+  const totalOdometer = vehicles.reduce((sum, vehicle) => sum + vehicle.odometer, 0)
+  const averageOdometer = totalVehicles > 0 ? totalOdometer / totalVehicles : 0
 
   // Calcular estadísticas de propietarios
-  const totalOwners = mockOwnersData.length
-  const activeOwners = mockOwnersData.filter(o => o.status === 'Activo').length
-  const companyOwners = mockOwnersData.filter(o => o.type === 'Empresa').length
-  const individualOwners = mockOwnersData.filter(o => o.type === 'Persona Natural').length
+  const totalOwners = owners.length
+  const activeOwners = owners.filter(o => o.isActive).length
 
   // Función para obtener el color del badge según el estado
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'Activo':
+      case 'active':
         return 'bg-green-100 text-green-800 border-green-300'
-      case 'En Mantenimiento':
+      case 'maintenance':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-      case 'Inactivo':
+      case 'inactive':
         return 'bg-red-100 text-red-800 border-red-300'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300'
     }
   }
 
+  // Función para obtener el texto del estado
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Activo'
+      case 'maintenance':
+        return 'En Mantenimiento'
+      case 'inactive':
+        return 'Inactivo'
+      default:
+        return status
+    }
+  }
+
   // Función para manejar el éxito de crear propietario
   const handleOwnerCreated = () => {
-    // Aquí podrías recargar los datos o actualizar el estado
-    console.log('Propietario creado exitosamente')
+    fetchOwners()
   }
 
   // Función para manejar el éxito de crear vehículo
   const handleVehicleCreated = () => {
-    // Aquí podrías recargar los datos o actualizar el estado
-    console.log('Vehículo creado exitosamente')
+    fetchVehicles()
   }
 
   return (
@@ -300,7 +283,7 @@ export default function VehiclesPage() {
             <CardContent>
               <div className="text-2xl font-bold">{totalOwners}</div>
               <p className="text-xs text-muted-foreground">
-                {companyOwners} empresas, {individualOwners} personas
+                Propietarios registrados
               </p>
             </CardContent>
           </Card>
@@ -492,10 +475,16 @@ export default function VehiclesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {activeTab === 'vehicles' ? (
-                <>
-                  {filteredVehicles.map((vehicle) => (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                <span className="ml-2 text-muted-foreground">Cargando datos...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeTab === 'vehicles' ? (
+                  <>
+                    {filteredVehicles.map((vehicle) => (
                     <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-lg bg-orange-100">
@@ -508,7 +497,7 @@ export default function VehiclesPage() {
                               variant="outline" 
                               className={getStatusBadgeColor(vehicle.status)}
                             >
-                              {vehicle.status}
+                              {getStatusText(vehicle.status)}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
@@ -555,38 +544,30 @@ export default function VehiclesPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{owner.name}</p>
+                            <p className="font-medium">{owner.firstName} {owner.lastName}</p>
                             <Badge 
                               variant="outline" 
-                              className={getStatusBadgeColor(owner.status)}
+                              className={owner.isActive ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}
                             >
-                              {owner.status}
+                              {owner.isActive ? 'Activo' : 'Inactivo'}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {owner.type} • {owner.document}
+                            Documento: {owner.document}
                           </p>
                         </div>
                       </div>
                       
                       <div className="text-center">
-                        <p className="text-sm font-medium">{owner.contact}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {owner.phone}
-                        </p>
-                      </div>
-                      
-                      <div className="text-center">
                         <p className="text-sm font-medium">{owner.vehicles.length} vehículos</p>
                         <p className="text-xs text-muted-foreground">
-                          {owner.vehicles.join(', ')}
+                          {owner.vehicles.length > 0 ? owner.vehicles.map(v => v.plate).join(', ') : 'Sin vehículos'}
                         </p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Dirección</p>
-                        <p className="text-sm font-medium max-w-48 truncate">{owner.address}</p>
+                        <p className="text-xs text-muted-foreground">Estado</p>
+                        <p className="text-sm font-medium">{owner.isActive ? 'Activo' : 'Inactivo'}</p>
                       </div>
                     </div>
                   ))}
@@ -599,7 +580,8 @@ export default function VehiclesPage() {
                   )}
                 </>
               )}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

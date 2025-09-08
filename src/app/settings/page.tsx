@@ -16,8 +16,11 @@ import {
   Edit,
   Trash2,
   Check,
-  X
+  X,
+  Database,
+  Globe
 } from "lucide-react"
+import { SiigoCredentialsModal } from '@/components/modals/SiigoCredentialsModal'
 
 interface Role {
   id: string;
@@ -36,11 +39,24 @@ interface Permission {
   description: string | null;
 }
 
+interface SiigoCredentials {
+  id: string;
+  email: string;
+  accessKey: string;
+  platform: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function SettingsPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [siigoCredentials, setSiigoCredentials] = useState<SiigoCredentials | null>(null);
   const [loading, setLoading] = useState(false);
+  const [siigoLoading, setSiigoLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("roles");
+  const [showSiigoModal, setShowSiigoModal] = useState(false);
 
   const loadRoles = async () => {
     setLoading(true);
@@ -75,9 +91,37 @@ export default function SettingsPage() {
     }
   };
 
+  const loadSiigoCredentials = async () => {
+    setSiigoLoading(true);
+    try {
+      const response = await fetch('/api/siigo-credentials');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+
+      if (result.success) {
+        setSiigoCredentials(result.data);
+      } else {
+        console.error('Error loading SIIGO credentials:', result.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Error loading SIIGO credentials:', error);
+      // No mostrar error al usuario si no hay credenciales configuradas
+      if (error instanceof Error && !error.message.includes('404')) {
+        console.error('Unexpected error:', error);
+      }
+    } finally {
+      setSiigoLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadRoles();
     loadPermissions();
+    loadSiigoCredentials();
   }, []);
 
   const getRoleColor = (roleName: string) => {
@@ -119,6 +163,69 @@ export default function SettingsPage() {
     return icons[resource] || <Key className="h-3 w-3" />;
   };
 
+  const handleSaveSiigoCredentials = async (credentials: any) => {
+    setSiigoLoading(true);
+    try {
+      const response = await fetch('/api/siigo-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSiigoCredentials(result.data);
+        setShowSiigoModal(false);
+        console.log('Credenciales guardadas exitosamente');
+      } else {
+        console.error('Error saving SIIGO credentials:', result.error || 'Unknown error');
+        // Aquí podrías mostrar una notificación de error
+      }
+    } catch (error) {
+      console.error('Error saving SIIGO credentials:', error);
+      // Aquí podrías mostrar una notificación de error
+    } finally {
+      setSiigoLoading(false);
+    }
+  };
+
+  const handleDeleteSiigoCredentials = async () => {
+    if (!siigoCredentials) return;
+    
+    setSiigoLoading(true);
+    try {
+      const response = await fetch('/api/siigo-credentials', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSiigoCredentials(null);
+        console.log('Credenciales eliminadas exitosamente');
+      } else {
+        console.error('Error deleting SIIGO credentials:', result.error || 'Unknown error');
+        // Aquí podrías mostrar una notificación de error
+      }
+    } catch (error) {
+      console.error('Error deleting SIIGO credentials:', error);
+      // Aquí podrías mostrar una notificación de error
+    } finally {
+      setSiigoLoading(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -137,7 +244,7 @@ export default function SettingsPage() {
 
         {/* Tabs de configuración */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="roles" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Roles
@@ -145,6 +252,10 @@ export default function SettingsPage() {
             <TabsTrigger value="permissions" className="flex items-center gap-2">
               <Key className="h-4 w-4" />
               Permissions
+            </TabsTrigger>
+            <TabsTrigger value="siigo" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              SIIGO API
             </TabsTrigger>
             <TabsTrigger value="system" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -270,6 +381,137 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
+          {/* Tab de SIIGO API */}
+          <TabsContent value="siigo" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      Configuración SIIGO API
+                    </CardTitle>
+                    <CardDescription>
+                      Configura las credenciales para conectar con la API de SIIGO
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowSiigoModal(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {siigoCredentials ? 'Actualizar Credenciales' : 'Configurar Credenciales'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {siigoLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Cargando configuración...</p>
+                  </div>
+                ) : siigoCredentials ? (
+                  <div className="space-y-4">
+                    <Card className="p-4 border-green-200 bg-green-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-full">
+                            <Check className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-green-800">Credenciales Configuradas</h3>
+                            <p className="text-sm text-green-600">Conexión activa con SIIGO API</p>
+                          </div>
+                        </div>
+                        <Badge className={
+                          siigoCredentials.platform === 'production' 
+                            ? 'bg-green-100 text-green-800' 
+                            : siigoCredentials.platform === 'data'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }>
+                          {siigoCredentials.platform === 'production' 
+                            ? 'Producción' 
+                            : siigoCredentials.platform === 'data'
+                            ? 'Data'
+                            : 'Sandbox'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Correo Electrónico</label>
+                          <p className="text-sm text-gray-600 mt-1">{siigoCredentials.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Plataforma</label>
+                          <p className="text-sm text-gray-600 mt-1 capitalize">{siigoCredentials.platform}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Última Actualización</label>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {new Date(siigoCredentials.updatedAt).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Estado</label>
+                          <p className="text-sm text-gray-600 mt-1">
+                            <Badge className="bg-green-100 text-green-800">
+                              {siigoCredentials.isActive ? 'Activo' : 'Inactivo'}
+                            </Badge>
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setShowSiigoModal(true)}
+                        >
+                          <Edit className="h-3 w-3 mr-2" />
+                          Editar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={handleDeleteSiigoCredentials}
+                        >
+                          <Trash2 className="h-3 w-3 mr-2" />
+                          Eliminar
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                      <Database className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay credenciales configuradas</h3>
+                    <p className="text-gray-600 mb-4">
+                      Configura las credenciales de SIIGO API para comenzar a sincronizar datos
+                    </p>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setShowSiigoModal(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Configurar Credenciales
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Tab de Sistema */}
           <TabsContent value="system" className="space-y-4">
             <Card>
@@ -314,6 +556,15 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Modal de Credenciales SIIGO */}
+        <SiigoCredentialsModal
+          isOpen={showSiigoModal}
+          onClose={() => setShowSiigoModal(false)}
+          onSave={handleSaveSiigoCredentials}
+          existingCredentials={siigoCredentials}
+          loading={siigoLoading}
+        />
       </div>
     </MainLayout>
   )
