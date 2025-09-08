@@ -68,7 +68,7 @@ export const createSession = async (userId: string): Promise<AuthSession> => {
         include: {
           role: {
             include: {
-              rolePermissions: {
+              permissions: {
                 include: {
                   permission: true
                 }
@@ -98,7 +98,7 @@ export const getSessionFromToken = async (token: string): Promise<AuthSession | 
           include: {
             role: {
               include: {
-                rolePermissions: {
+                permissions: {
                   include: {
                     permission: true
                   }
@@ -148,7 +148,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
       include: {
         role: {
           include: {
-            rolePermissions: {
+            permissions: {
               include: {
                 permission: true
               }
@@ -172,7 +172,7 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
       include: {
         role: {
           include: {
-            rolePermissions: {
+            permissions: {
               include: {
                 permission: true
               }
@@ -269,7 +269,7 @@ const transformPrismaUser = (prismaUser: any): User => {
       displayName: prismaUser.role.displayName,
       description: prismaUser.role.description,
       isActive: prismaUser.role.isActive,
-      permissions: prismaUser.role.rolePermissions.map((rp: any) => ({
+      permissions: prismaUser.role.permissions.map((rp: any) => ({
         id: rp.permission.id,
         name: rp.permission.name,
         resource: rp.permission.resource,
