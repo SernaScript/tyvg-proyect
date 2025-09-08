@@ -17,6 +17,7 @@ import {
   BarChart3,
   Zap,
   Settings,
+  Fuel,
   LucideIcon
 } from "lucide-react"
 
@@ -164,6 +165,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: Building2,
         href: "/areas/logistics/warehouses",
         status: ModuleStatus.PLANNED
+      },
+      {
+        id: "fuel",
+        name: "Combustible",
+        description: "Gestión de consumo y costos de combustible",
+        icon: Fuel,
+        href: "/areas/logistics/fuel",
+        status: ModuleStatus.ACTIVE
       },
       {
         id: "logistics-reports",
