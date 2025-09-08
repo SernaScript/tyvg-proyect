@@ -18,6 +18,7 @@ import {
   Zap,
   Settings,
   Fuel,
+  Car,
   LucideIcon
 } from "lucide-react"
 
@@ -172,6 +173,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         description: "Gestión de consumo y costos de combustible",
         icon: Fuel,
         href: "/areas/logistics/fuel",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "vehicles",
+        name: "Vehículos",
+        description: "Gestión de flota vehicular y mantenimiento",
+        icon: Car,
+        href: "/areas/logistics/vehicles",
         status: ModuleStatus.ACTIVE
       },
       {
