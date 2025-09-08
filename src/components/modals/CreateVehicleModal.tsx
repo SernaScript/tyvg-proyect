@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Truck, AlertCircle, CheckCircle } from "lucide-react"
-import { Select } from "@/components/ui/select"
+import { CustomSelect } from "@/components/ui/custom-select"
 import { DatePicker } from "@/components/ui/date-picker"
 
 interface Owner {
@@ -236,7 +236,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
 
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo *</Label>
-                <Select
+                <CustomSelect
                   options={[
                     { value: "Camión", label: "Camión" },
                     { value: "Van", label: "Van" },
@@ -254,7 +254,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
 
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Tipo de Combustible *</Label>
-                <Select
+                <CustomSelect
                   options={[
                     { value: "Diesel", label: "Diesel" },
                     { value: "Gasolina", label: "Gasolina" },
@@ -271,10 +271,9 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
 
               <div className="space-y-2">
                 <Label htmlFor="status">Estado</Label>
-                <Select
+                <CustomSelect
                   options={[
                     { value: "active", label: "Activo" },
-                    { value: "maintenance", label: "En Mantenimiento" },
                     { value: "inactive", label: "Inactivo" }
                   ]}
                   value={formData.status}
@@ -287,7 +286,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
 
               <div className="space-y-2">
                 <Label htmlFor="ownerId">Propietario</Label>
-                <Select
+                <CustomSelect
                   options={[
                     { value: "", label: "Sin propietario" },
                     ...owners.map((owner) => ({
