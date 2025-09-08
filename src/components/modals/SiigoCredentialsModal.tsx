@@ -16,7 +16,10 @@ import {
   Mail, 
   Globe,
   Check,
-  AlertCircle
+  AlertCircle,
+  Wifi,
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 
 interface SiigoCredentials {
@@ -49,6 +52,9 @@ export function SiigoCredentialsModal({
   });
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [connectionMessage, setConnectionMessage] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
 
   useEffect(() => {
     if (existingCredentials) {
@@ -57,12 +63,17 @@ export function SiigoCredentialsModal({
         accessKey: existingCredentials.accessKey,
         platform: existingCredentials.platform
       });
+      // Si hay credenciales existentes, asumimos que la conexión es válida
+      setConnectionStatus('success');
+      setConnectionMessage('Credenciales configuradas previamente');
     } else {
       setFormData({
         email: '',
         accessKey: '',
         platform: 'sandbox'
       });
+      setConnectionStatus('idle');
+      setConnectionMessage('');
     }
     setErrors({});
   }, [existingCredentials, isOpen]);
@@ -101,6 +112,52 @@ export function SiigoCredentialsModal({
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    // Resetear estado de conexión cuando cambien las credenciales
+    if (field === 'email' || field === 'accessKey' || field === 'platform') {
+      setConnectionStatus('idle');
+      setConnectionMessage('');
+    }
+  };
+
+  const testConnection = async () => {
+    // Validar formulario antes de probar conexión
+    if (!validateForm()) {
+      return;
+    }
+
+    setTestLoading(true);
+    setConnectionStatus('testing');
+    setConnectionMessage('Probando conexión...');
+
+    try {
+      const response = await fetch('/api/siigo-credentials/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          accessKey: formData.accessKey,
+          platform: formData.platform
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setConnectionStatus('success');
+        setConnectionMessage(result.message || 'Conexión exitosa');
+      } else {
+        setConnectionStatus('error');
+        setConnectionMessage(result.error || 'Error de conexión');
+      }
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      setConnectionStatus('error');
+      setConnectionMessage('Error de red al probar la conexión');
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -236,6 +293,61 @@ export function SiigoCredentialsModal({
               )}
             </div>
 
+            {/* Test Connection Status */}
+            {connectionStatus !== 'idle' && (
+              <div className={`border rounded-lg p-3 ${
+                connectionStatus === 'success' 
+                  ? 'bg-green-50 border-green-200' 
+                  : connectionStatus === 'error'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {connectionStatus === 'testing' && (
+                    <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                  )}
+                  {connectionStatus === 'success' && (
+                    <Check className="h-4 w-4 text-green-600" />
+                  )}
+                  {connectionStatus === 'error' && (
+                    <WifiOff className="h-4 w-4 text-red-600" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    connectionStatus === 'success' 
+                      ? 'text-green-800' 
+                      : connectionStatus === 'error'
+                      ? 'text-red-800'
+                      : 'text-blue-800'
+                  }`}>
+                    {connectionMessage}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Test Connection Button */}
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={testConnection}
+                disabled={testLoading || loading}
+                className="flex items-center gap-2"
+              >
+                {testLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Probando...
+                  </>
+                ) : (
+                  <>
+                    <Wifi className="h-4 w-4" />
+                    Probar Conexión
+                  </>
+                )}
+              </Button>
+            </div>
+
             {/* Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-start gap-2">
@@ -243,6 +355,7 @@ export function SiigoCredentialsModal({
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">Información importante:</p>
                   <ul className="text-xs space-y-1">
+                    <li>• Debes probar la conexión antes de guardar las credenciales</li>
                     <li>• Solo se puede configurar una conexión a la vez</li>
                     <li>• Las credenciales se almacenan de forma segura</li>
                     <li>• Usa Sandbox para pruebas, Production para uso real y Data para entorno de producción</li>
@@ -265,7 +378,8 @@ export function SiigoCredentialsModal({
               <Button
                 type="submit"
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={loading}
+                disabled={loading || connectionStatus !== 'success'}
+                title={connectionStatus !== 'success' ? 'Debes probar la conexión exitosamente antes de guardar' : ''}
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
