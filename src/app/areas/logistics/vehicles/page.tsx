@@ -25,6 +25,8 @@ import {
   UserPlus,
   Building2
 } from "lucide-react"
+import { CreateOwnerModal } from "@/components/modals/CreateOwnerModal"
+import { CreateVehicleModal } from "@/components/modals/CreateVehicleModal"
 
 // Datos vanilla para demostración
 const mockVehiclesData = [
@@ -132,6 +134,8 @@ export default function VehiclesPage() {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'vehicles' | 'owners'>('vehicles')
+  const [isCreateOwnerModalOpen, setIsCreateOwnerModalOpen] = useState(false)
+  const [isCreateVehicleModalOpen, setIsCreateVehicleModalOpen] = useState(false)
 
   // Función para descargar plantilla Excel
   const downloadTemplate = () => {
@@ -222,6 +226,18 @@ export default function VehiclesPage() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300'
     }
+  }
+
+  // Función para manejar el éxito de crear propietario
+  const handleOwnerCreated = () => {
+    // Aquí podrías recargar los datos o actualizar el estado
+    console.log('Propietario creado exitosamente')
+  }
+
+  // Función para manejar el éxito de crear vehículo
+  const handleVehicleCreated = () => {
+    // Aquí podrías recargar los datos o actualizar el estado
+    console.log('Vehículo creado exitosamente')
   }
 
   return (
@@ -450,7 +466,16 @@ export default function VehiclesPage() {
                     Propietarios
                   </Button>
                 </div>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    if (activeTab === 'vehicles') {
+                      setIsCreateVehicleModalOpen(true)
+                    } else {
+                      setIsCreateOwnerModalOpen(true)
+                    }
+                  }}
+                >
                   {activeTab === 'vehicles' ? (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
@@ -577,6 +602,19 @@ export default function VehiclesPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modales */}
+        <CreateOwnerModal
+          isOpen={isCreateOwnerModalOpen}
+          onClose={() => setIsCreateOwnerModalOpen(false)}
+          onSuccess={handleOwnerCreated}
+        />
+
+        <CreateVehicleModal
+          isOpen={isCreateVehicleModalOpen}
+          onClose={() => setIsCreateVehicleModalOpen(false)}
+          onSuccess={handleVehicleCreated}
+        />
       </div>
     </AreaLayout>
   )
