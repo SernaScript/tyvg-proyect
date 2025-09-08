@@ -146,3 +146,39 @@ enum PermissionAction {
   DELETE
   MANAGE
 }
+
+model Owner {
+  id        String    @id @default(cuid())
+  document  String    @unique // Número de documento (solo números)
+  firstName String    // Nombre
+  lastName  String    // Apellido
+  isActive  Boolean   @default(true) // Estado activo/inactivo
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  vehicles  Vehicle[] // Relación con vehículos
+
+  @@map("owners")
+}
+
+model Vehicle {
+  id              String    @id @default(cuid())
+  plate           String    @unique // Placa del vehículo
+  brand           String    // Marca
+  model           String    // Modelo
+  year            Int       // Año
+  type            String    // Tipo de vehículo (Camión, Van, Pickup, etc.)
+  status          String    @default("active") // Estado del vehículo
+  driver          String?   // Conductor asignado
+  location        String?   // Ubicación actual
+  odometer        Int       @default(0) // Odómetro en km
+  fuelType        String    // Tipo de combustible
+  lastMaintenance DateTime? // Último mantenimiento
+  nextMaintenance DateTime? // Próximo mantenimiento
+  isActive        Boolean   @default(true) // Estado activo/inactivo
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  ownerId         String?   // ID del propietario
+  owner           Owner?    @relation(fields: [ownerId], references: [id])
+
+  @@map("vehicles")
+}

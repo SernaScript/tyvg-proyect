@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { 
-  Car, 
+  Truck, 
   Download, 
   Upload, 
   FileSpreadsheet, 
@@ -21,7 +21,9 @@ import {
   MapPin,
   Activity,
   Plus,
-  Search
+  Search,
+  UserPlus,
+  Building2
 } from "lucide-react"
 
 // Datos vanilla para demostración
@@ -88,10 +90,48 @@ const mockVehiclesData = [
   }
 ]
 
+// Datos vanilla para propietarios
+const mockOwnersData = [
+  {
+    id: 1,
+    name: "Transportes del Norte S.A.",
+    type: "Empresa",
+    document: "12345678-9",
+    contact: "contacto@transportesnorte.com",
+    phone: "+56 9 1234 5678",
+    address: "Av. Principal 123, Santiago",
+    vehicles: ["ABC-123", "DEF-456"],
+    status: "Activo"
+  },
+  {
+    id: 2,
+    name: "Juan Carlos Pérez",
+    type: "Persona Natural",
+    document: "12.345.678-9",
+    contact: "juan.perez@email.com",
+    phone: "+56 9 8765 4321",
+    address: "Calle Secundaria 456, Valparaíso",
+    vehicles: ["GHI-789"],
+    status: "Activo"
+  },
+  {
+    id: 3,
+    name: "Logística Integral Ltda.",
+    type: "Empresa",
+    document: "98765432-1",
+    contact: "admin@logisticaintegral.cl",
+    phone: "+56 9 5555 1234",
+    address: "Zona Industrial 789, Concepción",
+    vehicles: ["JKL-012"],
+    status: "Inactivo"
+  }
+]
+
 export default function VehiclesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'owners'>('vehicles')
 
   // Función para descargar plantilla Excel
   const downloadTemplate = () => {
@@ -150,12 +190,25 @@ export default function VehiclesPage() {
     vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Filtrar propietarios por término de búsqueda
+  const filteredOwners = mockOwnersData.filter(owner =>
+    owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.contact.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   // Calcular estadísticas
   const totalVehicles = mockVehiclesData.length
   const activeVehicles = mockVehiclesData.filter(v => v.status === 'Activo').length
   const maintenanceVehicles = mockVehiclesData.filter(v => v.status === 'En Mantenimiento').length
   const totalOdometer = mockVehiclesData.reduce((sum, vehicle) => sum + vehicle.odometer, 0)
   const averageOdometer = totalOdometer / totalVehicles
+
+  // Calcular estadísticas de propietarios
+  const totalOwners = mockOwnersData.length
+  const activeOwners = mockOwnersData.filter(o => o.status === 'Activo').length
+  const companyOwners = mockOwnersData.filter(o => o.type === 'Empresa').length
+  const individualOwners = mockOwnersData.filter(o => o.type === 'Persona Natural').length
 
   // Función para obtener el color del badge según el estado
   const getStatusBadgeColor = (status: string) => {
@@ -177,7 +230,7 @@ export default function VehiclesPage() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg border border-orange-200 bg-orange-100">
-            <Car className="h-6 w-6 text-orange-600" />
+            <Truck className="h-6 w-6 text-orange-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -196,7 +249,7 @@ export default function VehiclesPage() {
               <CardTitle className="text-sm font-medium">
                 Total Vehículos
               </CardTitle>
-              <Car className="h-4 w-4 text-muted-foreground" />
+              <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalVehicles}</div>
@@ -224,14 +277,14 @@ export default function VehiclesPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                En Mantenimiento
+                Total Propietarios
               </CardTitle>
-              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{maintenanceVehicles}</div>
+              <div className="text-2xl font-bold">{totalOwners}</div>
               <p className="text-xs text-muted-foreground">
-                Requieren atención
+                {companyOwners} empresas, {individualOwners} personas
               </p>
             </CardContent>
           </Card>
@@ -239,14 +292,14 @@ export default function VehiclesPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Odómetro Promedio
+                Propietarios Activos
               </CardTitle>
-              <Fuel className="h-4 w-4 text-muted-foreground" />
+              <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Math.round(averageOdometer).toLocaleString()} km</div>
+              <div className="text-2xl font-bold text-green-600">{activeOwners}</div>
               <p className="text-xs text-muted-foreground">
-                Kilometraje promedio
+                Con vehículos activos
               </p>
             </CardContent>
           </Card>
@@ -359,83 +412,167 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        {/* Lista de Vehículos */}
+        {/* Lista de Vehículos y Propietarios */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Flota Vehicular</CardTitle>
+                <CardTitle>Gestión de Flota</CardTitle>
                 <CardDescription>
-                  Lista completa de vehículos en el sistema
+                  Administración de vehículos y propietarios
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar vehículo..."
+                    placeholder={activeTab === 'vehicles' ? "Buscar vehículo..." : "Buscar propietario..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 w-64"
                   />
                 </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant={activeTab === 'vehicles' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('vehicles')}
+                  >
+                    <Truck className="h-4 w-4 mr-2" />
+                    Vehículos
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={activeTab === 'owners' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('owners')}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Propietarios
+                  </Button>
+                </div>
                 <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Vehículo
+                  {activeTab === 'vehicles' ? (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Agregar Vehículo
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Agregar Propietario
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredVehicles.map((vehicle) => (
-                <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-orange-100">
-                      <Car className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{vehicle.plate}</p>
-                        <Badge 
-                          variant="outline" 
-                          className={getStatusBadgeColor(vehicle.status)}
-                        >
-                          {vehicle.status}
-                        </Badge>
+              {activeTab === 'vehicles' ? (
+                <>
+                  {filteredVehicles.map((vehicle) => (
+                    <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-lg bg-orange-100">
+                          <Truck className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{vehicle.plate}</p>
+                            <Badge 
+                              variant="outline" 
+                              className={getStatusBadgeColor(vehicle.status)}
+                            >
+                              {vehicle.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {vehicle.brand} {vehicle.model} ({vehicle.year}) • {vehicle.type}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {vehicle.brand} {vehicle.model} ({vehicle.year}) • {vehicle.type}
-                      </p>
+                      
+                      <div className="text-center">
+                        <p className="text-sm font-medium">{vehicle.driver}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {vehicle.location}
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-sm font-medium">{vehicle.odometer.toLocaleString()} km</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.fuelType}</p>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Último mantenimiento</p>
+                        <p className="text-sm font-medium">{vehicle.lastMaintenance}</p>
+                        <p className="text-xs text-muted-foreground">Próximo: {vehicle.nextMaintenance}</p>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                   
-                  <div className="text-center">
-                    <p className="text-sm font-medium">{vehicle.driver}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {vehicle.location}
-                    </p>
-                  </div>
+                  {filteredVehicles.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No se encontraron vehículos que coincidan con la búsqueda</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {filteredOwners.map((owner) => (
+                    <div key={owner.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-lg bg-blue-100">
+                          <Building2 className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{owner.name}</p>
+                            <Badge 
+                              variant="outline" 
+                              className={getStatusBadgeColor(owner.status)}
+                            >
+                              {owner.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {owner.type} • {owner.document}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-sm font-medium">{owner.contact}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {owner.phone}
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-sm font-medium">{owner.vehicles.length} vehículos</p>
+                        <p className="text-xs text-muted-foreground">
+                          {owner.vehicles.join(', ')}
+                        </p>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Dirección</p>
+                        <p className="text-sm font-medium max-w-48 truncate">{owner.address}</p>
+                      </div>
+                    </div>
+                  ))}
                   
-                  <div className="text-center">
-                    <p className="text-sm font-medium">{vehicle.odometer.toLocaleString()} km</p>
-                    <p className="text-xs text-muted-foreground">{vehicle.fuelType}</p>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Último mantenimiento</p>
-                    <p className="text-sm font-medium">{vehicle.lastMaintenance}</p>
-                    <p className="text-xs text-muted-foreground">Próximo: {vehicle.nextMaintenance}</p>
-                  </div>
-                </div>
-              ))}
-              
-              {filteredVehicles.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No se encontraron vehículos que coincidan con la búsqueda</p>
-                </div>
+                  {filteredOwners.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No se encontraron propietarios que coincidan con la búsqueda</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </CardContent>
