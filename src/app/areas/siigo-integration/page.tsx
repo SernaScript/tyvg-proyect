@@ -22,7 +22,8 @@ import {
   RefreshCw,
   Activity,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Building2
 } from "lucide-react"
 
 interface IntegrationStatus {
