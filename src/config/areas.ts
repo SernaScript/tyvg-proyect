@@ -19,6 +19,11 @@ import {
   Settings,
   Fuel,
   Car,
+  Link as LinkIcon,
+  Key,
+  TestTube,
+  Database,
+  ArrowUpDown,
   LucideIcon
 } from "lucide-react"
 
@@ -230,6 +235,55 @@ export const AREAS_CONFIG: AreaConfig[] = [
         description: "Análisis de ventas y facturación",
         icon: BarChart3,
         href: "/areas/billing/reports",
+        status: ModuleStatus.ACTIVE
+      }
+    ]
+  },
+  {
+    id: "siigo-integration",
+    name: "Integración Siigo",
+    description: "Configuración y gestión de integración con Siigo",
+    icon: LinkIcon,
+    color: AreaColor.BLUE,
+    modules: [
+      {
+        id: "siigo-credentials",
+        name: "Credenciales Siigo",
+        description: "Configuración de credenciales y conexión con Siigo",
+        icon: Key,
+        href: "/areas/siigo-integration/credentials",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "siigo-connection-test",
+        name: "Prueba de Conexión",
+        description: "Verificación de conectividad con la API de Siigo",
+        icon: TestTube,
+        href: "/areas/siigo-integration/connection-test",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "siigo-sync",
+        name: "Sincronización de Datos",
+        description: "Sincronización automática de datos con Siigo",
+        icon: Zap,
+        href: "/areas/siigo-integration/sync",
+        status: ModuleStatus.DEVELOPMENT
+      },
+      {
+        id: "siigo-logs",
+        name: "Logs de Integración",
+        description: "Registro de actividades y errores de integración",
+        icon: FileBarChart,
+        href: "/areas/siigo-integration/logs",
+        status: ModuleStatus.DEVELOPMENT
+      },
+      {
+        id: "siigo-database-integration",
+        name: "Integración de Bases de Datos",
+        description: "Consultas y sincronización con endpoints de Siigo (warehouses, cost-centers, movements, etc.)",
+        icon: Database,
+        href: "/areas/siigo-integration/database-integration",
         status: ModuleStatus.ACTIVE
       }
     ]
