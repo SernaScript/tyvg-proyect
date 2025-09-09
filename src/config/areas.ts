@@ -24,6 +24,7 @@ import {
   TestTube,
   Database,
   ArrowUpDown,
+  Target,
   LucideIcon
 } from "lucide-react"
 
@@ -292,6 +293,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         description: "Gestión y sincronización de bodegas desde Siigo",
         icon: Building2,
         href: "/areas/siigo-integration/warehouses",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "siigo-cost-centers",
+        name: "Centros de Costo",
+        description: "Gestión y sincronización de centros de costo desde Siigo",
+        icon: Target,
+        href: "/areas/siigo-integration/cost-centers",
         status: ModuleStatus.ACTIVE
       }
     ]

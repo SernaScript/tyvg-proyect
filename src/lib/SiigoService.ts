@@ -101,7 +101,8 @@ export class SiigoService {
       'Partner-Id': credentials.platform
     }
 
-    const response = await fetch(`https://api.siigo.com/v1/warehouses`, {
+    
+    const response = await fetch(`https://api.siigo.com/v1${endpoint}`, {
       ...options,
       headers: {
         ...defaultHeaders,
@@ -134,6 +135,32 @@ export class SiigoService {
       return data
     } catch (error) {
       console.error('Error obteniendo bodegas de Siigo:', error)
+      throw error
+    }
+  }
+
+  static async getCostCenters() {
+    try {
+      console.log('Consultando centros de costo de Siigo...')
+      const response = await this.makeAuthenticatedRequest('/cost-centers')
+      
+      console.log('Respuesta de centros de costo:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Error de Siigo API:', errorText)
+        throw new Error(`Error de Siigo API: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('Datos de centros de costo obtenidos:', data.length, 'centros de costo')
+      return data
+    } catch (error) {
+      console.error('Error obteniendo centros de costo de Siigo:', error)
       throw error
     }
   }
