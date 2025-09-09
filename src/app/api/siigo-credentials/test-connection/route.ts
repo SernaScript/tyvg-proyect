@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { SiigoService } from '@/lib/SiigoService';
 
 // POST - Probar conexión con SIIGO API
 export async function POST(request: NextRequest) {
@@ -60,75 +62,54 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Realizar la petición de autenticación a SIIGO
-    const authUrl = `${baseUrl}/auth`;
-    
-    const authResponse = await fetch(authUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Partner-Id': 'TYVG-APP' // Nombre de la aplicación
-      },
-      body: JSON.stringify({
-        username: email,
-        access_key: accessKey
-      })
+    // Guardar las credenciales temporalmente para la prueba
+    const existingCredentials = await prisma.siigoCredentials.findFirst({
+      where: { isActive: true }
     });
 
-    // Verificar el estado de la respuesta
-    if (authResponse.ok) {
-      const authData = await authResponse.json();
-      
+    if (existingCredentials) {
+      await prisma.siigoCredentials.update({
+        where: { id: existingCredentials.id },
+        data: {
+          email,
+          accessKey,
+          platform,
+          isActive: true
+        }
+      });
+    } else {
+      await prisma.siigoCredentials.create({
+        data: {
+          email,
+          accessKey,
+          platform,
+          isActive: true
+        }
+      });
+    }
+
+    // Limpiar el token cache para forzar nueva autenticación
+    SiigoService.clearToken();
+
+    // Probar conexión usando el servicio
+    const testResult = await SiigoService.testConnection();
+
+    if (testResult.success) {
       return NextResponse.json({
         success: true,
         message: 'Conexión exitosa con SIIGO API',
         data: {
           platform,
           email,
-          // No devolvemos el accessKey por seguridad
           authenticated: true,
-          responseStatus: authResponse.status
+          responseStatus: testResult.status
         }
       });
     } else {
-      // Obtener detalles del error
-      let errorMessage = 'Error de autenticación con SIIGO API';
-      let errorDetails = null;
-      
-      try {
-        const errorData = await authResponse.json();
-        errorDetails = errorData;
-        
-        // Mensajes de error más específicos según el código de estado
-        switch (authResponse.status) {
-          case 401:
-            errorMessage = 'Credenciales inválidas. Verifica tu email y access key';
-            break;
-          case 403:
-            errorMessage = 'Acceso denegado. Verifica los permisos de tu cuenta';
-            break;
-          case 404:
-            errorMessage = 'Endpoint no encontrado. Verifica la plataforma seleccionada';
-            break;
-          case 429:
-            errorMessage = 'Límite de solicitudes excedido. Intenta más tarde';
-            break;
-          case 500:
-            errorMessage = 'Error interno del servidor de SIIGO';
-            break;
-          default:
-            errorMessage = `Error de conexión: ${authResponse.status}`;
-        }
-      } catch (parseError) {
-        // Si no se puede parsear la respuesta de error
-        errorMessage = `Error de conexión: ${authResponse.status} ${authResponse.statusText}`;
-      }
-
       return NextResponse.json({
         success: false,
-        error: errorMessage,
-        details: errorDetails,
-        status: authResponse.status
+        error: testResult.message,
+        status: testResult.status
       }, { status: 400 });
     }
 

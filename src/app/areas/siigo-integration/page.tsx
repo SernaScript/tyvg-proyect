@@ -402,6 +402,31 @@ export default function SiigoIntegrationPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            <Card 
+              className="hover:shadow-lg transition-all cursor-pointer h-full border-blue-200 hover:border-blue-300"
+              onClick={() => router.push('/areas/siigo-integration/warehouses')}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-base">Bodegas</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                    Activo
+                  </Badge>
+                </div>
+                <CardDescription className="text-sm">
+                  Gestión y sincronización de bodegas desde Siigo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button variant="outline" size="sm" className="w-full">
+                  Acceder
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
 

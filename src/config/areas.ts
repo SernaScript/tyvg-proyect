@@ -285,6 +285,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: Database,
         href: "/areas/siigo-integration/database-integration",
         status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "siigo-warehouses",
+        name: "Bodegas",
+        description: "Gestión y sincronización de bodegas desde Siigo",
+        icon: Building2,
+        href: "/areas/siigo-integration/warehouses",
+        status: ModuleStatus.ACTIVE
       }
     ]
   }
