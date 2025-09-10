@@ -6,20 +6,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const state = searchParams.get('state')
     const skip = (page - 1) * limit
+
+
+    const whereClause: any = {}
+    if (state !== null) {
+      whereClause.state = state === 'true'
+    }
 
     const [fuelPurchases, total] = await Promise.all([
       (prisma as any).fuelPurchase.findMany({
+        where: whereClause,
         skip,
         take: limit,
         include: {
           vehicle: {
             select: {
               id: true,
-              plate: true,
-              brand: true,
-              model: true
+              plate: true
             }
           }
         },
@@ -27,7 +33,9 @@ export async function GET(request: NextRequest) {
           date: 'desc'
         }
       }),
-      (prisma as any).fuelPurchase.count()
+      (prisma as any).fuelPurchase.count({
+        where: whereClause
+      })
     ])
 
     return NextResponse.json({
@@ -98,8 +106,6 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             plate: true,
-            brand: true,
-            model: true
           }
         }
       }
