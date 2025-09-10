@@ -495,20 +495,11 @@ export default function VehiclesPage() {
                         </div>
                       </div>
                       
-                      <div className="text-center">
-                        <p className="text-sm font-medium">{vehicle.driver || 'Sin conductor'}</p>
-                        <p className="text-xs text-muted-foreground">Conductor asignado</p>
-                      </div>
                       
-                      <div className="text-center">
-                        <p className="text-sm font-medium">{vehicle.type}</p>
-                        <p className="text-xs text-muted-foreground">Tipo de vehículo</p>
-                      </div>
                       
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Estado</p>
-                        <p className="text-sm font-medium">{vehicle.status}</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.isActive ? 'Activo' : 'Inactivo'}</p>
+                        <p className="text-sm font-medium">{getStatusText(vehicle.status)}</p>
                       </div>
                     </div>
                   ))}
@@ -542,13 +533,6 @@ export default function VehiclesPage() {
                             Documento: {owner.document}
                           </p>
                         </div>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-sm font-medium">{owner.vehicles.length} vehículos</p>
-                        <p className="text-xs text-muted-foreground">
-                          {owner.vehicles.length > 0 ? owner.vehicles.map(v => v.plate).join(', ') : 'Sin vehículos'}
-                        </p>
                       </div>
                       
                       <div className="text-right">
