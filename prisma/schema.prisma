@@ -143,24 +143,25 @@ model Owner {
 }
 
 model Vehicle {
-  id              String    @id @default(cuid())
-  plate           String    @unique
+  id              String         @id @default(cuid())
+  plate           String         @unique
   brand           String
   model           String
   year            Int
   type            String
-  status          String    @default("active")
+  status          String         @default("active")
   driver          String?
   location        String?
-  odometer        Int       @default(0)
+  odometer        Int            @default(0)
   fuelType        String
   lastMaintenance DateTime?
   nextMaintenance DateTime?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   ownerId         String?
-  owner           Owner?    @relation(fields: [ownerId], references: [id])
+  owner           Owner?         @relation(fields: [ownerId], references: [id])
+  fuelPurchases   FuelPurchase[]
 
   @@map("vehicles")
 }
@@ -197,6 +198,21 @@ model SiigoCostCenter {
   updatedAt DateTime @updatedAt
 
   @@map("siigo_cost_centers")
+}
+
+model FuelPurchase {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  vehicleId String
+  quantity  Float
+  total     Decimal  @db.Decimal(12, 2)
+  provider  String
+  state     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("fuel_purchases")
 }
 
 enum RoleName {
