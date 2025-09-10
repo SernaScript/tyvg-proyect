@@ -417,7 +417,7 @@ export default function VehiclesPage() {
                     placeholder={activeTab === 'vehicles' ? "Buscar vehículo..." : "Buscar propietario..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
+                    className="pl-10 w-48 sm:w-64"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -425,17 +425,19 @@ export default function VehiclesPage() {
                     size="sm" 
                     variant={activeTab === 'vehicles' ? 'default' : 'outline'}
                     onClick={() => setActiveTab('vehicles')}
+                    className="flex items-center"
                   >
-                    <Truck className="h-4 w-4 mr-2" />
-                    Vehículos
+                    <Truck className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Vehículos</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant={activeTab === 'owners' ? 'default' : 'outline'}
                     onClick={() => setActiveTab('owners')}
+                    className="flex items-center"
                   >
-                    <Users className="h-4 w-4 mr-2" />
-                    Propietarios
+                    <Users className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Propietarios</span>
                   </Button>
                 </div>
                 <Button 
@@ -447,16 +449,17 @@ export default function VehiclesPage() {
                       setIsCreateOwnerModalOpen(true)
                     }
                   }}
+                  className="flex items-center"
                 >
                   {activeTab === 'vehicles' ? (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Agregar Vehículo
+                      <Plus className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Agregar Vehículo</span>
                     </>
                   ) : (
                     <>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Agregar Propietario
+                      <UserPlus className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Agregar Propietario</span>
                     </>
                   )}
                 </Button>
@@ -475,31 +478,29 @@ export default function VehiclesPage() {
                   <>
                     {filteredVehicles.map((vehicle) => (
                     <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-orange-100">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="p-2 rounded-lg bg-orange-100 flex-shrink-0">
                           <Truck className="h-4 w-4 text-orange-600" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{vehicle.plate}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium truncate">{vehicle.plate}</p>
                             <Badge 
                               variant="outline" 
-                              className={getStatusBadgeColor(vehicle.status)}
+                              className={`${getStatusBadgeColor(vehicle.status)} hidden sm:inline-flex`}
                             >
                               {getStatusText(vehicle.status)}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground truncate">
                             {vehicle.brand} {vehicle.model} • {vehicle.type}
                           </p>
                         </div>
                       </div>
                       
-                      
-                      
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Estado</p>
-                        <p className="text-sm font-medium">{getStatusText(vehicle.status)}</p>
+                      <div className="text-right flex-shrink-0 ml-4">
+                        
+                        
                       </div>
                     </div>
                   ))}
@@ -515,30 +516,27 @@ export default function VehiclesPage() {
                 <>
                   {filteredOwners.map((owner) => (
                     <div key={owner.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-blue-100">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="p-2 rounded-lg bg-blue-100 flex-shrink-0">
                           <Building2 className="h-4 w-4 text-blue-600" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{owner.firstName} {owner.lastName}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium truncate">{owner.firstName} {owner.lastName}</p>
                             <Badge 
                               variant="outline" 
-                              className={owner.isActive ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}
+                              className={`${owner.isActive ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'} hidden sm:inline-flex`}
                             >
                               {owner.isActive ? 'Activo' : 'Inactivo'}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground truncate">
                             Documento: {owner.document}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Estado</p>
-                        <p className="text-sm font-medium">{owner.isActive ? 'Activo' : 'Inactivo'}</p>
-                      </div>
+                      
                     </div>
                   ))}
                   
