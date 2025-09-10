@@ -24,14 +24,16 @@ export async function GET(request: NextRequest) {
         'Vehículo (Placa)': 'ABC-123',
         'Cantidad (Galones)': 25.5,
         'Total ($)': 125000,
-        'Proveedor': 'Estación de Servicio Central'
+        'Proveedor': 'Estación de Servicio Central',
+        'Recibo': 'REC-001-2024'
       },
       {
         'Fecha (dd/mm/aaaa)': '16/01/2024',
         'Vehículo (Placa)': 'XYZ-789',
         'Cantidad (Galones)': 30.0,
         'Total ($)': 150000,
-        'Proveedor': 'Gasolinera Norte'
+        'Proveedor': 'Gasolinera Norte',
+        'Recibo': 'REC-002-2024'
       }
     ]
 
@@ -40,11 +42,12 @@ export async function GET(request: NextRequest) {
 
     // Configurar ancho de columnas
     const colWidths = [
-      { wch: 15 }, // Fecha
+      { wch: 20 }, // Fecha
       { wch: 15 }, // Vehículo
       { wch: 18 }, // Cantidad
       { wch: 12 }, // Total
-      { wch: 25 }  // Proveedor
+      { wch: 30 }, // Proveedor
+      { wch: 15 }  // Recibo
     ]
     ws['!cols'] = colWidths
 

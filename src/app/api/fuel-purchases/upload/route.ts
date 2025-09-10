@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         const cantidad = row['Cantidad (Galones)'] || row['Cantidad'] || row['cantidad'] || row['quantity']
         const total = row['Total ($)'] || row['Total'] || row['total']
         const proveedor = row['Proveedor'] || row['proveedor'] || row['provider']
+        const recibo = row['Recibo'] || row['recibo'] || row['receipt'] || null
 
         // Manejar objetos Date de Excel (formato regional)
         if (fecha && typeof fecha === 'object') {
@@ -207,7 +208,8 @@ export async function POST(request: NextRequest) {
             vehicleId,
             quantity: cantidadNum,
             total: totalNum,
-            provider: proveedor.toString().trim()
+            provider: proveedor.toString().trim(),
+            receipt: recibo ? recibo.toString().trim() : null
           },
           include: {
             vehicle: {

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const [fuelPurchases, total] = await Promise.all([
-      prisma.fuelPurchase.findMany({
+      (prisma as any).fuelPurchase.findMany({
         skip,
         take: limit,
         include: {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
           date: 'desc'
         }
       }),
-      prisma.fuelPurchase.count()
+      (prisma as any).fuelPurchase.count()
     ])
 
     return NextResponse.json({
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { date, vehicleId, quantity, total, provider } = body
+    const { date, vehicleId, quantity, total, provider, receipt } = body
 
     // Validaciones
     if (!date || !vehicleId || !quantity || !total || !provider) {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que el vehículo existe y está activo
-    const vehicle = await prisma.vehicle.findUnique({
+    const vehicle = await (prisma as any).vehicle.findUnique({
       where: { 
         id: vehicleId,
         isActive: true
@@ -84,13 +84,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const fuelPurchase = await prisma.fuelPurchase.create({
+    const fuelPurchase = await (prisma as any).fuelPurchase.create({
       data: {
         date: new Date(date),
         vehicleId,
         quantity: parseFloat(quantity),
         total: parseFloat(total),
-        provider
+        provider,
+        receipt: receipt || null
       },
       include: {
         vehicle: {
