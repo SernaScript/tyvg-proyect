@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,10 @@ import {
   DollarSign, 
   Fuel,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -52,7 +55,24 @@ export function FuelPurchasesTable({
   const [selectedFuelPurchase, setSelectedFuelPurchase] = useState<FuelPurchaseForEdit | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const isClient = useClientOnly()
+
+  // Calcular paginación
+  const totalPages = Math.ceil(fuelPurchases.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentItems = fuelPurchases.slice(startIndex, endIndex)
+
+  // Resetear página cuando cambien los datos
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
+    } else if (totalPages === 0) {
+      setCurrentPage(1)
+    }
+  }, [fuelPurchases.length, totalPages, currentPage])
 
   const handleCreate = () => {
     setSelectedFuelPurchase(null)
@@ -127,8 +147,8 @@ export function FuelPurchasesTable({
   }
 
   const formatCurrency = (amount: number) => {
-    if (!isClient) return `$${amount.toFixed(2)}`
-    return `$${amount.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    if (!isClient) return `$${Math.round(amount).toLocaleString()}`
+    return `$${Math.round(amount).toLocaleString('es-CO')}`
   }
 
   const formatDate = (dateString: string) => {
@@ -191,71 +211,178 @@ export function FuelPurchasesTable({
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {fuelPurchases.map((record) => (
-                <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-lg bg-orange-100">
-                        <Car className="h-4 w-4 text-orange-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{record.vehicle.plate}</p>
-                          <Badge variant={record.state ? "default" : "secondary"}>
-                            {record.state ? "Activo" : "Inactivo"}
-                          </Badge>
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Vehículo</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Modelo</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Proveedor</th>
+                      <th className="text-right py-3 px-4 font-medium text-gray-600">Cantidad</th>
+                      <th className="text-right py-3 px-4 font-medium text-gray-600">Total</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-600">Fecha</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-600">Estado</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-600">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentItems.map((record) => (
+                    <tr key={record.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-orange-100">
+                            <Car className="h-4 w-4 text-orange-600" />
+                          </div>
+                          <span className="font-medium">{record.vehicle.plate}</span>
                         </div>
-                        <p className="text-sm text-gray-600">
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">
                           {record.vehicle.brand} {record.vehicle.model}
-                        </p>
-                        <p className="text-sm text-gray-500">
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-500">
                           {record.provider}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Cantidad</p>
-                          <p className="font-medium">{record.quantity}L</p>
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="font-medium">{record.quantity}L</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="font-medium">{formatCurrency(record.total)}</span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span className="text-sm">{formatDate(record.date)}</span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <Badge variant={record.state ? "default" : "secondary"}>
+                          {record.state ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(record)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(record.id)}
+                            disabled={deleteLoading === record.id}
+                            className="h-8 w-8 p-0"
+                          >
+                            {deleteLoading === record.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
                         </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Total</p>
-                          <p className="font-medium">{formatCurrency(record.total)}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Fecha</p>
-                          <p className="font-medium">{formatDate(record.date)}</p>
-                        </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
+                  ))}
+                  </tbody>
+                </table>
+            </div>
+          )}
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(record)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(record.id)}
-                        disabled={deleteLoading === record.id}
-                      >
-                        {deleteLoading === record.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+          {/* Controles de Paginación */}
+          {fuelPurchases.length > 0 && (
+            <div className="flex items-center justify-between mt-6 px-4 py-3 border-t bg-gray-50">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="items-per-page" className="text-sm text-gray-600">Mostrar:</label>
+                  <select
+                    id="items-per-page"
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      const newItemsPerPage = Number(e.target.value)
+                      console.log('Changing items per page from', itemsPerPage, 'to', newItemsPerPage)
+                      setItemsPerPage(newItemsPerPage)
+                      setCurrentPage(1)
+                    }}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-sm text-gray-600">registros</span>
                 </div>
-              ))}
+                <div className="text-sm text-gray-600">
+                  Mostrando {startIndex + 1} a {Math.min(endIndex, fuelPurchases.length)} de {fuelPurchases.length} registros
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newPage = Math.max(currentPage - 1, 1)
+                    console.log('Previous page: from', currentPage, 'to', newPage)
+                    setCurrentPage(newPage)
+                  }}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+                    
+                    // Asegurar que el número de página esté dentro del rango válido
+                    if (pageNumber < 1 || pageNumber > totalPages) {
+                      return null;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNumber}
+                        variant={currentPage === pageNumber ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          console.log('Clicking page number:', pageNumber, 'from current:', currentPage)
+                          setCurrentPage(pageNumber)
+                        }}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  }).filter(Boolean)}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newPage = Math.min(currentPage + 1, totalPages)
+                    console.log('Next page: from', currentPage, 'to', newPage)
+                    setCurrentPage(newPage)
+                  }}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
