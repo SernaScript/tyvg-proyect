@@ -18,15 +18,9 @@ export async function GET(
             plate: true,
             brand: true,
             model: true,
-            year: true,
             type: true,
             status: true,
             driver: true,
-            location: true,
-            odometer: true,
-            fuelType: true,
-            lastMaintenance: true,
-            nextMaintenance: true,
             isActive: true
           }
         }

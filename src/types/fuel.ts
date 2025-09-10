@@ -3,9 +3,7 @@ export interface Vehicle {
   plate: string
   brand: string
   model: string
-  year: number
   type: string
-  fuelType: string
 }
 
 export interface FuelPurchase {

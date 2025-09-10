@@ -5,9 +5,6 @@ export async function GET(request: NextRequest) {
   try {
     // Obtener todos los permisos
     const permissions = await prisma.permission.findMany({
-      where: {
-        isActive: true
-      },
       orderBy: [
         { resource: 'asc' },
         { action: 'asc' }

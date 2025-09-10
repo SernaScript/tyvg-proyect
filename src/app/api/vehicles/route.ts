@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { plate, brand, model, year, type, fuelType, driver, location, odometer, ownerId } = body
+    const { plate, brand, model, type, driver, ownerId } = body
 
     // Validaciones
-    if (!plate || !brand || !model || !year || !type || !fuelType) {
+    if (!plate || !brand || !model || !type) {
       return NextResponse.json(
-        { error: 'Placa, marca, modelo, año, tipo y combustible son obligatorios' },
+        { error: 'Placa, marca, modelo y tipo son obligatorios' },
         { status: 400 }
       )
     }
@@ -79,12 +79,8 @@ export async function POST(request: NextRequest) {
         plate,
         brand,
         model,
-        year: parseInt(year),
         type,
-        fuelType,
         driver: driver || null,
-        location: location || null,
-        odometer: odometer ? parseInt(odometer) : 0,
         ownerId: ownerId || null
       },
       include: {

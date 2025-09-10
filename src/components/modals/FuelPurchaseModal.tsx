@@ -212,7 +212,7 @@ export function FuelPurchaseModal({
                 <SelectContent>
                   {vehicles.map((vehicle) => (
                     <SelectItem key={vehicle.id} value={vehicle.id}>
-                      {vehicle.plate} - {vehicle.brand} {vehicle.model} ({vehicle.year})
+                      {vehicle.plate} - {vehicle.brand} {vehicle.model}
                     </SelectItem>
                   ))}
                 </SelectContent>

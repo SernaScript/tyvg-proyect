@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Truck, AlertCircle, CheckCircle } from "lucide-react"
 import { CustomSelect } from "@/components/ui/custom-select"
-import { DatePicker } from "@/components/ui/date-picker"
 
 interface Owner {
   id: string
@@ -28,15 +27,9 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
     plate: '',
     brand: '',
     model: '',
-    year: new Date().getFullYear(),
     type: '',
     status: 'active',
     driver: '',
-    location: '',
-    odometer: 0,
-    fuelType: '',
-    lastMaintenance: '',
-    nextMaintenance: '',
     isActive: true,
     ownerId: ''
   })
@@ -81,9 +74,6 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleDateChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,9 +83,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
     try {
       const submitData = {
         ...formData,
-        ownerId: formData.ownerId || null,
-        lastMaintenance: formData.lastMaintenance || null,
-        nextMaintenance: formData.nextMaintenance || null
+        ownerId: formData.ownerId || null
       }
 
       const response = await fetch('/api/vehicles', {
@@ -131,15 +119,9 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
       plate: '',
       brand: '',
       model: '',
-      year: new Date().getFullYear(),
       type: '',
       status: 'active',
       driver: '',
-      location: '',
-      odometer: 0,
-      fuelType: '',
-      lastMaintenance: '',
-      nextMaintenance: '',
       isActive: true,
       ownerId: ''
     })
@@ -219,20 +201,6 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="year">Año *</Label>
-                <Input
-                  id="year"
-                  name="year"
-                  type="number"
-                  value={formData.year}
-                  onChange={handleInputChange}
-                  min="1900"
-                  max={new Date().getFullYear() + 1}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo *</Label>
@@ -252,22 +220,6 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fuelType">Tipo de Combustible *</Label>
-                <CustomSelect
-                  options={[
-                    { value: "Diesel", label: "Diesel" },
-                    { value: "Gasolina", label: "Gasolina" },
-                    { value: "Gas", label: "Gas" },
-                    { value: "Eléctrico", label: "Eléctrico" }
-                  ]}
-                  value={formData.fuelType}
-                  onChange={(value) => handleSelectChange('fuelType', value)}
-                  placeholder="Seleccionar combustible"
-                  disabled={isLoading}
-                  ariaLabel="Tipo de combustible"
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="status">Estado</Label>
@@ -315,53 +267,9 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Ubicación</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  type="text"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="Ubicación actual"
-                  disabled={isLoading}
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="odometer">Odómetro (km)</Label>
-                <Input
-                  id="odometer"
-                  name="odometer"
-                  type="number"
-                  value={formData.odometer}
-                  onChange={handleInputChange}
-                  min="0"
-                  disabled={isLoading}
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="lastMaintenance">Último Mantenimiento</Label>
-                <DatePicker
-                  value={formData.lastMaintenance}
-                  onChange={(value) => handleDateChange('lastMaintenance', value)}
-                  placeholder="Seleccionar fecha"
-                  disabled={isLoading}
-                  ariaLabel="Último mantenimiento"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nextMaintenance">Próximo Mantenimiento</Label>
-                <DatePicker
-                  value={formData.nextMaintenance}
-                  onChange={(value) => handleDateChange('nextMaintenance', value)}
-                  placeholder="Seleccionar fecha"
-                  disabled={isLoading}
-                  ariaLabel="Próximo mantenimiento"
-                />
-              </div>
             </div>
 
             <div className="flex items-center space-x-2 pt-2">
@@ -406,7 +314,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || !formData.plate || !formData.brand || !formData.model || !formData.type || !formData.fuelType}
+                disabled={isLoading || !formData.plate || !formData.brand || !formData.model || !formData.type}
                 className="flex-1"
               >
                 {isLoading ? (

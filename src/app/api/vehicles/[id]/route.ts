@@ -53,34 +53,21 @@ export async function PUT(
       plate,
       brand,
       model,
-      year,
       type,
       status,
       driver,
-      location,
-      odometer,
-      fuelType,
-      lastMaintenance,
-      nextMaintenance,
       isActive,
       ownerId
     } = body
 
     // Validaciones
-    if (!plate || !brand || !model || !year || !type || !fuelType) {
+    if (!plate || !brand || !model || !type) {
       return NextResponse.json(
-        { error: 'Placa, marca, modelo, año, tipo y combustible son requeridos' },
+        { error: 'Placa, marca, modelo y tipo son requeridos' },
         { status: 400 }
       )
     }
 
-    // Validar año
-    if (year < 1900 || year > new Date().getFullYear() + 1) {
-      return NextResponse.json(
-        { error: 'El año debe ser válido' },
-        { status: 400 }
-      )
-    }
 
     // Verificar si el vehículo existe
     const existingVehicle = await prisma.vehicle.findUnique({
@@ -126,15 +113,9 @@ export async function PUT(
         plate,
         brand,
         model,
-        year,
         type,
         status,
         driver,
-        location,
-        odometer,
-        fuelType,
-        lastMaintenance: lastMaintenance ? new Date(lastMaintenance) : null,
-        nextMaintenance: nextMaintenance ? new Date(nextMaintenance) : null,
         isActive,
         ownerId
       },

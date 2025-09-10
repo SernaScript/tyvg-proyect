@@ -14,11 +14,7 @@ import {
   FileSpreadsheet, 
   CheckCircle, 
   AlertCircle,
-  Wrench,
-  Calendar,
-  Fuel,
   Users,
-  MapPin,
   Activity,
   Plus,
   Search,
@@ -34,15 +30,9 @@ interface Vehicle {
   plate: string
   brand: string
   model: string
-  year: number
   type: string
   status: string
   driver?: string
-  location?: string
-  odometer: number
-  fuelType: string
-  lastMaintenance?: string
-  nextMaintenance?: string
   isActive: boolean
   owner?: {
     id: string
@@ -178,8 +168,7 @@ export default function VehiclesPage() {
   const totalVehicles = vehicles.length
   const activeVehicles = vehicles.filter(v => v.status === 'active' && v.isActive).length
   const maintenanceVehicles = vehicles.filter(v => v.status === 'maintenance').length
-  const totalOdometer = vehicles.reduce((sum, vehicle) => sum + vehicle.odometer, 0)
-  const averageOdometer = totalVehicles > 0 ? totalOdometer / totalVehicles : 0
+  // Removed odometer calculations as field was deleted
 
   // Calcular estadísticas de propietarios
   const totalOwners = owners.length
@@ -501,28 +490,25 @@ export default function VehiclesPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {vehicle.brand} {vehicle.model} ({vehicle.year}) • {vehicle.type}
+                            {vehicle.brand} {vehicle.model} • {vehicle.type}
                           </p>
                         </div>
                       </div>
                       
                       <div className="text-center">
-                        <p className="text-sm font-medium">{vehicle.driver}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {vehicle.location}
-                        </p>
+                        <p className="text-sm font-medium">{vehicle.driver || 'Sin conductor'}</p>
+                        <p className="text-xs text-muted-foreground">Conductor asignado</p>
                       </div>
                       
                       <div className="text-center">
-                        <p className="text-sm font-medium">{vehicle.odometer.toLocaleString()} km</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.fuelType}</p>
+                        <p className="text-sm font-medium">{vehicle.type}</p>
+                        <p className="text-xs text-muted-foreground">Tipo de vehículo</p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Último mantenimiento</p>
-                        <p className="text-sm font-medium">{vehicle.lastMaintenance}</p>
-                        <p className="text-xs text-muted-foreground">Próximo: {vehicle.nextMaintenance}</p>
+                        <p className="text-xs text-muted-foreground">Estado</p>
+                        <p className="text-sm font-medium">{vehicle.status}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.isActive ? 'Activo' : 'Inactivo'}</p>
                       </div>
                     </div>
                   ))}

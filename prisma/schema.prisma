@@ -147,15 +147,9 @@ model Vehicle {
   plate           String         @unique
   brand           String
   model           String
-  year            Int
   type            String
   status          String         @default("active")
   driver          String?
-  location        String?
-  odometer        Int            @default(0)
-  fuelType        String
-  lastMaintenance DateTime?
-  nextMaintenance DateTime?
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
