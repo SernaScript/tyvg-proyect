@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,8 @@ import {
   RefreshCw,
   X,
   AlertTriangle,
-  Info
+  Info,
+  Cloud
 } from "lucide-react"
 import { FuelPurchasesTable } from "@/components/FuelPurchasesTable"
 import { FuelPurchase } from "@/types/fuel"
@@ -42,6 +44,7 @@ interface MigrationResult {
 }
 
 export default function FuelPage() {
+  const router = useRouter()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'validating' | 'validated' | 'migrating' | 'success' | 'error'>('idle')
   const [fuelPurchases, setFuelPurchases] = useState<FuelPurchase[]>([])
@@ -271,6 +274,30 @@ export default function FuelPage() {
               <Button onClick={downloadTemplate} className="w-full md:w-auto">
                 <Download className="h-4 w-4 mr-2" />
                 Descargar Plantilla Excel
+              </Button>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t"></div>
+
+            {/* Migración a Siigo Nube */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Cloud className="h-5 w-5 text-purple-600" />
+                <div>
+                  <h3 className="font-semibold">Migración a Siigo Nube</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sincroniza los datos de combustible con Siigo nube
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => router.push('/areas/logistics/fuel/siigo-migration')}
+                variant="outline"
+                className="w-full md:w-auto"
+              >
+                <Cloud className="h-4 w-4 mr-2" />
+                Migrar a Siigo Nube
               </Button>
             </div>
 
