@@ -238,11 +238,11 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
                 <Label htmlFor="type">Tipo *</Label>
                 <CustomSelect
                   options={[
-                    { value: "Camión", label: "Camión" },
-                    { value: "Van", label: "Van" },
-                    { value: "Pickup", label: "Pickup" },
-                    { value: "Automóvil", label: "Automóvil" },
-                    { value: "Motocicleta", label: "Motocicleta" }
+                    { value: "semi-trailer truck", label: "Tractomula" },
+                    { value: "single axle dump truck", label: "Volqueta Sencilla" },
+                    { value: "double axle dump truck", label: "Volqueta DobleTroque" },
+                    { value: "4WD dump truck", label: "Volqueta Cuatromanos" },
+                    { value: "Particular", label: "Particular" }
                   ]}
                   value={formData.type}
                   onChange={(value) => handleSelectChange('type', value)}
