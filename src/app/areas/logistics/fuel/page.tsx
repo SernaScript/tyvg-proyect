@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,49 +17,47 @@ import {
   TrendingUp,
   Car,
   DollarSign,
-  Calendar
+  Calendar,
+  Loader2,
+  RefreshCw
 } from "lucide-react"
-
-// Datos vanilla para demostración
-const mockFuelData = [
-  {
-    id: 1,
-    vehicle: "Camión-001",
-    driver: "Juan Pérez",
-    date: "2024-01-15",
-    fuelType: "Diesel",
-    quantity: 45.5,
-    cost: 125.50,
-    station: "Estación Central",
-    odometer: 125000
-  },
-  {
-    id: 2,
-    vehicle: "Camión-002", 
-    driver: "María García",
-    date: "2024-01-15",
-    fuelType: "Diesel",
-    quantity: 38.2,
-    cost: 105.20,
-    station: "Estación Norte",
-    odometer: 98000
-  },
-  {
-    id: 3,
-    vehicle: "Van-003",
-    driver: "Carlos López",
-    date: "2024-01-14",
-    fuelType: "Gasolina",
-    quantity: 25.0,
-    cost: 87.50,
-    station: "Estación Sur",
-    odometer: 75000
-  }
-]
+import { FuelPurchasesTable } from "@/components/FuelPurchasesTable"
+import { FuelPurchase } from "@/types/fuel"
+import { useClientOnly } from "@/hooks/useClientOnly"
+import { ClientOnly } from "@/components/ClientOnly"
 
 export default function FuelPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [fuelPurchases, setFuelPurchases] = useState<FuelPurchase[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const isClient = useClientOnly()
+
+  // Cargar datos de combustible
+  const loadFuelPurchases = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/fuel-purchases')
+      if (response.ok) {
+        const data = await response.json()
+        setFuelPurchases(data.data)
+      } else {
+        setError('Error al cargar los registros de combustible')
+      }
+    } catch (error) {
+      console.error('Error loading fuel purchases:', error)
+      setError('Error al cargar los registros de combustible')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    loadFuelPurchases()
+  }, [])
 
   // Función para descargar plantilla Excel
   const downloadTemplate = () => {
@@ -110,27 +108,38 @@ export default function FuelPage() {
     }, 2000)
   }
 
-  // Calcular estadísticas
-  const totalFuel = mockFuelData.reduce((sum, record) => sum + record.quantity, 0)
-  const totalCost = mockFuelData.reduce((sum, record) => sum + record.cost, 0)
-  const averageCost = totalCost / mockFuelData.length
+  // Calcular estadísticas solo después de montar
+  const totalFuel = isClient ? fuelPurchases.reduce((sum, record) => sum + record.quantity, 0) : 0
+  const totalCost = isClient ? fuelPurchases.reduce((sum, record) => sum + record.total, 0) : 0
+  const averageCost = isClient && fuelPurchases.length > 0 ? totalCost / fuelPurchases.length : 0
+  const activeVehicles = isClient ? new Set(fuelPurchases.map(record => record.vehicleId)).size : 0
 
   return (
     <AreaLayout areaId="logistics">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg border border-orange-200 bg-orange-100">
-            <Fuel className="h-6 w-6 text-orange-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg border border-orange-200 bg-orange-100">
+              <Fuel className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Gestión de Combustible
+              </h1>
+              <p className="text-muted-foreground">
+                Control de consumo y costos de combustible de la flota
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Gestión de Combustible
-            </h1>
-            <p className="text-muted-foreground">
-              Control de consumo y costos de combustible de la flota
-            </p>
-          </div>
+          <Button 
+            variant="outline" 
+            onClick={loadFuelPurchases}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
         </div>
 
         {/* Estadísticas */}
@@ -143,7 +152,9 @@ export default function FuelPage() {
               <Fuel className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalFuel.toFixed(1)} L</div>
+              <ClientOnly fallback={<div className="text-2xl font-bold">0.0 L</div>}>
+                <div className="text-2xl font-bold">{totalFuel.toFixed(1)} L</div>
+              </ClientOnly>
               <p className="text-xs text-muted-foreground">
                 Este mes
               </p>
@@ -158,7 +169,9 @@ export default function FuelPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
+              <ClientOnly fallback={<div className="text-2xl font-bold">$0.00</div>}>
+                <div className="text-2xl font-bold">${totalCost}</div>
+              </ClientOnly>
               <p className="text-xs text-muted-foreground">
                 Gastos en combustible
               </p>
@@ -173,7 +186,9 @@ export default function FuelPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${averageCost.toFixed(2)}</div>
+              <ClientOnly fallback={<div className="text-2xl font-bold">$0.00</div>}>
+                <div className="text-2xl font-bold">${averageCost.toFixed(2)}</div>
+              </ClientOnly>
               <p className="text-xs text-muted-foreground">
                 Por recarga
               </p>
@@ -188,7 +203,9 @@ export default function FuelPage() {
               <Car className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockFuelData.length}</div>
+              <ClientOnly fallback={<div className="text-2xl font-bold">0</div>}>
+                <div className="text-2xl font-bold">{activeVehicles}</div>
+              </ClientOnly>
               <p className="text-xs text-muted-foreground">
                 Con registros recientes
               </p>
@@ -303,42 +320,32 @@ export default function FuelPage() {
           </CardContent>
         </Card>
 
-        {/* Registros Recientes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Registros Recientes</CardTitle>
-            <CardDescription>
-              Últimos registros de combustible cargados en el sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockFuelData.map((record) => (
-                <div key={record.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-orange-100">
-                      <Car className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{record.vehicle}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {record.driver} • {record.fuelType}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{record.quantity}L</p>
-                    <p className="text-sm text-muted-foreground">${record.cost}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{record.date}</p>
-                    <p className="text-xs text-muted-foreground">{record.station}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Error State */}
+        {error && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <span className="text-sm text-red-800">{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={loadFuelPurchases}
+                  className="ml-auto"
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tabla de Registros */}
+        <FuelPurchasesTable 
+          fuelPurchases={fuelPurchases}
+          onRefresh={loadFuelPurchases}
+          isLoading={isLoading}
+        />
       </div>
     </AreaLayout>
   )

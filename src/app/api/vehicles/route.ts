@@ -2,22 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Obtener todos los vehículos
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const activeOnly = searchParams.get('active') === 'true'
+    
     const vehicles = await prisma.vehicle.findMany({
+      where: activeOnly ? { isActive: true } : {},
       include: {
         owner: {
           select: {
             id: true,
             document: true,
             firstName: true,
-            lastName: true,
-            isActive: true
+            lastName: true
           }
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        plate: 'asc'
       }
     })
 
@@ -31,44 +34,21 @@ export async function GET() {
   }
 }
 
-// POST - Crear un nuevo vehículo
+// POST - Crear nuevo vehículo
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const {
-      plate,
-      brand,
-      model,
-      year,
-      type,
-      status = 'active',
-      driver,
-      location,
-      odometer = 0,
-      fuelType,
-      lastMaintenance,
-      nextMaintenance,
-      isActive = true,
-      ownerId
-    } = body
+    const { plate, brand, model, year, type, fuelType, driver, location, odometer, ownerId } = body
 
     // Validaciones
     if (!plate || !brand || !model || !year || !type || !fuelType) {
       return NextResponse.json(
-        { error: 'Placa, marca, modelo, año, tipo y combustible son requeridos' },
+        { error: 'Placa, marca, modelo, año, tipo y combustible son obligatorios' },
         { status: 400 }
       )
     }
 
-    // Validar año
-    if (year < 1900 || year > new Date().getFullYear() + 1) {
-      return NextResponse.json(
-        { error: 'El año debe ser válido' },
-        { status: 400 }
-      )
-    }
-
-    // Verificar si la placa ya existe
+    // Verificar que la placa no exista
     const existingVehicle = await prisma.vehicle.findUnique({
       where: { plate }
     })
@@ -76,11 +56,11 @@ export async function POST(request: NextRequest) {
     if (existingVehicle) {
       return NextResponse.json(
         { error: 'Ya existe un vehículo con esta placa' },
-        { status: 409 }
+        { status: 400 }
       )
     }
 
-    // Verificar si el propietario existe (si se proporciona)
+    // Verificar que el propietario existe si se proporciona
     if (ownerId) {
       const owner = await prisma.owner.findUnique({
         where: { id: ownerId }
@@ -88,8 +68,8 @@ export async function POST(request: NextRequest) {
 
       if (!owner) {
         return NextResponse.json(
-          { error: 'El propietario especificado no existe' },
-          { status: 404 }
+          { error: 'El propietario seleccionado no existe' },
+          { status: 400 }
         )
       }
     }
@@ -99,20 +79,23 @@ export async function POST(request: NextRequest) {
         plate,
         brand,
         model,
-        year,
+        year: parseInt(year),
         type,
-        status,
-        driver,
-        location,
-        odometer,
         fuelType,
-        lastMaintenance: lastMaintenance ? new Date(lastMaintenance) : null,
-        nextMaintenance: nextMaintenance ? new Date(nextMaintenance) : null,
-        isActive,
-        ownerId
+        driver: driver || null,
+        location: location || null,
+        odometer: odometer ? parseInt(odometer) : 0,
+        ownerId: ownerId || null
       },
       include: {
-        owner: true
+        owner: {
+          select: {
+            id: true,
+            document: true,
+            firstName: true,
+            lastName: true
+          }
+        }
       }
     })
 
