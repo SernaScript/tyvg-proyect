@@ -60,27 +60,26 @@ export default function FuelPage() {
   }, [])
 
   // Función para descargar plantilla Excel
-  const downloadTemplate = () => {
-    // Crear datos de plantilla
-    const templateData = [
-      ['Vehículo', 'Conductor', 'Fecha', 'Tipo de Combustible', 'Cantidad (L)', 'Costo ($)', 'Estación', 'Odómetro'],
-      ['Camión-001', 'Juan Pérez', '2024-01-15', 'Diesel', '45.5', '125.50', 'Estación Central', '125000'],
-      ['Camión-002', 'María García', '2024-01-15', 'Diesel', '38.2', '105.20', 'Estación Norte', '98000']
-    ]
-
-    // Convertir a CSV (simulando Excel)
-    const csvContent = templateData.map(row => row.join(',')).join('\n')
-    
-    // Crear y descargar archivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', 'plantilla_combustible.csv')
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const downloadTemplate = async () => {
+    try {
+      const response = await fetch('/api/fuel-purchases/template')
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'plantilla_combustible.xlsx'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else {
+        setError('Error al descargar la plantilla')
+      }
+    } catch (error) {
+      console.error('Error downloading template:', error)
+      setError('Error al descargar la plantilla')
+    }
   }
 
   // Función para manejar la carga de archivo
@@ -98,14 +97,38 @@ export default function FuelPage() {
 
     setUploadStatus('uploading')
     
-    // Simular procesamiento
-    setTimeout(() => {
-      setUploadStatus('success')
-      setSelectedFile(null)
-      // Resetear el input
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
-    }, 2000)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const response = await fetch('/api/fuel-purchases/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setUploadStatus('success')
+        setSelectedFile(null)
+        // Resetear el input
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement
+        if (fileInput) fileInput.value = ''
+        
+        // Recargar los datos
+        await loadFuelPurchases()
+        
+        // Mostrar resumen del procesamiento
+        alert(`Procesamiento completado:\n- Filas procesadas: ${result.summary.processed}\n- Errores: ${result.summary.errors}`)
+      } else {
+        setUploadStatus('error')
+        setError(result.error || 'Error al procesar el archivo')
+      }
+    } catch (error) {
+      console.error('Error processing file:', error)
+      setUploadStatus('error')
+      setError('Error al procesar el archivo')
+    }
   }
 
   // Calcular estadísticas solo después de montar
@@ -263,7 +286,7 @@ export default function FuelPage() {
                   <Input
                     id="file-upload"
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls"
                     onChange={handleFileUpload}
                     className="mt-1"
                   />
