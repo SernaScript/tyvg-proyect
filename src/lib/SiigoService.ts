@@ -182,6 +182,35 @@ export class SiigoService {
     }
   }
 
+  static async createJournal(journalData: any) {
+    try {
+      console.log('Creando journal en Siigo...', { journalData })
+      const response = await this.makeAuthenticatedRequest('/journals', {
+        method: 'POST',
+        body: JSON.stringify(journalData)
+      })
+      
+      console.log('Respuesta de creación de journal:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Error de Siigo API al crear journal:', errorText)
+        throw new Error(`Error de Siigo API: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('Journal creado exitosamente:', data)
+      return data
+    } catch (error) {
+      console.error('Error creando journal en Siigo:', error)
+      throw error
+    }
+  }
+
   // Método para limpiar el token (útil para testing o logout)
   static clearToken() {
     this.accessToken = null

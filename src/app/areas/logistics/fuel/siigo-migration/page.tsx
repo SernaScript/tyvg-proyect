@@ -12,7 +12,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Send
 } from "lucide-react"
 import { FuelPurchase } from "@/types/fuel"
 
@@ -20,13 +21,32 @@ export default function SiigoMigrationPage() {
   const router = useRouter()
   const [isMigrating, setIsMigrating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<{
+    request?: any
+    response?: any
+    error?: any
+  } | null>(null)
   const [credentials, setCredentials] = useState({ isConfigured: false })
   const [fuelPurchases, setFuelPurchases] = useState<FuelPurchase[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
+  const [migratingItems, setMigratingItems] = useState<Set<string>>(new Set())
   const itemsPerPage = 20
+
+  // Cargar credenciales de Siigo
+  const loadSiigoCredentials = async () => {
+    try {
+      const response = await fetch('/api/siigo-credentials')
+      if (response.ok) {
+        const data = await response.json()
+        setCredentials({ isConfigured: data.success && data.data !== null })
+      }
+    } catch (error) {
+      console.error('Error loading Siigo credentials:', error)
+    }
+  }
 
   // Cargar registros de combustible pendientes
   const loadPendingFuelPurchases = async (page: number = 1) => {
@@ -53,6 +73,7 @@ export default function SiigoMigrationPage() {
   }
 
   useEffect(() => {
+    loadSiigoCredentials()
     loadPendingFuelPurchases()
   }, [])
 
@@ -74,6 +95,8 @@ export default function SiigoMigrationPage() {
       if (response.ok) {
         // Migración exitosa - recargar datos
         await loadPendingFuelPurchases()
+        // Mostrar mensaje de éxito
+        alert(`Migración completada exitosamente!\n\nProcesados: ${result.summary?.processed || 0}\nErrores: ${result.summary?.errors || 0}`)
       } else {
         setError(result.error || 'Error al migrar los datos')
       }
@@ -82,6 +105,49 @@ export default function SiigoMigrationPage() {
       setError('Error al migrar los datos')
     } finally {
       setIsMigrating(false)
+    }
+  }
+
+  // Función para migrar un registro individual
+  const migrateSingleRecord = async (purchaseId: string) => {
+    setMigratingItems(prev => new Set(prev).add(purchaseId))
+    setError(null)
+    setDebugInfo(null)
+    
+    try {
+      const response = await fetch(`/api/fuel-purchases/siigo-migration/${purchaseId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        // Migración exitosa - recargar datos
+        await loadPendingFuelPurchases(currentPage)
+        alert(`Registro migrado exitosamente!\n\nVehículo: ${result.data.plate}\nTotal: $${result.data.total}`)
+      } else {
+        setError(result.error || 'Error al migrar el registro')
+        setDebugInfo({
+          request: result.debugInfo?.request,
+          response: result.debugInfo?.response,
+          error: result.debugInfo?.error || result
+        })
+      }
+    } catch (error) {
+      console.error('Error during single migration:', error)
+      setError('Error al migrar el registro')
+      setDebugInfo({
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      })
+    } finally {
+      setMigratingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(purchaseId)
+        return newSet
+      })
     }
   }
 
@@ -143,9 +209,42 @@ export default function SiigoMigrationPage() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm text-red-800">{error}</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-800">{error}</span>
+                  </div>
+                  
+                  {debugInfo && (
+                    <div className="space-y-3">
+                      {debugInfo.request && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="font-medium text-blue-800 mb-2">📤 Petición enviada a Siigo:</h4>
+                          <pre className="text-xs text-blue-700 bg-blue-100 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(debugInfo.request, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      
+                      {debugInfo.response && (
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <h4 className="font-medium text-yellow-800 mb-2">📥 Respuesta de Siigo:</h4>
+                          <pre className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(debugInfo.response, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      
+                      {debugInfo.error && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <h4 className="font-medium text-red-800 mb-2">❌ Error detallado:</h4>
+                          <pre className="text-xs text-red-700 bg-red-100 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(debugInfo.error, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -197,33 +296,53 @@ export default function SiigoMigrationPage() {
                         <th className="text-right p-2 font-medium">Cantidad</th>
                         <th className="text-right p-2 font-medium">Total</th>
                         <th className="text-left p-2 font-medium">Proveedor</th>
+                        <th className="text-center p-2 font-medium">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {fuelPurchases.map((purchase) => (
-                        <tr key={purchase.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="p-2">
-                            <div className="font-medium">{purchase.vehicle.plate}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {purchase.vehicle.brand} {purchase.vehicle.model}
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            {new Date(purchase.date).toLocaleDateString()}
-                          </td>
-                          <td className="p-2 text-right">
-                            {purchase.quantity}L
-                          </td>
-                          <td className="p-2 text-right font-medium">
-                            ${purchase.total.toLocaleString()}
-                          </td>
-                          <td className="p-2">
-                            <Badge variant="outline" className="text-xs">
-                              {purchase.provider}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
+                      {fuelPurchases.map((purchase) => {
+                        const isMigrating = migratingItems.has(purchase.id)
+                        return (
+                          <tr key={purchase.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-2">
+                              <div className="font-medium">{purchase.vehicle.plate}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {purchase.vehicle.brand} {purchase.vehicle.model}
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              {new Date(purchase.date).toLocaleDateString()}
+                            </td>
+                            <td className="p-2 text-right">
+                              {purchase.quantity}L
+                            </td>
+                            <td className="p-2 text-right font-medium">
+                              ${purchase.total.toLocaleString()}
+                            </td>
+                            <td className="p-2">
+                              <Badge variant="outline" className="text-xs">
+                                {purchase.provider}
+                              </Badge>
+                            </td>
+                            <td className="p-2 text-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => migrateSingleRecord(purchase.id)}
+                                disabled={!credentials.isConfigured || isMigrating}
+                                className="h-8 w-8 p-0"
+                                title={isMigrating ? "Migrando..." : "Migrar a Siigo"}
+                              >
+                                {isMigrating ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
