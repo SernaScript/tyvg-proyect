@@ -12,7 +12,12 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset && npm run db:seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "flypass-complete": "tsx scripts/complete-flypass-process.ts",
+    "accounting-demo": "tsx scripts/accounting-utils.ts",
+    "process-excel": "tsx scripts/process-existing-excel.ts",
+    "test-automation": "tsx scripts/test-complete-automation.ts",
+    "test-web-api": "tsx scripts/test-web-api.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",

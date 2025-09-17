@@ -227,3 +227,31 @@ enum PermissionAction {
   DELETE
   MANAGE
 }
+
+// Modelo para los datos de Flypass (peajes)
+model FlypassData {
+  id          String   @id @default(cuid())
+  cufe        String   @unique // Primary key basado en CUFE
+  status      String   // Estado (Aprobado, etc.)
+  documentType String  // Tipo (FC, NC, etc.)
+  creationDate DateTime // Fecha de creación (solo fecha, sin hora)
+  documentNumber String // Número de documento
+  relatedDocument String? // Documento relacionado
+  costCenter String? // Centro de área
+  licensePlate String // Placa del vehículo
+  tollName String // Nombre del peaje
+  vehicleCategory String // Categoría del vehículo
+  passageDate DateTime // Fecha del paso
+  transactionId String // ID de transacción
+  subtotal Decimal @db.Decimal(12, 2) // Subtotal
+  tax Decimal? @db.Decimal(12, 2) // Impuesto
+  total Decimal @db.Decimal(12, 2) // Total
+  tascode String // Código TAS
+  description String // Descripción
+  companyNit String // NIT de la empresa
+  accounted Boolean @default(false) // Indica si el registro ha sido contabilizado
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("flypass_data")
+}

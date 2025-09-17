@@ -46,14 +46,21 @@ export default class WebScraper {
       }
 
       // Configurar contexto con directorio de descarga si se especifica
-      const contextOptions: any = {};
+      const contextOptions: any = {
+        acceptDownloads: true
+      };
+      
       if (this.config.downloadPath) {
-        contextOptions.acceptDownloads = true;
         // Crear el directorio si no existe
         const fs = require('fs');
-        if (!fs.existsSync(this.config.downloadPath)) {
-          fs.mkdirSync(this.config.downloadPath, { recursive: true });
+        const absolutePath = path.resolve(this.config.downloadPath);
+        if (!fs.existsSync(absolutePath)) {
+          fs.mkdirSync(absolutePath, { recursive: true });
         }
+        
+        // Configurar la ruta de descarga
+        contextOptions.acceptDownloads = true;
+        console.log(`📁 Directorio de descarga configurado: ${absolutePath}`);
       }
 
       this.context = await this.browser.newContext(contextOptions);

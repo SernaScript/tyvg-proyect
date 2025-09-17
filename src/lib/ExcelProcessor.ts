@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx';
 import { prisma } from './prisma';
 import path from 'path';
-import fs from 'fs';    
+import fs from 'fs';
+import FlypassDataMapper from './FlypassDataMapper';    
 
 export interface ExcelInvoiceData {
   invoiceNumber: string;
@@ -271,6 +272,88 @@ export class ExcelProcessor {
     
     return statusMap[status.toLowerCase()] || 'pending';
   }
+
+  /**
+   * Procesa un archivo Excel de Flypass específicamente
+   */
+  async processFlypassExcelFile(filePath: string): Promise<ProcessResult> {
+    const startTime = Date.now();
+    let logId = '';
+    
+    try {
+      console.log('🚀 Iniciando procesamiento de archivo Flypass...');
+      
+      // Crear log inicial
+      const scrapingLog = await prisma.scrapingLog.create({
+        data: {
+          companyNit: 'FLYPASS_DATA',
+          startDate: new Date(),
+          endDate: new Date(),
+          status: 'processing',
+          message: 'Procesando archivo Excel de Flypass',
+          recordsFound: 0,
+          recordsProcessed: 0,
+          recordsErrors: 0
+        }
+      });
+      
+      logId = scrapingLog.id;
+      
+      // Procesar el archivo usando el mapeador de Flypass
+      const result = await FlypassDataMapper.processExcelFile(filePath);
+      
+      // Actualizar el log con los resultados
+      await prisma.scrapingLog.update({
+        where: { id: logId },
+        data: {
+          status: result.success ? 'completed' : 'failed',
+          recordsFound: result.totalRows,
+          recordsProcessed: result.processedRows,
+          recordsErrors: result.errorRows,
+          message: result.success 
+            ? `Procesamiento completado: ${result.processedRows}/${result.totalRows} registros procesados`
+            : `Error en el procesamiento: ${result.errors.join(', ')}`,
+          errorDetails: result.errors.length > 0 ? result.errors.join('; ') : null
+        }
+      });
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`✅ Procesamiento completado en ${processingTime}ms`);
+      
+      return {
+        success: result.success,
+        totalRecords: result.totalRows,
+        processedRecords: result.processedRows,
+        errorRecords: result.errorRows,
+        errors: result.errors,
+        logId
+      };
+      
+    } catch (error) {
+      console.error('❌ Error procesando archivo Flypass:', error);
+      
+      // Actualizar log con error
+      if (logId) {
+        await prisma.scrapingLog.update({
+          where: { id: logId },
+          data: {
+            status: 'failed',
+            message: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+            errorDetails: error instanceof Error ? error.message : 'Error desconocido'
+          }
+        });
+      }
+      
+      return {
+        success: false,
+        totalRecords: 0,
+        processedRecords: 0,
+        errorRecords: 0,
+        errors: [error instanceof Error ? error.message : 'Error desconocido'],
+        logId
+      };
+    }
+  }
 }
 
 // Función helper para usar en API routes
@@ -306,4 +389,41 @@ export async function processDownloadedExcel(
   console.log(`📄 Procesando archivo: ${latestFile.name}`);
   
   return await processor.processExcelFile(latestFile.path, companyNit, startDate, endDate);
+}
+
+// Función helper específica para procesar archivos de Flypass
+export async function processFlypassExcel(
+  filePath?: string,
+  downloadDir = 'downloads'
+): Promise<ProcessResult> {
+  const processor = new ExcelProcessor();
+  
+  let targetFile = filePath;
+  
+  // Si no se especifica archivo, buscar el más reciente en downloads
+  if (!targetFile) {
+    const downloadsPath = path.join(process.cwd(), downloadDir);
+    
+    if (!fs.existsSync(downloadsPath)) {
+      throw new Error(`Directorio de descargas no encontrado: ${downloadsPath}`);
+    }
+    
+    const files = fs.readdirSync(downloadsPath)
+      .filter(file => file.endsWith('.xlsx') || file.endsWith('.xls'))
+      .map(file => ({
+        name: file,
+        path: path.join(downloadsPath, file),
+        stats: fs.statSync(path.join(downloadsPath, file))
+      }))
+      .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime());
+    
+    if (files.length === 0) {
+      throw new Error('No se encontraron archivos Excel en el directorio de descargas');
+    }
+    
+    targetFile = files[0].path;
+    console.log(`📄 Procesando archivo más reciente: ${files[0].name}`);
+  }
+  
+  return await processor.processFlypassExcelFile(targetFile);
 }
