@@ -211,6 +211,32 @@ export class SiigoService {
     }
   }
 
+  static async getAccountsPayable(page: number = 1) {
+    try {
+      console.log(`Consultando cuentas por pagar de Siigo - Página ${page}...`)
+      const response = await this.makeAuthenticatedRequest(`/accounts-payable?page=${page}`)
+      
+      console.log('Respuesta de cuentas por pagar:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Error de Siigo API:', errorText)
+        throw new Error(`Error de Siigo API: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log(`Datos de cuentas por pagar obtenidos (Página ${page}):`, data.results?.length || 0, 'cuentas por pagar')
+      return data
+    } catch (error) {
+      console.error('Error obteniendo cuentas por pagar de Siigo:', error)
+      throw error
+    }
+  }
+
   // Método para limpiar el token (útil para testing o logout)
   static clearToken() {
     this.accessToken = null
