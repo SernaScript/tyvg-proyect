@@ -62,7 +62,7 @@ interface GeneratedRequest {
   createdAt: string
   updatedAt: string
   _count: {
-    accountsPayable: number
+    siigoAccountsPayable: number
   }
 }
 
