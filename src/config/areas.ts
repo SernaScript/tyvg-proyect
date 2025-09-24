@@ -25,6 +25,7 @@ import {
   Database,
   ArrowUpDown,
   Target,
+  CheckCircle,
   LucideIcon
 } from "lucide-react"
 
@@ -139,6 +140,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: CreditCard,
         href: "/areas/treasury/bank-reconciliation",
         status: ModuleStatus.DEVELOPMENT
+      },
+      {
+        id: "approved-payments",
+        name: "Pagos Aprobados",
+        description: "Gestión y seguimiento de pagos aprobados",
+        icon: CheckCircle,
+        href: "/areas/treasury/approved-payments",
+        status: ModuleStatus.ACTIVE
       }
     ]
   },
