@@ -82,11 +82,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Verify token without database call (JWT verification only)
+  // Verify JWT token (includes expiration check)
   try {
     const payload = await verifyToken(token)
     if (!payload) {
-      console.log(`❌ Invalid token for: ${pathname}`)
+      console.log(`❌ Invalid or expired token for: ${pathname}`)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)

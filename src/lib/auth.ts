@@ -18,7 +18,7 @@ import {
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
 )
-const JWT_EXPIRES_IN = '7d'
+const JWT_EXPIRES_IN = '10h'
 
 // Password utilities
 export const hashPassword = async (password: string): Promise<string> => {
@@ -55,7 +55,7 @@ export const verifyToken = async (token: string): Promise<{ userId: string } | n
 export const createSession = async (userId: string): Promise<AuthSession> => {
   const token = await createToken(userId)
   const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + 7) // 7 days
+  expiresAt.setHours(expiresAt.getHours() + 10) // 10 hours
 
   const session = await prisma.session.create({
     data: {
