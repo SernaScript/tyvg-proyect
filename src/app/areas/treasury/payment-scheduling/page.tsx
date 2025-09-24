@@ -442,22 +442,31 @@ export default function PaymentSchedulingPage() {
 
         const result = await response.json()
 
-        if (result.success) {
-          const updatedRecord = result.data
-          
-          setProviderGroups(prevGroups => 
-            prevGroups.map(group => ({
-              ...group,
-              documents: group.documents.map(doc => 
-                doc.id === recordId 
-                  ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                  : doc
-              )
-            }))
-          )
-        } else {
-          setError(result.error || 'Error al actualizar el valor de pago')
-        }
+         if (result.success) {
+           const updatedRecord = result.data
+           
+           setProviderGroups(prevGroups => 
+             prevGroups.map(group => {
+               const updatedDocuments = group.documents.map(doc => 
+                 doc.id === recordId 
+                   ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                   : doc
+               )
+               
+               const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+                 return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+               }, 0)
+               
+               return {
+                 ...group,
+                 documents: updatedDocuments,
+                 totalPaymentValue: Math.round(newTotalPaymentValue)
+               }
+             })
+           )
+         } else {
+           setError(result.error || 'Error al actualizar el valor de pago')
+         }
       }
     } catch (err) {
       setError('Error de conexión con la API')
@@ -494,22 +503,31 @@ export default function PaymentSchedulingPage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        const updatedRecord = result.data
-        
-        setProviderGroups(prevGroups => 
-          prevGroups.map(group => ({
-            ...group,
-            documents: group.documents.map(doc => 
-              doc.id === recordId 
-                ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                : doc
-            )
-          }))
-        )
-      } else {
-        setError(result.error || 'Error al borrar el valor de pago')
-      }
+       if (result.success) {
+         const updatedRecord = result.data
+         
+         setProviderGroups(prevGroups => 
+           prevGroups.map(group => {
+             const updatedDocuments = group.documents.map(doc => 
+               doc.id === recordId 
+                 ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                 : doc
+             )
+             
+             const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+               return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+             }, 0)
+             
+             return {
+               ...group,
+               documents: updatedDocuments,
+               totalPaymentValue: Math.round(newTotalPaymentValue)
+             }
+           })
+         )
+       } else {
+         setError(result.error || 'Error al borrar el valor de pago')
+       }
     } catch (err) {
       setError('Error de conexión con la API')
       console.error('Error clearing payment value:', err)
@@ -548,25 +566,34 @@ export default function PaymentSchedulingPage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        setEditingPayment(null)
-        setEditingValue('')
-        
-        const updatedRecord = result.data
-        
-        setProviderGroups(prevGroups => 
-          prevGroups.map(group => ({
-            ...group,
-            documents: group.documents.map(doc => 
-              doc.id === recordId 
-                ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                : doc
-            )
-          }))
-        )
-      } else {
-        setError(result.error || 'Error al actualizar el valor de pago')
-      }
+       if (result.success) {
+         setEditingPayment(null)
+         setEditingValue('')
+         
+         const updatedRecord = result.data
+         
+         setProviderGroups(prevGroups => 
+           prevGroups.map(group => {
+             const updatedDocuments = group.documents.map(doc => 
+               doc.id === recordId 
+                 ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                 : doc
+             )
+             
+             const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+               return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+             }, 0)
+             
+             return {
+               ...group,
+               documents: updatedDocuments,
+               totalPaymentValue: Math.round(newTotalPaymentValue)
+             }
+           })
+         )
+       } else {
+         setError(result.error || 'Error al actualizar el valor de pago')
+       }
     } catch (err) {
       setError('Error de conexión con la API')
       console.error('Error updating payment value:', err)
