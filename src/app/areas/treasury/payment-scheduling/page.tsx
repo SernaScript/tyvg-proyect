@@ -3,7 +3,7 @@
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign } from "lucide-react"
+import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 interface SiigoDue {
@@ -78,6 +78,9 @@ interface AccountPayableRecord {
   costCenterName: string
   currencyCode: string
   currencyBalance: number
+  paymentValue?: number
+  approved: boolean
+  paid: boolean
   createdAt: string
   updatedAt: string
   generatedRequestId: string
@@ -122,6 +125,11 @@ export default function PaymentSchedulingPage() {
   
   const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
   const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set())
+  
+  const [editingPayment, setEditingPayment] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState<string>('')
+  const [updatingPayment, setUpdatingPayment] = useState<boolean>(false)
+  const [paymentMode, setPaymentMode] = useState<'total' | 'partial' | null>(null)
 
   const fetchAccountsPayable = async (saveToDatabase: boolean = false) => {
     try {
@@ -347,6 +355,161 @@ export default function PaymentSchedulingPage() {
       newExpanded.add(providerKey)
     }
     setExpandedProviders(newExpanded)
+  }
+
+  const startTotalPayment = async (recordId: string) => {
+    try {
+      setUpdatingPayment(true)
+      setError(null)
+
+      const currentRecord = providerGroups
+        .flatMap(group => group.documents)
+        .find(doc => doc.id === recordId)
+      
+      if (currentRecord) {
+        const balance = Number(currentRecord.balance || (currentRecord as any).due?.balance || 0)
+        
+        const response = await fetch(`/api/accounts-payable/${recordId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentValue: balance })
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          const updatedRecord = result.data
+          
+          setProviderGroups(prevGroups => 
+            prevGroups.map(group => ({
+              ...group,
+              documents: group.documents.map(doc => 
+                doc.id === recordId 
+                  ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                  : doc
+              )
+            }))
+          )
+        } else {
+          setError(result.error || 'Error al actualizar el valor de pago')
+        }
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error updating payment value:', err)
+    } finally {
+      setUpdatingPayment(false)
+    }
+  }
+
+  const startPartialPayment = (recordId: string, currentValue?: number) => {
+    setEditingPayment(recordId)
+    setPaymentMode('partial')
+    setEditingValue(currentValue ? currentValue.toString() : '')
+  }
+
+  const cancelEditingPayment = () => {
+    setEditingPayment(null)
+    setEditingValue('')
+    setPaymentMode(null)
+  }
+
+  const clearPaymentValue = async (recordId: string) => {
+    try {
+      setUpdatingPayment(true)
+      setError(null)
+
+      const response = await fetch(`/api/accounts-payable/${recordId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentValue: null })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        const updatedRecord = result.data
+        
+        setProviderGroups(prevGroups => 
+          prevGroups.map(group => ({
+            ...group,
+            documents: group.documents.map(doc => 
+              doc.id === recordId 
+                ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                : doc
+            )
+          }))
+        )
+      } else {
+        setError(result.error || 'Error al borrar el valor de pago')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error clearing payment value:', err)
+    } finally {
+      setUpdatingPayment(false)
+    }
+  }
+
+  const updatePaymentValue = async (recordId: string) => {
+    try {
+      setUpdatingPayment(true)
+      setError(null)
+
+      const paymentValue = editingValue.trim() === '' ? null : parseFloat(editingValue)
+      
+      const currentRecord = providerGroups
+        .flatMap(group => group.documents)
+        .find(doc => doc.id === recordId)
+      
+      if (currentRecord && paymentValue !== null) {
+        const balance = Number(currentRecord.balance || (currentRecord as any).due?.balance || 0)
+        if (paymentValue > balance) {
+          setError(`El valor de pago ($${paymentValue.toLocaleString()}) no puede ser mayor al balance ($${balance.toLocaleString()})`)
+          setUpdatingPayment(false)
+          return
+        }
+      }
+
+      const response = await fetch(`/api/accounts-payable/${recordId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentValue })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setEditingPayment(null)
+        setEditingValue('')
+        
+        const updatedRecord = result.data
+        
+        setProviderGroups(prevGroups => 
+          prevGroups.map(group => ({
+            ...group,
+            documents: group.documents.map(doc => 
+              doc.id === recordId 
+                ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                : doc
+            )
+          }))
+        )
+      } else {
+        setError(result.error || 'Error al actualizar el valor de pago')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error updating payment value:', err)
+    } finally {
+      setUpdatingPayment(false)
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -592,7 +755,8 @@ export default function PaymentSchedulingPage() {
                                           <th className="px-3 py-2 text-left font-medium text-gray-700">Consecutivo</th>
                                           <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Vencimiento</th>
                                           <th className="px-3 py-2 text-left font-medium text-gray-700">Balance</th>
-                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Centro de Costo</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Valor Pago</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Acciones</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-gray-200">
@@ -614,7 +778,94 @@ export default function PaymentSchedulingPage() {
                                               ${Math.round(Number(doc.balance || (doc as any).due?.balance || 0)).toLocaleString()}
                                             </td>
                                             <td className="px-3 py-2 text-gray-900">
-                                              {doc.costCenterName || (doc as any).cost_center?.name || ''}
+                                              {editingPayment === doc.id && paymentMode === 'partial' ? (
+                                                <div className="flex flex-col">
+                                                  <input
+                                                    type="number"
+                                                    value={editingValue}
+                                                    onChange={(e) => setEditingValue(e.target.value)}
+                                                    max={Math.round(Number(doc.balance || (doc as any).due?.balance || 0))}
+                                                    className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    placeholder="0"
+                                                    autoFocus
+                                                  />
+                                                  <span className="text-xs text-gray-500 mt-1">
+                                                    Máx: ${Math.round(Number(doc.balance || (doc as any).due?.balance || 0)).toLocaleString()}
+                                                  </span>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-center gap-2">
+                                                  <span>
+                                                    {doc.paymentValue ? `$${Math.round(Number(doc.paymentValue)).toLocaleString()}` : '-'}
+                                                  </span>
+                                                  {doc.paymentValue && (
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => clearPaymentValue(doc.id)}
+                                                      disabled={updatingPayment}
+                                                      className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                      title="Borrar valor de pago"
+                                                    >
+                                                      <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-900">
+                                              {editingPayment === doc.id ? (
+                                                <div className="flex flex-col gap-1">
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => updatePaymentValue(doc.id)}
+                                                    disabled={updatingPayment}
+                                                    className="h-6 w-6 p-0"
+                                                  >
+                                                    {updatingPayment ? (
+                                                      <RefreshCw className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                      <Save className="h-3 w-3" />
+                                                    )}
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={cancelEditingPayment}
+                                                    disabled={updatingPayment}
+                                                    className="h-6 w-6 p-0"
+                                                  >
+                                                    <X className="h-3 w-3" />
+                                                  </Button>
+                                                </div>
+                                              ) : (
+                                                <div className="flex flex-col gap-1">
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => startTotalPayment(doc.id)}
+                                                    disabled={updatingPayment}
+                                                    className="h-6 px-2 text-xs"
+                                                    title="Pago total"
+                                                  >
+                                                    {updatingPayment ? (
+                                                      <RefreshCw className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                      'Pago total'
+                                                    )}
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => startPartialPayment(doc.id, doc.paymentValue)}
+                                                    className="h-6 px-2 text-xs"
+                                                    title="Pago parcial"
+                                                  >
+                                                    Pago parcial
+                                                  </Button>
+                                                </div>
+                                              )}
                                             </td>
                                           </tr>
                                         ))}
@@ -797,7 +1048,8 @@ export default function PaymentSchedulingPage() {
                                         <th className="px-3 py-2 text-left font-medium text-gray-700">Consecutivo</th>
                                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Vencimiento</th>
                                         <th className="px-3 py-2 text-left font-medium text-gray-700">Balance</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Centro de Costo</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Valor Pago</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Acciones</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
@@ -816,7 +1068,94 @@ export default function PaymentSchedulingPage() {
                                             ${Math.round(Number(doc.balance)).toLocaleString()}
                                           </td>
                                           <td className="px-3 py-2 text-gray-900">
-                                            {doc.costCenterName}
+                                            {editingPayment === doc.id && paymentMode === 'partial' ? (
+                                              <div className="flex flex-col">
+                                                <input
+                                                  type="number"
+                                                  value={editingValue}
+                                                  onChange={(e) => setEditingValue(e.target.value)}
+                                                  max={Math.round(Number(doc.balance))}
+                                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                                  placeholder="0"
+                                                  autoFocus
+                                                />
+                                                <span className="text-xs text-gray-500 mt-1">
+                                                  Máx: ${Math.round(Number(doc.balance)).toLocaleString()}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <div className="flex items-center gap-2">
+                                                <span>
+                                                  {doc.paymentValue ? `$${Math.round(Number(doc.paymentValue)).toLocaleString()}` : '-'}
+                                                </span>
+                                                {doc.paymentValue && (
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => clearPaymentValue(doc.id)}
+                                                    disabled={updatingPayment}
+                                                    className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    title="Borrar valor de pago"
+                                                  >
+                                                    <Trash2 className="h-3 w-3" />
+                                                  </Button>
+                                                )}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-900">
+                                            {editingPayment === doc.id ? (
+                                              <div className="flex flex-col gap-1">
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => updatePaymentValue(doc.id)}
+                                                  disabled={updatingPayment}
+                                                  className="h-6 w-6 p-0"
+                                                >
+                                                  {updatingPayment ? (
+                                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                                  ) : (
+                                                    <Save className="h-3 w-3" />
+                                                  )}
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={cancelEditingPayment}
+                                                  disabled={updatingPayment}
+                                                  className="h-6 w-6 p-0"
+                                                >
+                                                  <X className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ) : (
+                                              <div className="flex flex-col gap-1">
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => startTotalPayment(doc.id)}
+                                                  disabled={updatingPayment}
+                                                  className="h-6 px-2 text-xs"
+                                                  title="Pago total"
+                                                >
+                                                  {updatingPayment ? (
+                                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                                  ) : (
+                                                    'Pago total'
+                                                  )}
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => startPartialPayment(doc.id, doc.paymentValue)}
+                                                  className="h-6 px-2 text-xs"
+                                                  title="Pago parcial"
+                                                >
+                                                  Pago parcial
+                                                </Button>
+                                              </div>
+                                            )}
                                           </td>
                                         </tr>
                                       ))}

@@ -133,6 +133,11 @@ export class SiigoAccountsPayableService {
               currencyCode: account.currency?.code || '',
               currencyBalance: account.currency?.balance || 0,
               
+              // Nuevos campos de pago
+              paymentValue: null,
+              approved: false,
+              paid: false,
+              
               // Relación con la solicitud
               generatedRequestId: generatedRequestId
             }
@@ -228,6 +233,11 @@ export class SiigoAccountsPayableService {
               // Campos del objeto currency
               currencyCode: account.currency?.code || '',
               currencyBalance: account.currency?.balance || 0,
+              
+              // Nuevos campos de pago
+              paymentValue: null,
+              approved: false,
+              paid: false,
               
               // Relación con la solicitud
               generatedRequestId: generatedRequest.id

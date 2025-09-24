@@ -251,6 +251,9 @@ model SiigoAccountsPayable {
   costCenterName         String
   currencyCode           String
   currencyBalance        Decimal                       @db.Decimal(15, 2)
+  paymentValue           Decimal?                      @db.Decimal(15, 2)
+  approved               Boolean                       @default(false)
+  paid                   Boolean                       @default(false)
   createdAt              DateTime                      @default(now())
   updatedAt              DateTime                      @updatedAt
   generatedRequestId     String
