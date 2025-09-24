@@ -4,7 +4,7 @@ import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2, Filter, Search } from "lucide-react"
+import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2, Filter, Search, Lock } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface SiigoDue {
@@ -54,6 +54,7 @@ interface GeneratedRequest {
   totalResults: number
   recordsProcessed: number
   status: 'success' | 'partial' | 'error' | 'processing'
+  state: 'pending' | 'approved' | 'cancelled'
   errorMessage?: string
   duration: number
   userAgent?: string
@@ -137,10 +138,17 @@ export default function PaymentSchedulingPage() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [showFilters, setShowFilters] = useState<boolean>(false)
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false)
+  const [approvingPayments, setApprovingPayments] = useState<boolean>(false)
 
   useEffect(() => {
     fetchGeneratedRequests()
   }, [])
+
+  useEffect(() => {
+    if (showSummaryModal) {
+      console.log('Modal opened, showSummaryModal:', showSummaryModal)
+    }
+  }, [showSummaryModal])
 
   const fetchAccountsPayable = async (saveToDatabase: boolean = false) => {
     try {
@@ -282,6 +290,8 @@ export default function PaymentSchedulingPage() {
         
         const groupedData = groupDatabaseDataByProvider(result.data.accountsPayable)
         setProviderGroups(groupedData)
+        
+        console.log('Selected request state:', result.data.generatedRequest.state)
       } else {
         setError(result.error || 'Error al cargar los registros de la cartera')
       }
@@ -421,6 +431,11 @@ export default function PaymentSchedulingPage() {
   }
 
   const startTotalPayment = async (recordId: string) => {
+    if (isPortfolioLocked()) {
+      setError('No se puede editar una cartera aprobada o cancelada')
+      return
+    }
+
     try {
       setUpdatingPayment(true)
       setError(null)
@@ -477,6 +492,11 @@ export default function PaymentSchedulingPage() {
   }
 
   const startPartialPayment = (recordId: string, currentValue?: number) => {
+    if (isPortfolioLocked()) {
+      setError('No se puede editar una cartera aprobada o cancelada')
+      return
+    }
+    
     setEditingPayment(recordId)
     setPaymentMode('partial')
     setEditingValue(currentValue ? currentValue.toString() : '')
@@ -489,6 +509,11 @@ export default function PaymentSchedulingPage() {
   }
 
   const clearPaymentValue = async (recordId: string) => {
+    if (isPortfolioLocked()) {
+      setError('No se puede editar una cartera aprobada o cancelada')
+      return
+    }
+
     try {
       setUpdatingPayment(true)
       setError(null)
@@ -537,6 +562,11 @@ export default function PaymentSchedulingPage() {
   }
 
   const updatePaymentValue = async (recordId: string) => {
+    if (isPortfolioLocked()) {
+      setError('No se puede editar una cartera aprobada o cancelada')
+      return
+    }
+
     try {
       setUpdatingPayment(true)
       setError(null)
@@ -632,6 +662,32 @@ export default function PaymentSchedulingPage() {
     }
   }
 
+  const getStateIcon = (state: string) => {
+    switch (state) {
+      case 'approved':
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-red-600" />
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getStateColor = (state: string) => {
+    switch (state) {
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-300'
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-300'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
   const filteredProviders = providerGroups.filter(group => 
     group.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     group.providerIdentification.includes(searchTerm)
@@ -640,6 +696,54 @@ export default function PaymentSchedulingPage() {
   const clearFilters = () => {
     setSearchTerm('')
     setExpandedProviders(new Set())
+  }
+
+  const isPortfolioLocked = (): boolean => {
+    return selectedRequest ? (selectedRequest.state === 'approved' || selectedRequest.state === 'cancelled') : false
+  }
+
+  const approvePayments = async () => {
+    if (!selectedRequest) return
+
+    if (selectedRequest.state === 'approved') {
+      setError('Esta cartera ya está aprobada')
+      return
+    }
+
+    if (selectedRequest.state === 'cancelled') {
+      setError('No se puede aprobar una cartera cancelada')
+      return
+    }
+
+    try {
+      setApprovingPayments(true)
+      setError(null)
+
+      const response = await fetch('/api/accounts-payable/approve-payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generatedRequestId: selectedRequest.id
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setShowSummaryModal(false)
+        await fetchGeneratedRequests()
+        await fetchRequestAccounts(selectedRequest.id)
+      } else {
+        setError(result.error || 'Error al aprobar los pagos')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error approving payments:', err)
+    } finally {
+      setApprovingPayments(false)
+    }
   }
 
   const getPaymentSummary = () => {
@@ -679,6 +783,16 @@ export default function PaymentSchedulingPage() {
 
     summary.totalDocuments = summary.providersWithPayments.reduce((sum, provider) => sum + provider.documentCount, 0)
     summary.totalProviders = summary.providersWithPayments.length
+
+    console.log('Payment Summary Debug:', {
+      totalPaymentValue: summary.totalPaymentValue,
+      providersWithPayments: summary.providersWithPayments,
+      filteredProviders: filteredProviders.map(g => ({
+        name: g.providerName,
+        totalPaymentValue: g.totalPaymentValue,
+        documents: g.documents.map(d => ({ id: d.id, paymentValue: d.paymentValue }))
+      }))
+    })
 
     return summary
   }
@@ -943,9 +1057,9 @@ export default function PaymentSchedulingPage() {
                                                       size="sm"
                                                       variant="outline"
                                                       onClick={() => clearPaymentValue(doc.id)}
-                                                      disabled={updatingPayment}
+                                                      disabled={updatingPayment || isPortfolioLocked()}
                                                       className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                      title="Borrar valor de pago"
+                                                      title={isPortfolioLocked() ? "Cartera bloqueada" : "Borrar valor de pago"}
                                                     >
                                                       <Trash2 className="h-3 w-3" />
                                                     </Button>
@@ -985,9 +1099,9 @@ export default function PaymentSchedulingPage() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => startTotalPayment(doc.id)}
-                                                    disabled={updatingPayment}
+                                                    disabled={updatingPayment || isPortfolioLocked()}
                                                     className="h-6 px-2 text-xs"
-                                                    title="Pago total"
+                                                    title={isPortfolioLocked() ? "Cartera bloqueada" : "Pago total"}
                                                   >
                                                     {updatingPayment ? (
                                                       <RefreshCw className="h-3 w-3 animate-spin" />
@@ -999,8 +1113,9 @@ export default function PaymentSchedulingPage() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => startPartialPayment(doc.id, doc.paymentValue)}
+                                                    disabled={isPortfolioLocked()}
                                                     className="h-6 px-2 text-xs"
-                                                    title="Pago parcial"
+                                                    title={isPortfolioLocked() ? "Cartera bloqueada" : "Pago parcial"}
                                                   >
                                                     Pago parcial
                                                   </Button>
@@ -1076,22 +1191,27 @@ export default function PaymentSchedulingPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(request.status)}`}>
-                            {request.status}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              fetchRequestAccounts(request.id)
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver
-                          </Button>
-                        </div>
+                         <div className="flex items-center gap-4">
+                           <div className="flex items-center gap-2">
+                             <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(request.status)}`}>
+                               {request.status}
+                             </span>
+                             <span className={`px-2 py-1 rounded-full text-xs border ${getStateColor(request.state)}`}>
+                               {request.state}
+                             </span>
+                           </div>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation()
+                               fetchRequestAccounts(request.id)
+                             }}
+                           >
+                             <Eye className="h-4 w-4 mr-1" />
+                             Ver
+                           </Button>
+                         </div>
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
                         <p>Duración: {Math.round(request.duration / 1000)}s | Total: {request.totalResults} registros</p>
@@ -1110,9 +1230,24 @@ export default function PaymentSchedulingPage() {
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
                 Registros de Cartera
+                {isPortfolioLocked() && (
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    selectedRequest.state === 'approved' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedRequest.state === 'approved' ? 'APROBADA' : 'CANCELADA'}
+                  </span>
+                )}
               </CardTitle>
               <CardDescription>
                 Solicitud del {new Date(selectedRequest.createdAt).toLocaleDateString()} - {selectedRequest.recordsProcessed} registros
+                {isPortfolioLocked() && (
+                  <span className="block mt-1 text-orange-600 font-medium flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Esta cartera está bloqueada y no se puede editar
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
              <CardContent>
@@ -1369,15 +1504,43 @@ export default function PaymentSchedulingPage() {
                   <DollarSign className="h-5 w-5" />
                   Resumen de Pagos Programados
                 </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSummaryModal(false)}
-                  className="flex items-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cerrar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const summary = getPaymentSummary()
+                      console.log('Debug Summary:', summary)
+                      alert(`Total Payment Value: ${summary.totalPaymentValue}\nProviders with payments: ${summary.providersWithPayments.length}`)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    Debug
+                  </Button>
+                  <Button
+                    onClick={approvePayments}
+                    disabled={approvingPayments || (selectedRequest ? (selectedRequest.state === 'approved' || selectedRequest.state === 'cancelled') : false)}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {approvingPayments ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    {selectedRequest && selectedRequest.state === 'approved' ? 'Ya Aprobada' : 
+                     selectedRequest && selectedRequest.state === 'cancelled' ? 'Cartera Cancelada' : 
+                     'Aprobar Pagos'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSummaryModal(false)}
+                    className="flex items-center gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Cerrar
+                  </Button>
+                </div>
               </div>
               
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
@@ -1448,7 +1611,10 @@ export default function PaymentSchedulingPage() {
         {selectedRequest && (
           <div className="fixed bottom-6 right-6 z-50">
             <Button
-              onClick={() => setShowSummaryModal(true)}
+              onClick={() => {
+                console.log('Floating button clicked, selectedRequest:', selectedRequest)
+                setShowSummaryModal(true)
+              }}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 rounded-full w-14 h-14 p-0"
               title="Ver resumen de pagos"
             >

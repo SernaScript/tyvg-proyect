@@ -271,6 +271,7 @@ model SiigoAccountsPayableGenerated {
   totalResults     Int
   recordsProcessed Int
   status           String
+  state            String                 @default("pending")
   errorMessage     String?
   duration         Int?
   userAgent        String?
