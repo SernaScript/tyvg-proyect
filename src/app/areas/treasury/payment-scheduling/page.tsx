@@ -3,8 +3,9 @@
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2, Filter, Search } from "lucide-react"
+import { useState, useEffect } from "react"
 
 interface SiigoDue {
   prefix: string
@@ -95,6 +96,7 @@ interface ProviderGroup {
   providerName: string
   providerIdentification: string
   totalBalance: number
+  totalPaymentValue: number
   documentCount: number
   documents: AccountPayableRecord[]
 }
@@ -103,6 +105,7 @@ interface ProviderGroupFromAPI {
   providerName: string
   providerIdentification: string
   totalBalance: number
+  totalPaymentValue: number
   documentCount: number
   documents: SiigoAccountPayable[]
 }
@@ -117,7 +120,7 @@ export default function PaymentSchedulingPage() {
   const [loadingProgress, setLoadingProgress] = useState<string>('')
   const [savedToDatabase, setSavedToDatabase] = useState<boolean>(false)
   
-  const [viewMode, setViewMode] = useState<'load' | 'generated'>('load')
+  const [viewMode, setViewMode] = useState<'load' | 'generated'>('generated')
   const [generatedRequests, setGeneratedRequests] = useState<GeneratedRequest[]>([])
   const [selectedRequest, setSelectedRequest] = useState<GeneratedRequest | null>(null)
   const [selectedAccounts, setSelectedAccounts] = useState<AccountPayableRecord[]>([])
@@ -130,6 +133,14 @@ export default function PaymentSchedulingPage() {
   const [editingValue, setEditingValue] = useState<string>('')
   const [updatingPayment, setUpdatingPayment] = useState<boolean>(false)
   const [paymentMode, setPaymentMode] = useState<'total' | 'partial' | null>(null)
+  
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const [showFilters, setShowFilters] = useState<boolean>(false)
+  const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false)
+
+  useEffect(() => {
+    fetchGeneratedRequests()
+  }, [])
 
   const fetchAccountsPayable = async (saveToDatabase: boolean = false) => {
     try {
@@ -150,11 +161,12 @@ export default function PaymentSchedulingPage() {
         setDataLoaded(true)
         setSavedToDatabase(result.savedToDatabase || false)
         
-        const groupedData = groupDataByProvider(data.results || [])
-        setProviderGroups(groupedData.map(group => ({
-          ...group,
-          documents: []
-        })))
+         const groupedData = groupDataByProvider(data.results || [])
+         setProviderGroups(groupedData.map(group => ({
+           ...group,
+           totalPaymentValue: 0,
+           documents: []
+         })))
         
         if (saveToDatabase) {
           setLoadingProgress(`Cargado y guardado: ${data.results?.length || 0} registros en la base de datos`)
@@ -293,6 +305,53 @@ export default function PaymentSchedulingPage() {
     setSelectedAccounts([])
   }
 
+  const generateNewPortfolio = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      setLoadingProgress('Generando nueva cartera...')
+
+      const response = await fetch('/api/accounts-payable/load-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setLoadingProgress('Cargando registros desde la base de datos...')
+        
+        const allRecordsResponse = await fetch('/api/accounts-payable/all-records')
+        const allRecordsResult = await allRecordsResponse.json()
+
+        if (allRecordsResult.success) {
+          const groupedData = groupDatabaseDataByProvider(allRecordsResult.data)
+          setProviderGroups(groupedData)
+          setPagination({
+            page: 1,
+            page_size: allRecordsResult.data.length,
+            total_results: allRecordsResult.data.length
+          })
+          setLoadingProgress('')
+        }
+
+        await fetchGeneratedRequests()
+        setLoadingProgress('')
+      } else {
+        setError(result.error || 'Error al generar la nueva cartera')
+        setLoadingProgress('')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      setLoadingProgress('')
+      console.error('Error generating new portfolio:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const groupDataByProvider = (data: SiigoAccountPayable[]): ProviderGroupFromAPI[] => {
     const groups = new Map<string, ProviderGroupFromAPI>()
     
@@ -311,6 +370,7 @@ export default function PaymentSchedulingPage() {
           providerName,
           providerIdentification: providerKey,
           totalBalance: balance,
+          totalPaymentValue: 0,
           documentCount: 1,
           documents: [account]
         })
@@ -327,10 +387,12 @@ export default function PaymentSchedulingPage() {
       const providerKey = account.providerIdentification
       const providerName = account.providerName
       const balance = Math.round(Number(account.balance))
+      const paymentValue = account.paymentValue ? Math.round(Number(account.paymentValue)) : 0
       
       if (groups.has(providerKey)) {
         const group = groups.get(providerKey)!
         group.totalBalance = Math.round(Number(group.totalBalance) + balance)
+        group.totalPaymentValue = Math.round(Number(group.totalPaymentValue) + paymentValue)
         group.documentCount += 1
         group.documents.push(account)
       } else {
@@ -338,6 +400,7 @@ export default function PaymentSchedulingPage() {
           providerName,
           providerIdentification: providerKey,
           totalBalance: balance,
+          totalPaymentValue: paymentValue,
           documentCount: 1,
           documents: [account]
         })
@@ -542,6 +605,57 @@ export default function PaymentSchedulingPage() {
     }
   }
 
+  const filteredProviders = providerGroups.filter(group => 
+    group.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    group.providerIdentification.includes(searchTerm)
+  )
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setExpandedProviders(new Set())
+  }
+
+  const getPaymentSummary = () => {
+    const summary = {
+      totalPaymentValue: 0,
+      providersWithPayments: [] as Array<{
+        providerName: string
+        providerIdentification: string
+        totalPayment: number
+        documentCount: number
+      }>,
+      totalDocuments: 0,
+      totalProviders: 0
+    }
+
+    filteredProviders.forEach(group => {
+      let groupTotalPayment = 0
+      let groupDocumentCount = 0
+
+      group.documents.forEach(doc => {
+        if (doc.paymentValue && doc.paymentValue > 0) {
+          groupTotalPayment += Number(doc.paymentValue)
+          groupDocumentCount++
+        }
+      })
+
+      if (groupTotalPayment > 0) {
+        summary.totalPaymentValue += groupTotalPayment
+        summary.providersWithPayments.push({
+          providerName: group.providerName,
+          providerIdentification: group.providerIdentification,
+          totalPayment: groupTotalPayment,
+          documentCount: groupDocumentCount
+        })
+      }
+    })
+
+    summary.totalDocuments = summary.providersWithPayments.reduce((sum, provider) => sum + provider.documentCount, 0)
+    summary.totalProviders = summary.providersWithPayments.length
+
+    return summary
+  }
+
   return (
     <AreaLayout 
       areaId="treasury" 
@@ -551,29 +665,21 @@ export default function PaymentSchedulingPage() {
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
             <Button
-              onClick={backToLoadView}
-              variant={viewMode === 'load' ? 'default' : 'outline'}
+              onClick={generateNewPortfolio}
+              variant="default"
               className="flex items-center gap-2"
+              disabled={loading}
             >
-              <Calendar className="h-4 w-4" />
-              Cargar Datos
-            </Button>
-            <Button
-              onClick={fetchGeneratedRequests}
-              variant={viewMode === 'generated' ? 'default' : 'outline'}
-              className="flex items-center gap-2"
-              disabled={loadingGenerated}
-            >
-              {loadingGenerated ? (
+              {loading ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 <Database className="h-4 w-4" />
               )}
-              Ver Carteras Generadas
+              Generar Nueva Cartera
             </Button>
           </div>
           
-          {viewMode === 'generated' && selectedRequest && (
+          {selectedRequest && (
             <Button
               onClick={backToGeneratedList}
               variant="outline"
@@ -731,15 +837,22 @@ export default function PaymentSchedulingPage() {
                                     <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-6">
-                                  <div className="text-right">
-                                    <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
-                                    <p className="text-lg font-bold text-green-600 flex items-center gap-1">
-                                      <DollarSign className="h-4 w-4" />
-                                      ${Math.round(Number(group.totalBalance)).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
+                                 <div className="flex items-center gap-6">
+                                   <div className="text-right">
+                                     <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                     <div className="flex flex-col gap-1">
+                                       <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                         <DollarSign className="h-4 w-4" />
+                                         ${Math.round(Number(group.totalBalance)).toLocaleString()}
+                                       </p>
+                                       {group.totalPaymentValue > 0 && (
+                                         <p className="text-sm font-medium text-blue-600">
+                                           Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
+                                         </p>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
                               </div>
                             </div>
                             
@@ -893,7 +1006,7 @@ export default function PaymentSchedulingPage() {
           </>
         )}
 
-        {viewMode === 'generated' && !selectedRequest && (
+        {!selectedRequest && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -964,7 +1077,7 @@ export default function PaymentSchedulingPage() {
           </Card>
         )}
 
-        {viewMode === 'generated' && selectedRequest && (
+        {selectedRequest && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -975,34 +1088,60 @@ export default function PaymentSchedulingPage() {
                 Solicitud del {new Date(selectedRequest.createdAt).toLocaleDateString()} - {selectedRequest.recordsProcessed} registros
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {loadingGenerated ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                  <span>Cargando registros...</span>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 border rounded-lg">
-                    <h4 className="font-medium mb-2">Información de la Solicitud:</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p><strong>Fecha:</strong> {new Date(selectedRequest.createdAt).toLocaleString()}</p>
-                        <p><strong>Estado:</strong> 
-                          <span className={`ml-1 px-2 py-1 rounded-full text-xs border ${getStatusColor(selectedRequest.status)}`}>
-                            {selectedRequest.status}
-                          </span>
-                        </p>
-                      </div>
-                      <div>
-                        <p><strong>Duración:</strong> {Math.round(selectedRequest.duration / 1000)}s</p>
-                        <p><strong>Registros:</strong> {selectedRequest.recordsProcessed} de {selectedRequest.totalResults}</p>
-                      </div>
-                    </div>
-                  </div>
+             <CardContent>
+               {loadingGenerated ? (
+                 <div className="flex items-center justify-center py-8">
+                   <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                   <span>Cargando registros...</span>
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setShowFilters(!showFilters)}
+                         className="flex items-center gap-2"
+                       >
+                         <Filter className="h-4 w-4" />
+                         Filtros
+                       </Button>
+                       <div className="text-sm text-gray-600">
+                         Mostrando {filteredProviders.length} de {providerGroups.length} proveedores
+                       </div>
+                     </div>
+                   </div>
+                   
+                   {showFilters && (
+                     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                       <div className="flex items-center gap-2 flex-1">
+                         <Search className="h-4 w-4 text-gray-500" />
+                         <Input
+                           type="text"
+                           placeholder="Buscar por nombre o ID del proveedor..."
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
+                           className="flex-1"
+                         />
+                       </div>
+                       {searchTerm && (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={clearFilters}
+                           className="flex items-center gap-2"
+                         >
+                           <X className="h-4 w-4" />
+                           Limpiar
+                         </Button>
+                       )}
+                     </div>
+                   )}
+
 
                   <div className="space-y-3">
-                    {providerGroups.map((group, index) => {
+                    {filteredProviders.map((group, index) => {
                       const isExpanded = expandedProviders.has(group.providerIdentification)
                       const providerKey = group.providerIdentification
                       
@@ -1024,15 +1163,22 @@ export default function PaymentSchedulingPage() {
                                   <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                  <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
-                                  <p className="text-lg font-bold text-green-600 flex items-center gap-1">
-                                    <DollarSign className="h-4 w-4" />
-                                    ${Number(group.totalBalance).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
+                               <div className="flex items-center gap-6">
+                                 <div className="text-right">
+                                   <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                   <div className="flex flex-col gap-1">
+                                     <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                       <DollarSign className="h-4 w-4" />
+                                       ${Number(group.totalBalance).toLocaleString()}
+                                     </p>
+                                     {group.totalPaymentValue > 0 && (
+                                       <p className="text-sm font-medium text-blue-600">
+                                         Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
+                               </div>
                             </div>
                           </div>
                           
@@ -1169,17 +1315,119 @@ export default function PaymentSchedulingPage() {
                       )
                     })}
                     
-                    {providerGroups.length === 0 && (
+                    {filteredProviders.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No se encontraron proveedores</p>
+                        {searchTerm && (
+                          <p className="text-sm mt-2">
+                            No hay resultados para "{searchTerm}"
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
+
                 </div>
               )}
             </CardContent>
           </Card>
+        )}
+
+        {showSummaryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Resumen de Pagos Programados
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSummaryModal(false)}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cerrar
+                </Button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {(() => {
+                  const summary = getPaymentSummary()
+                  return (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-3xl font-bold text-green-600">
+                            ${Math.round(summary.totalPaymentValue).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-green-700 font-medium">Total a Pagar</p>
+                        </div>
+                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-3xl font-bold text-blue-600">
+                            {summary.totalProviders}
+                          </p>
+                          <p className="text-sm text-blue-700 font-medium">Proveedores</p>
+                        </div>
+                        <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                          <p className="text-3xl font-bold text-purple-600">
+                            {summary.totalDocuments}
+                          </p>
+                          <p className="text-sm text-purple-700 font-medium">Documentos</p>
+                        </div>
+                      </div>
+
+                      {summary.providersWithPayments.length > 0 ? (
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-4">Detalle por Proveedor:</h4>
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {summary.providersWithPayments
+                              .sort((a, b) => b.totalPayment - a.totalPayment)
+                              .map((provider, index) => (
+                              <div key={provider.providerIdentification} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900">{provider.providerName}</p>
+                                  <p className="text-sm text-gray-600">ID: {provider.providerIdentification}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xl font-bold text-green-600">
+                                    ${Math.round(provider.totalPayment).toLocaleString()}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {provider.documentCount} documento{provider.documentCount !== 1 ? 's' : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-lg font-medium">No hay pagos programados</p>
+                          <p className="text-sm mt-2">Asigna valores de pago a los documentos para ver el resumen</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedRequest && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <Button
+              onClick={() => setShowSummaryModal(true)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 rounded-full w-14 h-14 p-0"
+              title="Ver resumen de pagos"
+            >
+              <DollarSign className="h-6 w-6" />
+            </Button>
+          </div>
         )}
       </div>
     </AreaLayout>
