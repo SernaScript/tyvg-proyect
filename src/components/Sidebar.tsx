@@ -17,6 +17,8 @@ import {
   ChevronRight
 } from "lucide-react"
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { PermissionAction } from "@/types/auth"
 
 const staticNavigation = [
   {
@@ -52,6 +54,7 @@ const adminNavigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const [expandedAreas, setExpandedAreas] = useState<string[]>([])
+  const { canAccessArea, canAccessModule, hasPermission, user } = useAuth()
 
   const toggleArea = (areaId: string) => {
     setExpandedAreas(prev => 
@@ -69,6 +72,25 @@ export function Sidebar() {
     return pathname === moduleHref
   }
 
+  // Filter areas based on user permissions
+  const accessibleAreas = AREAS_CONFIG.filter(area => canAccessArea(area.id))
+
+  // Filter admin navigation based on permissions
+  const accessibleAdminNav = adminNavigation.filter(item => {
+    switch (item.name) {
+      case "Reportes":
+        return hasPermission("reports", PermissionAction.VIEW)
+      case "Users":
+        return hasPermission("users", PermissionAction.VIEW)
+      case "Base de Datos":
+        return hasPermission("database", PermissionAction.VIEW)
+      case "Settings":
+        return hasPermission("settings", PermissionAction.VIEW)
+      default:
+        return false
+    }
+  })
+
 
 
   return (
@@ -82,6 +104,16 @@ export function Sidebar() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Panel de Control
           </p>
+          {user && (
+            <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                {user.name || user.email}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {user.role.displayName}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -113,12 +145,13 @@ export function Sidebar() {
           </div>
 
           {/* Areas Navigation */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
-              Áreas de Negocio
-            </p>
-            
-            {AREAS_CONFIG.map((area) => {
+          {accessibleAreas.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
+                Áreas de Negocio
+              </p>
+              
+              {accessibleAreas.map((area) => {
               const AreaIcon = area.icon
               const isExpanded = expandedAreas.includes(area.id)
               const isActive = isAreaActive(area.id)
@@ -157,7 +190,9 @@ export function Sidebar() {
                   {/* Area Modules */}
                   {isExpanded && (
                     <div className="ml-6 mt-1 space-y-1">
-                      {area.modules.map((module) => {
+                      {area.modules
+                        .filter(module => canAccessModule(area.id, module.id))
+                        .map((module) => {
                         const ModuleIcon = module.icon
                         const isModActive = isModuleActive(module.href)
 
@@ -192,19 +227,23 @@ export function Sidebar() {
                 </div>
               )
             })}
-          </div>
+            </div>
+          )}
 
-          {/* Separator */}
-          <div className="py-2">
-            <div className="border-t border-gray-200 dark:border-gray-700"></div>
-          </div>
+          {/* Separator - only show if there are admin items */}
+          {accessibleAdminNav.length > 0 && (
+            <div className="py-2">
+              <div className="border-t border-gray-200 dark:border-gray-700"></div>
+            </div>
+          )}
 
           {/* Admin Navigation */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
-              Administración
-            </p>
-            {adminNavigation.map((item) => {
+          {accessibleAdminNav.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
+                Administración
+              </p>
+              {accessibleAdminNav.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
 
@@ -223,7 +262,8 @@ export function Sidebar() {
               </Link>
             )
           })}
-          </div>
+            </div>
+          )}
         </nav>
 
         {/* Footer */}

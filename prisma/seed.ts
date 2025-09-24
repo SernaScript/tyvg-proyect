@@ -143,7 +143,18 @@ const PERMISSIONS_DATA = [
   // Settings permissions
   { name: 'settings:view', resource: 'settings', action: PermissionAction.VIEW, description: 'Ver configuración' },
   { name: 'settings:edit', resource: 'settings', action: PermissionAction.EDIT, description: 'Editar configuración' },
-  { name: 'settings:manage', resource: 'settings', action: PermissionAction.MANAGE, description: 'Gestión completa de configuración' }
+  { name: 'settings:manage', resource: 'settings', action: PermissionAction.MANAGE, description: 'Gestión completa de configuración' },
+  
+  // Siigo permissions
+  { name: 'siigo:view', resource: 'siigo', action: PermissionAction.VIEW, description: 'Ver integración con Siigo' },
+  { name: 'siigo:edit', resource: 'siigo', action: PermissionAction.EDIT, description: 'Editar configuración de Siigo' },
+  { name: 'siigo:create', resource: 'siigo', action: PermissionAction.CREATE, description: 'Crear configuraciones de Siigo' },
+  { name: 'siigo:delete', resource: 'siigo', action: PermissionAction.DELETE, description: 'Eliminar configuraciones de Siigo' },
+  { name: 'siigo:manage', resource: 'siigo', action: PermissionAction.MANAGE, description: 'Gestión completa de integración con Siigo' },
+  
+  // Database permissions
+  { name: 'database:view', resource: 'database', action: PermissionAction.VIEW, description: 'Ver base de datos' },
+  { name: 'database:manage', resource: 'database', action: PermissionAction.MANAGE, description: 'Gestión completa de base de datos' }
 ]
 
 // Role-Permission mappings
@@ -154,10 +165,12 @@ const ROLE_PERMISSIONS_MAPPING = {
     'treasury:manage',
     'logistics:manage',
     'billing:manage',
+    'siigo:manage',
     'reports:manage',
     'users:manage',
     'roles:manage',
-    'settings:manage'
+    'settings:manage',
+    'database:manage'
   ],
   [RoleName.ADMIN]: [
     'dashboard:view',
@@ -165,12 +178,15 @@ const ROLE_PERMISSIONS_MAPPING = {
     'treasury:manage',
     'logistics:manage',
     'billing:manage',
+    'siigo:view',
     'reports:view',
-    'users:view'
+    'users:view',
+    'database:view'
   ],
   [RoleName.ACCOUNTING]: [
     'dashboard:view',
     'accounting:manage',
+    'siigo:view',
     'reports:view',
     'treasury:view',
     'billing:view'
@@ -178,6 +194,7 @@ const ROLE_PERMISSIONS_MAPPING = {
   [RoleName.TREASURY]: [
     'dashboard:view',
     'treasury:manage',
+    'siigo:view',
     'reports:view',
     'accounting:view',
     'billing:view'
@@ -185,12 +202,14 @@ const ROLE_PERMISSIONS_MAPPING = {
   [RoleName.LOGISTICS]: [
     'dashboard:view',
     'logistics:manage',
+    'siigo:view',
     'reports:view',
     'billing:view'
   ],
   [RoleName.BILLING]: [
     'dashboard:view',
     'billing:manage',
+    'siigo:view',
     'reports:view',
     'accounting:view'
   ],
@@ -200,6 +219,7 @@ const ROLE_PERMISSIONS_MAPPING = {
     'treasury:view',
     'logistics:view',
     'billing:view',
+    'siigo:view',
     'reports:view'
   ]
 }

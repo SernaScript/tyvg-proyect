@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
           total: totalNum,
           provider: proveedor.toString().trim(),
           receipt: recibo ? recibo.toString().trim() : null,
-          vehicle: vehicles.find(v => v.id === vehicleId)
+          vehicle: vehicles.find((v: any) => v.id === vehicleId)
         })
 
       } catch (error) {

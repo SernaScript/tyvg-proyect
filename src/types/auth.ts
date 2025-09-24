@@ -111,38 +111,46 @@ export const ROLE_PERMISSIONS_CONFIG: Record<RoleName, string[]> = {
     'treasury:MANAGE',
     'logistics:MANAGE',
     'billing:MANAGE',
+    'siigo:MANAGE',
     'users:MANAGE',
     'roles:MANAGE',
     'settings:MANAGE',
-    'reports:MANAGE'
+    'reports:MANAGE',
+    'database:MANAGE'
   ],
   [RoleName.ADMIN]: [
     'accounting:MANAGE',
     'treasury:MANAGE',
     'logistics:MANAGE',
     'billing:MANAGE',
+    'siigo:VIEW',
     'reports:VIEW',
-    'users:VIEW'
+    'users:VIEW',
+    'database:VIEW'
   ],
   [RoleName.ACCOUNTING]: [
     'accounting:MANAGE',
+    'siigo:VIEW',
     'reports:VIEW',
     'treasury:VIEW',
     'billing:VIEW'
   ],
   [RoleName.TREASURY]: [
     'treasury:MANAGE',
+    'siigo:VIEW',
     'reports:VIEW',
     'accounting:VIEW',
     'billing:VIEW'
   ],
   [RoleName.LOGISTICS]: [
     'logistics:MANAGE',
+    'siigo:VIEW',
     'reports:VIEW',
     'billing:VIEW'
   ],
   [RoleName.BILLING]: [
     'billing:MANAGE',
+    'siigo:VIEW',
     'reports:VIEW',
     'accounting:VIEW'
   ],
@@ -151,6 +159,7 @@ export const ROLE_PERMISSIONS_CONFIG: Record<RoleName, string[]> = {
     'treasury:VIEW',
     'logistics:VIEW',
     'billing:VIEW',
+    'siigo:VIEW',
     'reports:VIEW'
   ]
 }
@@ -218,6 +227,72 @@ export const AREA_PERMISSIONS_MAP: Record<string, AreaPermission> = {
       action: PermissionAction.VIEW
     },
     modules: []
+  },
+  'siigo-integration': {
+    areaId: 'siigo-integration',
+    displayName: 'Integración Siigo',
+    requiredPermission: {
+      resource: 'siigo',
+      action: PermissionAction.VIEW
+    },
+    modules: [
+      {
+        moduleId: 'siigo-credentials',
+        displayName: 'Credenciales Siigo',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.MANAGE
+        }
+      },
+      {
+        moduleId: 'siigo-connection-test',
+        displayName: 'Prueba de Conexión',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.VIEW
+        }
+      },
+      {
+        moduleId: 'siigo-sync',
+        displayName: 'Sincronización de Datos',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.MANAGE
+        }
+      },
+      {
+        moduleId: 'siigo-logs',
+        displayName: 'Logs de Integración',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.VIEW
+        }
+      },
+      {
+        moduleId: 'siigo-database-integration',
+        displayName: 'Integración de Bases de Datos',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.MANAGE
+        }
+      },
+      {
+        moduleId: 'siigo-warehouses',
+        displayName: 'Bodegas',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.VIEW
+        }
+      },
+      {
+        moduleId: 'siigo-cost-centers',
+        displayName: 'Centros de Costo',
+        requiredPermission: {
+          resource: 'siigo',
+          action: PermissionAction.VIEW
+        }
+      }
+    ]
   }
 }
 

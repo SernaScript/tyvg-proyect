@@ -16,6 +16,7 @@ import {
   ModuleStatus
 } from "@/config/areas"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface AreasNavigationProps {
   className?: string
@@ -29,11 +30,15 @@ export function AreasNavigation({
   compactMode = false 
 }: AreasNavigationProps) {
   const pathname = usePathname()
+  const { canAccessArea } = useAuth()
+
+  // Filter areas based on user permissions
+  const accessibleAreas = AREAS_CONFIG.filter(area => canAccessArea(area.id))
 
   if (compactMode) {
     return (
       <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4", className)}>
-        {AREAS_CONFIG.map((area) => {
+        {accessibleAreas.map((area) => {
           const Icon = area.icon
           const colorClasses = getAreaColorClasses(area.color)
           
@@ -60,7 +65,7 @@ export function AreasNavigation({
 
   return (
     <div className={cn("space-y-8", className)}>
-      {AREAS_CONFIG.map((area) => {
+      {accessibleAreas.map((area) => {
         const Icon = area.icon
         const colorClasses = getAreaColorClasses(area.color)
         
@@ -92,6 +97,7 @@ export function AreasNavigation({
                   module={module}
                   areaColor={area.color}
                   isActive={pathname === module.href}
+                  areaId={area.id}
                 />
               ))}
             </div>
@@ -107,11 +113,20 @@ interface ModuleCardProps {
   module: ModuleConfig
   areaColor: string
   isActive: boolean
+  areaId: string
 }
 
-function ModuleCard({ module, areaColor, isActive }: ModuleCardProps) {
+function ModuleCard({ module, areaColor, isActive, areaId }: ModuleCardProps) {
   const ModuleIcon = module.icon
   const colorClasses = getAreaColorClasses(areaColor as any)
+  const { canAccessModule } = useAuth()
+  
+  // Check if user can access this specific module
+  const canAccess = canAccessModule(areaId, module.id)
+  
+  if (!canAccess) {
+    return null // Don't render modules the user can't access
+  }
   
   return (
     <Link href={module.href}>
@@ -163,8 +178,9 @@ interface AreaModulesProps {
 export function AreaModules({ areaId, className }: AreaModulesProps) {
   const area = AREAS_CONFIG.find(areaItem => areaItem.id === areaId)
   const pathname = usePathname()
+  const { canAccessArea, canAccessModule } = useAuth()
   
-  if (!area) return null
+  if (!area || !canAccessArea(areaId)) return null
 
   return (
     <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
@@ -174,6 +190,7 @@ export function AreaModules({ areaId, className }: AreaModulesProps) {
           module={module}
           areaColor={area.color}
           isActive={pathname === module.href}
+          areaId={area.id}
         />
       ))}
     </div>
