@@ -3,10 +3,9 @@
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign } from "lucide-react"
 import { useState } from "react"
 
-// Interfaces para los datos de Siigo
 interface SiigoDue {
   prefix: string
   consecutive: number
@@ -45,7 +44,6 @@ interface SiigoPagination {
   total_results: number
 }
 
-// Interfaces para carteras generadas
 interface GeneratedRequest {
   id: string
   requestDate: string
@@ -90,8 +88,23 @@ interface SiigoAccountsPayableResponse {
   results: SiigoAccountPayable[]
 }
 
+interface ProviderGroup {
+  providerName: string
+  providerIdentification: string
+  totalBalance: number
+  documentCount: number
+  documents: AccountPayableRecord[]
+}
+
+interface ProviderGroupFromAPI {
+  providerName: string
+  providerIdentification: string
+  totalBalance: number
+  documentCount: number
+  documents: SiigoAccountPayable[]
+}
+
 export default function PaymentSchedulingPage() {
-  // Estados para la vista de carga
   const [accountsPayable, setAccountsPayable] = useState<SiigoAccountPayable[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -101,14 +114,15 @@ export default function PaymentSchedulingPage() {
   const [loadingProgress, setLoadingProgress] = useState<string>('')
   const [savedToDatabase, setSavedToDatabase] = useState<boolean>(false)
   
-  // Estados para la vista de carteras generadas
   const [viewMode, setViewMode] = useState<'load' | 'generated'>('load')
   const [generatedRequests, setGeneratedRequests] = useState<GeneratedRequest[]>([])
   const [selectedRequest, setSelectedRequest] = useState<GeneratedRequest | null>(null)
   const [selectedAccounts, setSelectedAccounts] = useState<AccountPayableRecord[]>([])
   const [loadingGenerated, setLoadingGenerated] = useState<boolean>(false)
+  
+  const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
+  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set())
 
-  // Función para cargar datos de la API (solo primera página por el momento)
   const fetchAccountsPayable = async (saveToDatabase: boolean = false) => {
     try {
       setLoading(true)
@@ -128,6 +142,12 @@ export default function PaymentSchedulingPage() {
         setDataLoaded(true)
         setSavedToDatabase(result.savedToDatabase || false)
         
+        const groupedData = groupDataByProvider(data.results || [])
+        setProviderGroups(groupedData.map(group => ({
+          ...group,
+          documents: []
+        })))
+        
         if (saveToDatabase) {
           setLoadingProgress(`Cargado y guardado: ${data.results?.length || 0} registros en la base de datos`)
         } else {
@@ -141,11 +161,10 @@ export default function PaymentSchedulingPage() {
       console.error('Error fetching accounts payable:', err)
     } finally {
       setLoading(false)
-      setTimeout(() => setLoadingProgress(''), 3000) // Limpiar progreso después de 3 segundos
+      setTimeout(() => setLoadingProgress(''), 3000)
     }
   }
 
-  // Función para cargar TODOS los datos de la API con paginación
   const fetchAllAccountsPayable = async () => {
     try {
       setLoading(true)
@@ -170,22 +189,22 @@ export default function PaymentSchedulingPage() {
         
         setLoadingProgress(`✅ Completado: ${data.totalProcessed} registros guardados de ${data.totalRecords} totales en ${Math.round(data.duration / 1000)}s`)
         
-        // Mostrar todos los registros cargados, no solo la primera página
         setPagination({
           page: 1,
-          page_size: data.totalRecords, // Mostrar todos los registros
+          page_size: data.totalRecords,
           total_results: data.totalRecords
         })
         
-        // Cargar todos los registros desde la base de datos para mostrar en la tabla
         const allRecordsResponse = await fetch('/api/accounts-payable/all-records')
         if (allRecordsResponse.ok) {
           const allRecordsResult = await allRecordsResponse.json()
           if (allRecordsResult.success) {
             setAccountsPayable(allRecordsResult.data || [])
+            
+            const groupedData = groupDatabaseDataByProvider(allRecordsResult.data || [])
+            setProviderGroups(groupedData)
           }
         } else {
-          // Si no hay endpoint para todos los registros, cargar la primera página como fallback
           const firstPageResponse = await fetch('/api/accounts-payable')
           const firstPageResult = await firstPageResponse.json()
           
@@ -203,11 +222,10 @@ export default function PaymentSchedulingPage() {
       console.error('Error fetching all accounts payable:', err)
     } finally {
       setLoading(false)
-      setTimeout(() => setLoadingProgress(''), 8000) // Limpiar progreso después de 8 segundos
+      setTimeout(() => setLoadingProgress(''), 8000)
     }
   }
 
-  // Función para cargar las carteras generadas
   const fetchGeneratedRequests = async () => {
     try {
       setLoadingGenerated(true)
@@ -230,7 +248,6 @@ export default function PaymentSchedulingPage() {
     }
   }
 
-  // Función para cargar los registros de una cartera específica
   const fetchRequestAccounts = async (requestId: string) => {
     try {
       setLoadingGenerated(true)
@@ -242,6 +259,9 @@ export default function PaymentSchedulingPage() {
       if (result.success) {
         setSelectedRequest(result.data.generatedRequest)
         setSelectedAccounts(result.data.accountsPayable)
+        
+        const groupedData = groupDatabaseDataByProvider(result.data.accountsPayable)
+        setProviderGroups(groupedData)
       } else {
         setError(result.error || 'Error al cargar los registros de la cartera')
       }
@@ -253,13 +273,11 @@ export default function PaymentSchedulingPage() {
     }
   }
 
-  // Función para volver a la vista de carteras
   const backToGeneratedList = () => {
     setSelectedRequest(null)
     setSelectedAccounts([])
   }
 
-  // Función para volver a la vista de carga
   const backToLoadView = () => {
     setViewMode('load')
     setGeneratedRequests([])
@@ -267,7 +285,70 @@ export default function PaymentSchedulingPage() {
     setSelectedAccounts([])
   }
 
-  // Función para obtener el ícono de estado
+  const groupDataByProvider = (data: SiigoAccountPayable[]): ProviderGroupFromAPI[] => {
+    const groups = new Map<string, ProviderGroupFromAPI>()
+    
+    data.forEach(account => {
+      const providerKey = account.provider?.identification || 'unknown'
+      const providerName = account.provider?.name || 'Proveedor Desconocido'
+      const balance = Math.round(Number(account.due?.balance || 0))
+      
+      if (groups.has(providerKey)) {
+        const group = groups.get(providerKey)!
+        group.totalBalance = Math.round(Number(group.totalBalance) + balance)
+        group.documentCount += 1
+        group.documents.push(account)
+      } else {
+        groups.set(providerKey, {
+          providerName,
+          providerIdentification: providerKey,
+          totalBalance: balance,
+          documentCount: 1,
+          documents: [account]
+        })
+      }
+    })
+    
+    return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
+  }
+
+  const groupDatabaseDataByProvider = (data: AccountPayableRecord[]): ProviderGroup[] => {
+    const groups = new Map<string, ProviderGroup>()
+    
+    data.forEach(account => {
+      const providerKey = account.providerIdentification
+      const providerName = account.providerName
+      const balance = Math.round(Number(account.balance))
+      
+      if (groups.has(providerKey)) {
+        const group = groups.get(providerKey)!
+        group.totalBalance = Math.round(Number(group.totalBalance) + balance)
+        group.documentCount += 1
+        group.documents.push(account)
+      } else {
+        groups.set(providerKey, {
+          providerName,
+          providerIdentification: providerKey,
+          totalBalance: balance,
+          documentCount: 1,
+          documents: [account]
+        })
+      }
+    })
+    
+    return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
+  }
+
+  const toggleProviderExpansion = (providerKey: string) => {
+    const newExpanded = new Set(expandedProviders)
+    if (newExpanded.has(providerKey)) {
+      newExpanded.delete(providerKey)
+    } else {
+      newExpanded.add(providerKey)
+    }
+    setExpandedProviders(newExpanded)
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -283,7 +364,6 @@ export default function PaymentSchedulingPage() {
     }
   }
 
-  // Función para obtener el color de estado
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'success':
@@ -305,7 +385,6 @@ export default function PaymentSchedulingPage() {
       moduleId="payment-scheduling"
     >
       <div className="space-y-6">
-        {/* Navegación entre vistas */}
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
             <Button
@@ -343,10 +422,8 @@ export default function PaymentSchedulingPage() {
           )}
         </div>
 
-        {/* Vista de Carga de Datos */}
         {viewMode === 'load' && (
           <>
-            {/* Development Notice */}
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-yellow-800">
@@ -359,7 +436,6 @@ export default function PaymentSchedulingPage() {
               </CardHeader>
             </Card>
 
-            {/* Controles de Carga */}
             <Card>
               <CardHeader>
                 <CardTitle>Programación de Pagos - Siigo</CardTitle>
@@ -447,7 +523,6 @@ export default function PaymentSchedulingPage() {
               </CardContent>
             </Card>
 
-            {/* Tabla de Cuentas por Pagar - Solo mostrar si se han cargado los datos */}
             {dataLoaded && (
               <Card>
                 <CardHeader>
@@ -470,35 +545,95 @@ export default function PaymentSchedulingPage() {
                       )}
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left">Prefijo</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Consecutivo</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Cuota</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Fecha Vencimiento</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Balance</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Proveedor</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Centro de Costo</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Moneda</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(accountsPayable || []).map((account, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-4 py-2">{account.due?.prefix || ''}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.due?.consecutive || 0}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.due?.quote || 0}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.due?.date || ''}</td>
-                              <td className="border border-gray-300 px-4 py-2">${account.due?.balance || 0}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.provider?.name || ''}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.cost_center?.name || ''}</td>
-                              <td className="border border-gray-300 px-4 py-2">{account.currency?.code || ''}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="space-y-3">
+                      {providerGroups.map((group, index) => {
+                        const isExpanded = expandedProviders.has(group.providerIdentification)
+                        const providerKey = group.providerIdentification
+                        
+                        return (
+                          <div key={providerKey} className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div 
+                              className="bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                              onClick={() => toggleProviderExpansion(providerKey)}
+                            >
+                              <div className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-3">
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-600" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-600" />
+                                  )}
+                                  <div>
+                                    <h3 className="font-semibold text-gray-900">{group.providerName}</h3>
+                                    <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-6">
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                    <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                      <DollarSign className="h-4 w-4" />
+                                      ${Math.round(Number(group.totalBalance)).toLocaleString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {isExpanded && (
+                              <div className="border-t border-gray-200 bg-white">
+                                <div className="p-4">
+                                  <h4 className="font-medium text-gray-900 mb-3">Documentos del Proveedor</h4>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                      <thead>
+                                        <tr className="bg-gray-50 border-b">
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Prefijo</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Consecutivo</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Vencimiento</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Balance</th>
+                                          <th className="px-3 py-2 text-left font-medium text-gray-700">Centro de Costo</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-200">
+                                        {group.documents.map((doc, docIndex) => (
+                                          <tr key={docIndex} className="hover:bg-gray-50">
+                                            <td className="px-3 py-2 font-medium text-gray-900">
+                                              {doc.prefix || (doc as any).due?.prefix || ''}
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-900">
+                                              {doc.consecutive || (doc as any).due?.consecutive || 0}
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-900">
+                                              {doc.dueDate ? 
+                                                new Date(doc.dueDate).toLocaleDateString() : 
+                                                ((doc as any).due?.date || '')
+                                              }
+                                            </td>
+                                            <td className="px-3 py-2 font-medium text-gray-900">
+                                              ${Math.round(Number(doc.balance || (doc as any).due?.balance || 0)).toLocaleString()}
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-900">
+                                              {doc.costCenterName || (doc as any).cost_center?.name || ''}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      
+                      {providerGroups.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No se encontraron proveedores</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -507,7 +642,6 @@ export default function PaymentSchedulingPage() {
           </>
         )}
 
-        {/* Vista de Carteras Generadas */}
         {viewMode === 'generated' && !selectedRequest && (
           <Card>
             <CardHeader>
@@ -579,7 +713,6 @@ export default function PaymentSchedulingPage() {
           </Card>
         )}
 
-        {/* Vista de Registros de una Cartera Específica */}
         {viewMode === 'generated' && selectedRequest && (
           <Card>
             <CardHeader>
@@ -599,7 +732,6 @@ export default function PaymentSchedulingPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Información de la solicitud */}
                   <div className="p-4 bg-gray-50 border rounded-lg">
                     <h4 className="font-medium mb-2">Información de la Solicitud:</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -618,34 +750,92 @@ export default function PaymentSchedulingPage() {
                     </div>
                   </div>
 
-                  {/* Tabla de registros */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border border-gray-300 px-4 py-2 text-left">Prefijo</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left">Consecutivo</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left">Fecha Vencimiento</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left">Balance</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left">Proveedor</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left">Centro de Costo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedAccounts.map((account, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 px-4 py-2">{account.prefix}</td>
-                            <td className="border border-gray-300 px-4 py-2">{account.consecutive}</td>
-                            <td className="border border-gray-300 px-4 py-2">
-                              {new Date(account.dueDate).toLocaleDateString()}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2">${account.balance.toLocaleString()}</td>
-                            <td className="border border-gray-300 px-4 py-2">{account.providerName}</td>
-                            <td className="border border-gray-300 px-4 py-2">{account.costCenterName}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-3">
+                    {providerGroups.map((group, index) => {
+                      const isExpanded = expandedProviders.has(group.providerIdentification)
+                      const providerKey = group.providerIdentification
+                      
+                      return (
+                        <div key={providerKey} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div 
+                            className="bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => toggleProviderExpansion(providerKey)}
+                          >
+                            <div className="flex items-center justify-between p-4">
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-gray-600" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-gray-600" />
+                                )}
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">{group.providerName}</h3>
+                                  <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                  <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                    <DollarSign className="h-4 w-4" />
+                                    ${Number(group.totalBalance).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {isExpanded && (
+                            <div className="border-t border-gray-200 bg-white">
+                              <div className="p-4">
+                                <h4 className="font-medium text-gray-900 mb-3">Documentos del Proveedor</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="bg-gray-50 border-b">
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Prefijo</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Consecutivo</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Vencimiento</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Balance</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-700">Centro de Costo</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                      {group.documents.map((doc, docIndex) => (
+                                        <tr key={docIndex} className="hover:bg-gray-50">
+                                          <td className="px-3 py-2 font-medium text-gray-900">
+                                            {doc.prefix}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-900">
+                                            {doc.consecutive}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-900">
+                                            {new Date(doc.dueDate).toLocaleDateString()}
+                                          </td>
+                                          <td className="px-3 py-2 font-medium text-gray-900">
+                                            ${Math.round(Number(doc.balance)).toLocaleString()}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-900">
+                                            {doc.costCenterName}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                    
+                    {providerGroups.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No se encontraron proveedores</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
