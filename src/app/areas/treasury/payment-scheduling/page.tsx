@@ -4,8 +4,9 @@ import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2, Filter, Search, Lock } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 
 interface SiigoDue {
   prefix: string
@@ -139,6 +140,7 @@ export default function PaymentSchedulingPage() {
   const [showFilters, setShowFilters] = useState<boolean>(false)
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false)
   const [approvingPayments, setApprovingPayments] = useState<boolean>(false)
+  const [costCenterFilter, setCostCenterFilter] = useState<'all' | 'deposito' | 'tyvg'>('all')
 
   useEffect(() => {
     fetchGeneratedRequests()
@@ -390,7 +392,7 @@ export default function PaymentSchedulingPage() {
     return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
   }
 
-  const groupDatabaseDataByProvider = (data: AccountPayableRecord[]): ProviderGroup[] => {
+  const groupDatabaseDataByProvider = useCallback((data: AccountPayableRecord[]): ProviderGroup[] => {
     const groups = new Map<string, ProviderGroup>()
     
     data.forEach(account => {
@@ -418,17 +420,19 @@ export default function PaymentSchedulingPage() {
     })
     
     return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
-  }
+  }, [])
 
-  const toggleProviderExpansion = (providerKey: string) => {
-    const newExpanded = new Set(expandedProviders)
-    if (newExpanded.has(providerKey)) {
-      newExpanded.delete(providerKey)
-    } else {
-      newExpanded.add(providerKey)
-    }
-    setExpandedProviders(newExpanded)
-  }
+  const toggleProviderExpansion = useCallback((providerKey: string) => {
+    setExpandedProviders(prev => {
+      const newExpanded = new Set(prev)
+      if (newExpanded.has(providerKey)) {
+        newExpanded.delete(providerKey)
+      } else {
+        newExpanded.add(providerKey)
+      }
+      return newExpanded
+    })
+  }, [])
 
   const startTotalPayment = async (recordId: string) => {
     if (isPortfolioLocked()) {
@@ -688,19 +692,34 @@ export default function PaymentSchedulingPage() {
     }
   }
 
-  const filteredProviders = providerGroups.filter(group => 
-    group.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.providerIdentification.includes(searchTerm)
-  )
+  const filteredProviders = useMemo(() => {
+    return providerGroups.filter(group => {
+      // Filtro por término de búsqueda
+      const matchesSearch = group.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           group.providerIdentification.includes(searchTerm)
+      
+      // Filtro por cost center
+      let matchesCostCenter = true
+      if (costCenterFilter === 'deposito') {
+        matchesCostCenter = group.documents.some(doc => doc.costCenterName === 'DEPOSITO')
+      } else if (costCenterFilter === 'tyvg') {
+        matchesCostCenter = group.documents.some(doc => doc.costCenterName !== 'DEPOSITO')
+      }
+      // Si costCenterFilter === 'all', matchesCostCenter ya es true
+      
+      return matchesSearch && matchesCostCenter
+    })
+  }, [providerGroups, searchTerm, costCenterFilter])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchTerm('')
+    setCostCenterFilter('all')
     setExpandedProviders(new Set())
-  }
+  }, [])
 
-  const isPortfolioLocked = (): boolean => {
+  const isPortfolioLocked = useCallback((): boolean => {
     return selectedRequest ? (selectedRequest.state === 'approved' || selectedRequest.state === 'cancelled') : false
-  }
+  }, [selectedRequest])
 
   const approvePayments = async () => {
     if (!selectedRequest) return
@@ -746,7 +765,7 @@ export default function PaymentSchedulingPage() {
     }
   }
 
-  const getPaymentSummary = () => {
+  const paymentSummary = useMemo(() => {
     const summary = {
       totalPaymentValue: 0,
       providersWithPayments: [] as Array<{
@@ -764,7 +783,15 @@ export default function PaymentSchedulingPage() {
       let groupDocumentCount = 0
 
       group.documents.forEach(doc => {
-        if (doc.paymentValue && doc.paymentValue > 0) {
+        // Aplicar filtro de cost center a nivel de documento
+        let documentMatchesFilter = true
+        if (costCenterFilter === 'deposito') {
+          documentMatchesFilter = doc.costCenterName === 'DEPOSITO'
+        } else if (costCenterFilter === 'tyvg') {
+          documentMatchesFilter = doc.costCenterName !== 'DEPOSITO'
+        }
+
+        if (documentMatchesFilter && doc.paymentValue && doc.paymentValue > 0) {
           groupTotalPayment += Number(doc.paymentValue)
           groupDocumentCount++
         }
@@ -784,18 +811,21 @@ export default function PaymentSchedulingPage() {
     summary.totalDocuments = summary.providersWithPayments.reduce((sum, provider) => sum + provider.documentCount, 0)
     summary.totalProviders = summary.providersWithPayments.length
 
+    return summary
+  }, [filteredProviders, costCenterFilter])
+
+  const getPaymentSummary = useCallback(() => {
     console.log('Payment Summary Debug:', {
-      totalPaymentValue: summary.totalPaymentValue,
-      providersWithPayments: summary.providersWithPayments,
+      totalPaymentValue: paymentSummary.totalPaymentValue,
+      providersWithPayments: paymentSummary.providersWithPayments,
       filteredProviders: filteredProviders.map(g => ({
         name: g.providerName,
         totalPaymentValue: g.totalPaymentValue,
         documents: g.documents.map(d => ({ id: d.id, paymentValue: d.paymentValue }))
       }))
     })
-
-    return summary
-  }
+    return paymentSummary
+  }, [paymentSummary, filteredProviders])
 
   return (
     <AreaLayout 
@@ -1271,6 +1301,11 @@ export default function PaymentSchedulingPage() {
                        </Button>
                        <div className="text-sm text-gray-600">
                          Mostrando {filteredProviders.length} de {providerGroups.length} proveedores
+                         {costCenterFilter !== 'all' && (
+                           <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                             {costCenterFilter === 'deposito' ? 'DEPOSITO' : 'TYVG'}
+                           </span>
+                         )}
                        </div>
                      </div>
                    </div>
@@ -1287,7 +1322,20 @@ export default function PaymentSchedulingPage() {
                            className="flex-1"
                          />
                        </div>
-                       {searchTerm && (
+                       <div className="flex items-center gap-2">
+                         <span className="text-sm text-gray-600 whitespace-nowrap">Centro de Costo:</span>
+                         <Select value={costCenterFilter} onValueChange={(value: 'all' | 'deposito' | 'tyvg') => setCostCenterFilter(value)}>
+                           <SelectTrigger className="w-40">
+                             <SelectValue />
+                           </SelectTrigger>
+                           <SelectContent>
+                             <SelectItem value="all">Todos</SelectItem>
+                             <SelectItem value="deposito">DEPOSITO</SelectItem>
+                             <SelectItem value="tyvg">TYVG</SelectItem>
+                           </SelectContent>
+                         </Select>
+                       </div>
+                       {(searchTerm || costCenterFilter !== 'all') && (
                          <Button
                            variant="outline"
                            size="sm"
@@ -1509,9 +1557,8 @@ export default function PaymentSchedulingPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const summary = getPaymentSummary()
-                      console.log('Debug Summary:', summary)
-                      alert(`Total Payment Value: ${summary.totalPaymentValue}\nProviders with payments: ${summary.providersWithPayments.length}`)
+                      console.log('Debug Summary:', paymentSummary)
+                      alert(`Total Payment Value: ${paymentSummary.totalPaymentValue}\nProviders with payments: ${paymentSummary.providersWithPayments.length}`)
                     }}
                     className="flex items-center gap-2"
                   >
@@ -1545,7 +1592,7 @@ export default function PaymentSchedulingPage() {
               
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {(() => {
-                  const summary = getPaymentSummary()
+                  const summary = paymentSummary
                   return (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
