@@ -1,5 +1,6 @@
 import WebScraper, { ScrapingResult } from './WebScraper';
 import { processFlypassExcel, ProcessResult } from './ExcelProcessor';
+import { FlypassDataMapper } from './FlypassDataMapper';
 import path from 'path';
 import fs from 'fs';
 
@@ -135,14 +136,29 @@ export class FlypassScraper {
               }
             }
             
-            processResult = await processFlypassExcel(latestFile.path);
-            console.log(`✅ Procesamiento completado: ${processResult.processedRecords}/${processResult.totalRecords} registros`);
+            // Usar el mapeador de Flypass para migración específica
+            console.log('🔄 Ejecutando migración de datos Flypass...');
+            const migrationResult = await FlypassDataMapper.processExcelFile(latestFile.path);
+            console.log(`✅ Migración completada: ${migrationResult.processedRows}/${migrationResult.totalRows} registros`);
             
-            // Eliminar el archivo Excel después del procesamiento exitoso
+            // Convertir resultado de migración a formato ProcessResult
+            processResult = {
+              success: migrationResult.success,
+              totalRecords: migrationResult.totalRows,
+              processedRecords: migrationResult.processedRows,
+              errorRecords: migrationResult.errorRows,
+              errors: migrationResult.errors,
+              logId: 'migration-' + Date.now()
+            };
+            
+            // Esperar 5 segundos antes de eliminar el archivo
             if (processResult.success) {
+              console.log('⏳ Esperando 5 segundos antes de eliminar el archivo...');
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
               try {
                 fs.unlinkSync(latestFile.path);
-                console.log(`🗑️ Archivo Excel eliminado: ${latestFile.name}`);
+                console.log(`🗑️ Archivo Excel eliminado después de 5 segundos: ${latestFile.name}`);
               } catch (deleteError) {
                 console.warn('⚠️ No se pudo eliminar el archivo Excel:', deleteError);
               }

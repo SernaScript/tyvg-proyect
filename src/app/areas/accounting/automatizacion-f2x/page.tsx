@@ -2,20 +2,16 @@
 
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { LoginForm } from "@/components/LoginForm"
-import { ScrapingStatus } from "@/components/ScrapingStatus"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Clock, CheckCircle, AlertCircle, Zap, Shield, Database, Download } from "lucide-react"
+import { Download, Database, ArrowRight, FileText, BarChart3 } from "lucide-react"
+import Link from "next/link"
 
 export default function F2XAutomationPage() {
   const handleFormSubmit = (data: any) => {
     console.log('Datos del formulario F2X:', data)
   }
 
-  const handleRefreshStatus = () => {
-    console.log('Refrescando estado del sistema...')
-    // Aquí podrías agregar lógica para actualizar el estado en tiempo real
-  }
 
   return (
     <AreaLayout 
@@ -29,68 +25,6 @@ export default function F2XAutomationPage() {
       }
     >
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Documentos Procesados
-              </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
-              <p className="text-xs text-muted-foreground">
-                +15% desde el mes pasado
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Tiempo Promedio
-              </CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2.3m</div>
-              <p className="text-xs text-muted-foreground">
-                Por ejecución
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Tasa de Éxito
-              </CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">98.5%</div>
-              <p className="text-xs text-muted-foreground">
-                Últimos 30 días
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Errores
-              </CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">
-                Esta semana
-              </p>
-            </CardContent>
-          </Card>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Formulario Principal */}
@@ -111,133 +45,72 @@ export default function F2XAutomationPage() {
             </Card>
           </div>
 
-          {/* Panel de Estado */}
+          {/* Panel de Navegación */}
           <div className="space-y-6">
-            <ScrapingStatus 
-              isActive={false}
-              lastRun="Nunca"
-              totalProcessed={0}
-              successRate={0}
-              onRefresh={handleRefreshStatus}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-blue-500" />
+                  Datos de Flypass
+                </CardTitle>
+                <CardDescription>
+                  Accede a los datos procesados y estadísticas
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Link href="/areas/accounting/flypass-data">
+                  <Button className="w-full justify-between" variant="outline">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Ver Tabla de Datos
+                    </div>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                
+                <Link href="/areas/accounting/flypass-reports">
+                  <Button className="w-full justify-between" variant="outline">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Reportes y Estadísticas
+                    </div>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Download className="h-5 w-5 text-green-500" />
+                  Acciones Rápidas
+                </CardTitle>
+                <CardDescription>
+                  Herramientas y utilidades
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button className="w-full justify-between" variant="outline">
+                  <div className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Descargar Datos
+                  </div>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                
+                <Button className="w-full justify-between" variant="outline">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    Sincronizar Base de Datos
+                  </div>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        {/* Información adicional */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-blue-500" />
-                Proceso de Scraping F2X
-              </CardTitle>
-              <CardDescription>
-                Automatización completa del proceso de descarga de facturas desde Flypass
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-semibold mb-2">¿Qué hace este proceso?</h4>
-                  <ul className="space-y-1 text-gray-600 ml-4">
-                    <li>• Se conecta automáticamente a Flypass</li>
-                    <li>• Autentica con NIT y contraseña</li>
-                    <li>• Navega a la sección de facturas</li>
-                    <li>• Aplica el rango de fechas seleccionado</li>
-                    <li>• Descarga el archivo con las facturas del período</li>
-                    <li>• <strong>Opcional:</strong> Procesa automáticamente a la base de datos</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Tiempo estimado:</h4>
-                  <p className="text-gray-600">2-3 minutos por ejecución</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-500" />
-                Seguridad y Validaciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-semibold mb-2">Medidas de Seguridad</h4>
-                  <ul className="space-y-1 text-gray-600 ml-4">
-                    <li>• Las credenciales no se almacenan</li>
-                    <li>• Conexión HTTPS segura</li>
-                    <li>• Validación de formato de datos</li>
-                    <li>• Manejo de errores robusto</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Validaciones</h4>
-                  <ul className="space-y-1 text-gray-600 ml-4">
-                    <li>• Formato válido de NIT</li>
-                    <li>• Rango de fechas coherente</li>
-                    <li>• Disponibilidad del servicio</li>
-                    <li>• Integridad de descarga</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Información técnica */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-purple-500" />
-              Información Técnica del Módulo F2X
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div>
-                <h4 className="font-semibold mb-2">Tecnologías</h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• Playwright WebDriver</li>
-                  <li>• TypeScript/Node.js</li>
-                  <li>• Next.js API Routes</li>
-                  <li>• Chromium Browser</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Formatos Soportados</h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• Archivos Excel (.xlsx)</li>
-                  <li>• Datos CSV</li>
-                  <li>• Reportes PDF</li>
-                  <li>• Logs JSON</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Capacidades</h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• Procesamiento automático</li>
-                  <li>• Selector de rango de fechas</li>
-                  <li>• Manejo de errores</li>
-                  <li>• Reintentos inteligentes</li>
-                  <li>• Capturas de pantalla</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Salidas</h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• Archivo descargado</li>
-                  <li>• Log de actividades</li>
-                  <li>• Reporte de estado</li>
-                  <li>• Métricas de tiempo</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AreaLayout>
   )

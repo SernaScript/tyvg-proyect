@@ -17,7 +17,9 @@
     "accounting-demo": "tsx scripts/accounting-utils.ts",
     "process-excel": "tsx scripts/process-existing-excel.ts",
     "test-automation": "tsx scripts/test-complete-automation.ts",
-    "test-web-api": "tsx scripts/test-web-api.ts"
+    "test-web-api": "tsx scripts/test-web-api.ts",
+    "migrate-flypass": "tsx scripts/migrate-flypass-data.ts",
+    "test-flypass-flow": "tsx scripts/test-complete-flypass-flow.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",

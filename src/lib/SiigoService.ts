@@ -211,6 +211,35 @@ export class SiigoService {
     }
   }
 
+  static async createPurchase(purchaseData: any) {
+    try {
+      console.log('Creando purchase en Siigo...', { purchaseData })
+      const response = await this.makeAuthenticatedRequest('/purchases', {
+        method: 'POST',
+        body: JSON.stringify(purchaseData)
+      })
+      
+      console.log('Respuesta de creación de purchase:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Error de Siigo API al crear purchase:', errorText)
+        throw new Error(`Error de Siigo API: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('Purchase creado exitosamente:', data)
+      return data
+    } catch (error) {
+      console.error('Error creando purchase en Siigo:', error)
+      throw error
+    }
+  }
+
   static async getAccountsPayable(page: number = 1) {
     try {
       console.log(`Consultando cuentas por pagar de Siigo - Página ${page}...`)
