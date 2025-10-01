@@ -38,10 +38,18 @@ interface GeneratedRequest {
   }
 }
 
+interface ProviderGroup {
+  providerName: string
+  payments: ApprovedPayment[]
+  totalValue: number
+  paidCount: number
+  pendingCount: number
+}
+
 interface GroupedPayments {
   [generatedRequestId: string]: {
     request: GeneratedRequest
-    payments: ApprovedPayment[]
+    providers: ProviderGroup[]
     totalValue: number
     paidCount: number
     pendingCount: number
@@ -59,6 +67,7 @@ export default function ApprovedPaymentsPage() {
   const [selectedPayments, setSelectedPayments] = useState<string[]>([])
   const [processingPayments, setProcessingPayments] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchApprovedPayments()
@@ -80,13 +89,37 @@ export default function ApprovedPaymentsPage() {
       )
       
       if (requestPayments.length > 0) {
+        // Agrupar por proveedor
+        const providerGroups: { [providerName: string]: ApprovedPayment[] } = {}
+        requestPayments.forEach(payment => {
+          if (!providerGroups[payment.providerName]) {
+            providerGroups[payment.providerName] = []
+          }
+          providerGroups[payment.providerName].push(payment)
+        })
+        
+        // Crear grupos de proveedores con estadísticas
+        const providers: ProviderGroup[] = Object.entries(providerGroups).map(([providerName, payments]) => {
+          const totalValue = payments.reduce((sum, payment) => sum + payment.paymentValue, 0)
+          const paidCount = payments.filter(p => p.paid).length
+          const pendingCount = payments.filter(p => !p.paid).length
+          
+          return {
+            providerName,
+            payments,
+            totalValue,
+            paidCount,
+            pendingCount
+          }
+        })
+        
         const totalValue = requestPayments.reduce((sum, payment) => sum + payment.paymentValue, 0)
         const paidCount = requestPayments.filter(p => p.paid).length
         const pendingCount = requestPayments.filter(p => !p.paid).length
         
         grouped[request.id] = {
           request,
-          payments: requestPayments,
+          providers,
           totalValue,
           paidCount,
           pendingCount
@@ -162,10 +195,12 @@ export default function ApprovedPaymentsPage() {
     }
     
     if (searchTerm) {
-      const hasMatchingPayment = group.payments.some(payment => 
-        payment.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.providerIdentification.includes(searchTerm) ||
-        payment.costCenterName.toLowerCase().includes(searchTerm.toLowerCase())
+      const hasMatchingPayment = group.providers.some(provider => 
+        provider.payments.some(payment => 
+          payment.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          payment.providerIdentification.includes(searchTerm) ||
+          payment.costCenterName.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       )
       return hasMatchingPayment
     }
@@ -197,9 +232,21 @@ export default function ApprovedPaymentsPage() {
     })
   }
 
+  const toggleProviderExpansion = (providerKey: string) => {
+    setExpandedProviders(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(providerKey)) {
+        newSet.delete(providerKey)
+      } else {
+        newSet.add(providerKey)
+      }
+      return newSet
+    })
+  }
+
   const handleSelectAll = () => {
     const allPendingPayments = Object.values(groupedPayments)
-      .flatMap(group => group.payments.filter(p => !p.paid))
+      .flatMap(group => group.providers.flatMap(provider => provider.payments.filter(p => !p.paid)))
       .map(p => p.id)
     
     setSelectedPayments(prev => 
@@ -211,7 +258,7 @@ export default function ApprovedPaymentsPage() {
     const group = groupedPayments[groupId]
     if (!group) return
     
-    const groupPendingPayments = group.payments.filter(p => !p.paid).map(p => p.id)
+    const groupPendingPayments = group.providers.flatMap(provider => provider.payments.filter(p => !p.paid)).map(p => p.id)
     const allGroupPaymentsSelected = groupPendingPayments.every(id => selectedPayments.includes(id))
     
     if (allGroupPaymentsSelected) {
@@ -222,6 +269,33 @@ export default function ApprovedPaymentsPage() {
       setSelectedPayments(prev => {
         const newSelection = [...prev]
         groupPendingPayments.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id)
+          }
+        })
+        return newSelection
+      })
+    }
+  }
+
+  const handleSelectProvider = (groupId: string, providerName: string) => {
+    const group = groupedPayments[groupId]
+    if (!group) return
+    
+    const provider = group.providers.find(p => p.providerName === providerName)
+    if (!provider) return
+    
+    const providerPendingPayments = provider.payments.filter(p => !p.paid).map(p => p.id)
+    const allProviderPaymentsSelected = providerPendingPayments.every(id => selectedPayments.includes(id))
+    
+    if (allProviderPaymentsSelected) {
+      // Deseleccionar todos los pagos del proveedor
+      setSelectedPayments(prev => prev.filter(id => !providerPendingPayments.includes(id)))
+    } else {
+      // Seleccionar todos los pagos pendientes del proveedor
+      setSelectedPayments(prev => {
+        const newSelection = [...prev]
+        providerPendingPayments.forEach(id => {
           if (!newSelection.includes(id)) {
             newSelection.push(id)
           }
@@ -287,7 +361,7 @@ export default function ApprovedPaymentsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(totalApprovedValue)}</div>
               <p className="text-xs text-muted-foreground">
-                {Object.values(groupedPayments).reduce((sum, group) => sum + group.payments.length, 0)} pagos
+                {Object.values(groupedPayments).reduce((sum, group) => sum + group.providers.reduce((pSum, provider) => pSum + provider.payments.length, 0), 0)} pagos
               </p>
             </CardContent>
           </Card>
@@ -302,8 +376,8 @@ export default function ApprovedPaymentsPage() {
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{paidCount}</div>
               <p className="text-xs text-muted-foreground">
-                {Object.values(groupedPayments).reduce((sum, group) => sum + group.payments.length, 0) > 0 ? 
-                  Math.round((paidCount / Object.values(groupedPayments).reduce((sum, group) => sum + group.payments.length, 0)) * 100) : 0}% completado
+                {Object.values(groupedPayments).reduce((sum, group) => sum + group.providers.reduce((pSum, provider) => pSum + provider.payments.length, 0), 0) > 0 ? 
+                  Math.round((paidCount / Object.values(groupedPayments).reduce((sum, group) => sum + group.providers.reduce((pSum, provider) => pSum + provider.payments.length, 0), 0)) * 100) : 0}% completado
               </p>
             </CardContent>
           </Card>
@@ -352,7 +426,7 @@ export default function ApprovedPaymentsPage() {
                   <p className="text-sm text-muted-foreground">
                     Total: {formatCurrency(
                       Object.values(groupedPayments)
-                        .flatMap(group => group.payments)
+                        .flatMap(group => group.providers.flatMap(provider => provider.payments))
                         .filter(p => selectedPayments.includes(p.id))
                         .reduce((sum, p) => sum + p.paymentValue, 0)
                     )}
@@ -421,7 +495,7 @@ export default function ApprovedPaymentsPage() {
                   onClick={handleSelectAll}
                 >
                   {selectedPayments.length === Object.values(groupedPayments)
-                    .flatMap(group => group.payments.filter(p => !p.paid)).length 
+                    .flatMap(group => group.providers.flatMap(provider => provider.payments.filter(p => !p.paid))).length 
                     ? 'Deseleccionar Todo' 
                     : 'Seleccionar Todo'
                   }
@@ -444,7 +518,7 @@ export default function ApprovedPaymentsPage() {
               <div className="space-y-4">
                 {filteredGroups.map(([groupId, group]) => {
                   const isExpanded = expandedGroups.has(groupId)
-                  const groupPendingPayments = group.payments.filter(p => !p.paid)
+                  const groupPendingPayments = group.providers.flatMap(provider => provider.payments.filter(p => !p.paid))
                   const allGroupSelected = groupPendingPayments.length > 0 && 
                     groupPendingPayments.every(p => selectedPayments.includes(p.id))
                   
@@ -471,9 +545,10 @@ export default function ApprovedPaymentsPage() {
                                 Solicitud: {formatDate(group.request.requestDate)}
                               </h3>
                               <p className="text-sm text-muted-foreground">
-                                {group.payments.length} pagos • 
+                                {group.providers.reduce((sum, provider) => sum + provider.payments.length, 0)} pagos • 
                                 {group.paidCount} ejecutados • 
-                                {group.pendingCount} pendientes
+                                {group.pendingCount} pendientes • 
+                                {group.providers.length} proveedores
                               </p>
                             </div>
                           </div>
@@ -505,81 +580,149 @@ export default function ApprovedPaymentsPage() {
                         </div>
                       </div>
 
-                      {/* Group Content */}
+                      {/* Group Content - Providers */}
                       {isExpanded && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="border-b bg-gray-50">
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">
-                                  <input
-                                    type="checkbox"
-                                    checked={allGroupSelected}
-                                    onChange={() => handleSelectGroup(groupId)}
-                                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                                  />
-                                </th>
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">NIT</th>
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">Proveedor</th>
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">Número de Documento</th>
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">Fecha de Vencimiento</th>
-                                <th className="text-left p-3 font-medium text-sm text-muted-foreground">Fecha de Aprobación</th>
-                                <th className="text-right p-3 font-medium text-sm text-muted-foreground">Valor</th>
-                                <th className="text-center p-3 font-medium text-sm text-muted-foreground">Estado</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {group.payments.map((payment) => (
-                                <tr 
-                                  key={payment.id}
-                                  className={`border-b hover:bg-gray-50 transition-colors ${
-                                    selectedPayments.includes(payment.id) ? 'bg-blue-50' : ''
-                                  } ${payment.paid ? 'opacity-60' : ''}`}
+                        <div className="space-y-2 p-4 bg-gray-50">
+                          {group.providers.map((provider) => {
+                            const providerKey = `${groupId}-${provider.providerName}`
+                            const isProviderExpanded = expandedProviders.has(providerKey)
+                            const providerPendingPayments = provider.payments.filter(p => !p.paid)
+                            const allProviderSelected = providerPendingPayments.length > 0 && 
+                              providerPendingPayments.every(p => selectedPayments.includes(p.id))
+                            
+                            return (
+                              <div key={providerKey} className="border rounded-lg overflow-hidden bg-white">
+                                {/* Provider Header */}
+                                <div 
+                                  className="p-3 cursor-pointer hover:bg-gray-50 transition-colors border-b"
+                                  onClick={() => toggleProviderExpansion(providerKey)}
                                 >
-                                  <td className="p-3">
-                                    {!payment.paid && (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
                                       <input
                                         type="checkbox"
-                                        checked={selectedPayments.includes(payment.id)}
-                                        onChange={() => handleSelectPayment(payment.id)}
+                                        checked={allProviderSelected}
+                                        onChange={(e) => {
+                                          e.stopPropagation()
+                                          handleSelectProvider(groupId, provider.providerName)
+                                        }}
                                         className="h-4 w-4 text-blue-600 rounded border-gray-300"
                                       />
-                                    )}
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="font-medium text-sm">{payment.providerIdentification}</span>
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="text-sm">{payment.providerName}</span>
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="font-mono text-sm">
-                                      {payment.prefix}-{payment.consecutive}
-                                    </span>
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="text-sm">{formatDate(payment.dueDate)}</span>
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="text-sm">{formatDate(payment.updatedAt)}</span>
-                                  </td>
-                                  <td className="p-3 text-right">
-                                    <span className="font-bold text-sm">
-                                      ${Math.round(payment.paymentValue).toLocaleString('es-CO')}
-                                    </span>
-                                  </td>
-                                  <td className="p-3 text-center">
-                                    <Badge 
-                                      variant={payment.paid ? "default" : "secondary"}
-                                      className={payment.paid ? "bg-green-100 text-green-800" : ""}
-                                    >
-                                      {payment.paid ? "Ejecutado" : "Pendiente"}
-                                    </Badge>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                      <div>
+                                        <h4 className="font-medium text-sm">
+                                          {provider.providerName}
+                                        </h4>
+                                        <p className="text-xs text-muted-foreground">
+                                          {provider.payments.length} pagos • 
+                                          {provider.paidCount} ejecutados • 
+                                          {provider.pendingCount} pendientes
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-right">
+                                        <p className="font-bold text-sm">
+                                          ${Math.round(provider.totalValue).toLocaleString('es-CO')}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          Total proveedor
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 hover:bg-gray-200"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          toggleProviderExpansion(providerKey)
+                                        }}
+                                      >
+                                        {isProviderExpanded ? (
+                                          <ChevronDown className="h-3 w-3" />
+                                        ) : (
+                                          <ChevronRight className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Provider Content - Payments Table */}
+                                {isProviderExpanded && (
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                      <thead>
+                                        <tr className="border-b bg-gray-50">
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">
+                                            <input
+                                              type="checkbox"
+                                              checked={allProviderSelected}
+                                              onChange={() => handleSelectProvider(groupId, provider.providerName)}
+                                              className="h-3 w-3 text-blue-600 rounded border-gray-300"
+                                            />
+                                          </th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">NIT</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Número de Documento</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Fecha de Vencimiento</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Fecha de Aprobación</th>
+                                          <th className="text-right p-2 font-medium text-xs text-muted-foreground">Valor</th>
+                                          <th className="text-center p-2 font-medium text-xs text-muted-foreground">Estado</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {provider.payments.map((payment) => (
+                                          <tr 
+                                            key={payment.id}
+                                            className={`border-b hover:bg-gray-50 transition-colors ${
+                                              selectedPayments.includes(payment.id) ? 'bg-blue-50' : ''
+                                            } ${payment.paid ? 'opacity-60' : ''}`}
+                                          >
+                                            <td className="p-2">
+                                              {!payment.paid && (
+                                                <input
+                                                  type="checkbox"
+                                                  checked={selectedPayments.includes(payment.id)}
+                                                  onChange={() => handleSelectPayment(payment.id)}
+                                                  className="h-3 w-3 text-blue-600 rounded border-gray-300"
+                                                />
+                                              )}
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="font-medium text-xs">{payment.providerIdentification}</span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="font-mono text-xs">
+                                                {payment.prefix}-{payment.consecutive}
+                                              </span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="text-xs">{formatDate(payment.dueDate)}</span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="text-xs">{formatDate(payment.updatedAt)}</span>
+                                            </td>
+                                            <td className="p-2 text-right">
+                                              <span className="font-bold text-xs">
+                                                ${Math.round(payment.paymentValue).toLocaleString('es-CO')}
+                                              </span>
+                                            </td>
+                                            <td className="p-2 text-center">
+                                              <Badge 
+                                                variant={payment.paid ? "default" : "secondary"}
+                                                className={`text-xs ${payment.paid ? "bg-green-100 text-green-800" : ""}`}
+                                              >
+                                                {payment.paid ? "Ejecutado" : "Pendiente"}
+                                              </Badge>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
