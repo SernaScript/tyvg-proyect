@@ -7,9 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Cloud, 
   AlertCircle,
-  Settings,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -45,12 +43,10 @@ export default function FlypassSiigoMigrationPage() {
   const router = useRouter()
   const [isMigrating, setIsMigrating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [credentials, setCredentials] = useState({ isConfigured: false })
   const [flypassData, setFlypassData] = useState<FlypassData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [totalRecords, setTotalRecords] = useState(0)
   const [migratingItems, setMigratingItems] = useState<Set<string>>(new Set())
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [migrationProgress, setMigrationProgress] = useState<{
@@ -81,18 +77,6 @@ export default function FlypassSiigoMigrationPage() {
     setNotifications(prev => prev.filter(n => n.id !== id))
   }
 
-  // Cargar credenciales de Siigo
-  const loadSiigoCredentials = async () => {
-    try {
-      const response = await fetch('/api/siigo-credentials')
-      if (response.ok) {
-        const data = await response.json()
-        setCredentials({ isConfigured: data.success && data.data !== null })
-      }
-    } catch (error) {
-      console.error('Error loading Siigo credentials:', error)
-    }
-  }
 
   // Cargar registros de flypass_data pendientes
   const loadPendingFlypassData = async (page: number = 1) => {
@@ -105,7 +89,6 @@ export default function FlypassSiigoMigrationPage() {
         const data = await response.json()
         setFlypassData(data.data)
         setTotalPages(data.pagination.totalPages)
-        setTotalRecords(data.pagination.total)
         setCurrentPage(page)
       } else {
         setError('Error al cargar los registros de flypass_data')
@@ -228,7 +211,6 @@ export default function FlypassSiigoMigrationPage() {
   }
 
   useEffect(() => {
-    loadSiigoCredentials()
     loadPendingFlypassData()
   }, [])
 
@@ -308,31 +290,6 @@ export default function FlypassSiigoMigrationPage() {
           </div>
         )}
 
-        {/* Estado de credenciales */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Configuración de Siigo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Cloud className="h-4 w-4" />
-                <span>Credenciales de Siigo</span>
-                <Badge variant={credentials.isConfigured ? "default" : "destructive"}>
-                  {credentials.isConfigured ? "Configuradas" : "No configuradas"}
-                </Badge>
-              </div>
-              {!credentials.isConfigured && (
-                <Button variant="outline" size="sm">
-                  Configurar
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Progreso de migración */}
         {migrationProgress && (
@@ -366,35 +323,18 @@ export default function FlypassSiigoMigrationPage() {
           </Card>
         )}
 
-        {/* Resumen y controles */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalRecords}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Contabilizados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{totalRecords - pendingCount}</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Resumen de pendientes */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Registros Pendientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Registros pendientes de migración a Siigo
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Botón de migración masiva */}
         <Card>
@@ -407,7 +347,7 @@ export default function FlypassSiigoMigrationPage() {
           <CardContent>
             <Button 
               onClick={startMigration}
-              disabled={isMigrating || !credentials.isConfigured || pendingCount === 0}
+              disabled={isMigrating || pendingCount === 0}
               className="flex items-center gap-2"
             >
               {isMigrating ? (
@@ -422,11 +362,6 @@ export default function FlypassSiigoMigrationPage() {
                 </>
               )}
             </Button>
-            {!credentials.isConfigured && (
-              <p className="text-sm text-red-600 mt-2">
-                Las credenciales de Siigo no están configuradas
-              </p>
-            )}
             {pendingCount === 0 && (
               <p className="text-sm text-green-600 mt-2">
                 No hay registros pendientes de migración
@@ -443,7 +378,7 @@ export default function FlypassSiigoMigrationPage() {
               Registros de Flypass Data
             </CardTitle>
             <CardDescription>
-              {totalRecords} registros encontrados • Página {currentPage} de {totalPages}
+              Página {currentPage} de {totalPages}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -475,7 +410,7 @@ export default function FlypassSiigoMigrationPage() {
                   </Button>
                   
                   <span className="text-sm text-muted-foreground">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalRecords)} de {totalRecords}
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, flypassData.length + ((currentPage - 1) * itemsPerPage))} registros
                   </span>
                   
                   <Button
