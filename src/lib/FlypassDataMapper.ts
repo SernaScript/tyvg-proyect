@@ -182,12 +182,26 @@ export class FlypassDataMapper {
         try {
           const mappedData = this.mapExcelRowToDatabase(row);
           
-          // Insertar o actualizar en la base de datos
-          await prisma.flypassData.upsert({
+          // Verificar si el registro ya existe
+          const existingRecord = await prisma.flypassData.findUnique({
             where: { cufe: mappedData.cufe },
-            update: mappedData,
-            create: mappedData
+            select: { accounted: true }
           });
+          
+          // Si existe, preservar el estado de contabilización
+          if (existingRecord) {
+            // Actualizar solo los campos de datos, preservando el estado de contabilización
+            const { accounted, ...dataToUpdate } = mappedData;
+            await prisma.flypassData.update({
+              where: { cufe: mappedData.cufe },
+              data: dataToUpdate
+            });
+          } else {
+            // Si no existe, crear nuevo registro
+            await prisma.flypassData.create({
+              data: mappedData
+            });
+          }
           
           processedRows++;
           
