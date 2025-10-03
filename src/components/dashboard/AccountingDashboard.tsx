@@ -185,20 +185,20 @@ export function AccountingDashboard({ user }: AccountingDashboardProps) {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/areas/accounting/automatizacion-f2x">
+              <Link href="/areas/accounting/flypass-data">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-blue-600" />
-                    Automatización F2X
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    Datos de Flypass
                   </CardTitle>
                   <CardDescription>
-                    Procesamiento automático de documentos F2X
+                    Gestión y procesamiento de datos de peajes
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm text-muted-foreground">
-                    <p>324 procesos completados</p>
-                    <p>98.7% de precisión</p>
+                    <p>6,781 registros procesados</p>
+                    <p>90.15% contabilizados</p>
                   </div>
                 </CardContent>
               </Link>
@@ -275,10 +275,10 @@ export function AccountingDashboard({ user }: AccountingDashboardProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
-            <Link href="/areas/accounting/automatizacion-f2x">
+            <Link href="/areas/accounting/flypass-data">
               <Button size="lg">
-                <Zap className="mr-2 h-4 w-4" />
-                Procesar F2X
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Gestionar Flypass
               </Button>
             </Link>
             <Link href="/areas/accounting/reconciliation">

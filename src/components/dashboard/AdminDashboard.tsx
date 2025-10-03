@@ -190,10 +190,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
-            <Link href="/areas/accounting/automatizacion-f2x">
+            <Link href="/areas/accounting/flypass-data">
               <Button size="lg">
-                <Zap className="mr-2 h-4 w-4" />
-                Automatización F2X
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Datos de Flypass
               </Button>
             </Link>
             <Link href="/areas/treasury/approved-payments">

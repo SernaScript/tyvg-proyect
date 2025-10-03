@@ -18,11 +18,11 @@ import {
   Zap,
   Settings,
   Fuel,
+  Database,
   Car,
   Link as LinkIcon,
   Key,
   TestTube,
-  Database,
   ArrowUpDown,
   Target,
   CheckCircle,
@@ -69,11 +69,19 @@ export const AREAS_CONFIG: AreaConfig[] = [
     color: AreaColor.BLUE,
     modules: [
       {
-        id: "f2x-automation",
-        name: "Automatización F2X",
-        description: "Procesamiento automático de documentos F2X",
-        icon: Zap,
-        href: "/areas/accounting/automatizacion-f2x",
+        id: "flypass-data",
+        name: "Datos de Flypass",
+        description: "Gestión y procesamiento de datos de peajes Flypass",
+        icon: Database,
+        href: "/areas/accounting/flypass-data",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "flypass-reports",
+        name: "Reportes Flypass",
+        description: "Análisis y estadísticas de datos de peajes",
+        icon: BarChart3,
+        href: "/areas/accounting/flypass-reports",
         status: ModuleStatus.ACTIVE
       },
       {

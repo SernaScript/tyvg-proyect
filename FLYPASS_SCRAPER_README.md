@@ -1,14 +1,15 @@
-# Automatización F2X - Scraper de Flypass
+# Datos de Flypass - Sistema de Gestión
 
 ## 📋 Descripción
 
-Este módulo automatiza el proceso de descarga de facturas desde el portal de Flypass (https://clientes.flypass.com.co/) utilizando web scraping con Playwright.
+Este módulo gestiona y procesa datos de peajes desde el portal de Flypass (https://clientes.flypass.com.co/) utilizando web scraping con Playwright y migración automática a la base de datos.
 
 ## 🚀 Características
 
-- **Automatización completa**: Desde login hasta descarga de archivos
-- **TypeScript**: Código tipado y seguro
-- **Interfaz intuitiva**: Formulario web con validaciones
+- **Scraping automatizado**: Descarga de datos desde el portal de Flypass
+- **Migración inteligente**: Procesamiento automático de archivos Excel
+- **Preservación de estado**: Mantiene el estado de contabilización existente
+- **Interfaz intuitiva**: Modales con validaciones y estados de carga
 - **Manejo de errores**: Captura de pantallas y logs detallados
 - **Tiempo real**: Estado y progreso en vivo
 - **Seguridad**: Las credenciales no se almacenan
@@ -20,28 +21,32 @@ Este módulo automatiza el proceso de descarga de facturas desde el portal de Fl
 - **TypeScript**: Tipado estático
 - **ShadCN UI**: Componentes de interfaz
 - **Tailwind CSS**: Estilos
+- **Prisma**: ORM para base de datos
+- **XLSX**: Procesamiento de archivos Excel
 
 ## 📝 Cómo Usar
 
-### 1. Completar el Formulario
+### 1. Scraping de Datos
 
-En la página **Automatización F2X**, completa los siguientes campos:
+En la página **Datos de Flypass**, haz clic en el botón **"Scraping"**:
 
 - **NIT**: Número de identificación tributaria
 - **Contraseña**: Contraseña de acceso a Flypass
-- **Fecha Inicial**: Fecha de inicio del rango (formato: dd/mm/yyyy)
-- **Fecha Final**: Fecha de fin del rango (formato: dd/mm/yyyy)
+- **Fecha Inicial**: Fecha de inicio del rango (formato: YYYY-MM-DD)
+- **Fecha Final**: Fecha de fin del rango (formato: YYYY-MM-DD)
 
-### 2. Iniciar el Proceso
+### 2. Migración de Excel
 
-- Haz clic en **"Iniciar Scraping F2X"**
-- El botón mostrará "Procesando..." mientras se ejecuta
-- Verás el progreso en tiempo real
+Haz clic en el botón **"Migrar Excel"** para procesar el archivo más reciente:
+
+- Muestra estadísticas actuales de la base de datos
+- Lista archivos Excel disponibles
+- Migra automáticamente preservando el estado de contabilización
 
 ### 3. Resultados
 
 El sistema mostrará:
-- ✅ **Éxito**: Si la descarga fue completada
+- ✅ **Éxito**: Si la operación fue completada
 - ❌ **Error**: Si ocurrió algún problema
 - 📊 **Detalles**: Información del proceso realizado
 
@@ -53,13 +58,22 @@ El sistema mostrará:
 src/
 ├── lib/
 │   ├── WebScraper.ts          # Clase base para web scraping
-│   └── FlypassScraper.ts      # Lógica específica de Flypass
+│   ├── FlypassScraper.ts      # Lógica específica de Flypass
+│   ├── FlypassDataMapper.ts   # Mapeo de datos a la base de datos
+│   └── ExcelProcessor.ts      # Procesamiento de archivos Excel
 ├── app/
-│   └── api/
-│       └── flypass-scraping/
-│           └── route.ts       # API endpoint para el scraping
+│   ├── api/
+│   │   ├── flypass-scraping/
+│   │   │   └── route.ts       # API endpoint para el scraping
+│   │   └── flypass-data/
+│   │       └── migrate/
+│   │           └── route.ts   # API endpoint para migración
+│   └── areas/accounting/flypass-data/
+│       └── page.tsx           # Página principal
 ├── components/
-│   ├── LoginForm.tsx          # Formulario principal
+│   ├── modals/
+│   │   ├── FlypassScrapingModal.tsx    # Modal de scraping
+│   │   └── FlypassMigrationModal.tsx   # Modal de migración
 │   └── ScrapingStatus.tsx     # Estado del sistema
 └── app/automatizacion-f2x/
     └── page.tsx              # Página principal del módulo

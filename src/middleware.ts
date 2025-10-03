@@ -35,7 +35,8 @@ const AREA_ROUTE_PATTERNS = [
 
 // Module-specific route patterns
 const MODULE_ROUTE_PATTERNS = [
-  { pattern: /^\/areas\/accounting\/automatizacion-f2x$/, areaId: 'accounting', moduleId: 'f2x-automation' },
+  { pattern: /^\/areas\/accounting\/flypass-data$/, areaId: 'accounting', moduleId: 'flypass-data' },
+  { pattern: /^\/areas\/accounting\/flypass-reports$/, areaId: 'accounting', moduleId: 'flypass-reports' },
   { pattern: /^\/areas\/accounting\/reconciliation$/, areaId: 'accounting', moduleId: 'reconciliation' },
   { pattern: /^\/areas\/treasury\/portfolio$/, areaId: 'treasury', moduleId: 'portfolio' }
 ]
