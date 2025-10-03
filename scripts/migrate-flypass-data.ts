@@ -299,7 +299,7 @@ async function main() {
     process.exit(0);
   } else {
     console.log('\n❌ Migración falló');
-    console.log(`Error: ${result.error}`);
+    console.log(`Error: ${result.duration}`);
     process.exit(1);
   }
 }
