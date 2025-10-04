@@ -1,225 +1,267 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MetricsGrid } from "@/components/shared/MetricsCard"
-import { ActivityFeed } from "@/components/shared/ActivityFeed"
-import { Building2, TrendingUp, AlertCircle, CheckCircle, Clock, Settings } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Building2, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Eye, 
+  Edit,
+  CheckCircle,
+  AlertCircle,
+  Clock
+} from "lucide-react"
 
 export default function ReconciliationPage() {
-  const metrics = [
-    {
-      title: "Cuentas Conciliadas",
-      value: "12",
-      description: "De 15 cuentas totales",
-      icon: CheckCircle,
-      trend: { value: "+2 este mes", type: "increase" as const }
-    },
-    {
-      title: "Diferencias Detectadas",
-      value: "3",
-      description: "Requieren revisión",
-      icon: AlertCircle,
-      trend: { value: "-1 desde ayer", type: "decrease" as const }
-    },
-    {
-      title: "Tiempo Promedio",
-      value: "1.5h",
-      description: "Por conciliación",
-      icon: Clock,
-      trend: { value: "-30min", type: "decrease" as const }
-    },
-    {
-      title: "Precisión",
-      value: "98.5%",
-      description: "Tasa de aciertos",
-      icon: TrendingUp,
-      trend: { value: "+0.5%", type: "increase" as const }
-    }
-  ]
+  const router = useRouter()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
 
-  const activities = [
+  // Datos ficticios de conciliaciones realizadas
+  const reconciliations = [
     {
       id: "1",
-      title: "Conciliación completada",
-      description: "Banco Santander - Cuenta corriente 123456789",
-      timestamp: "Hace 2 horas",
-      type: "success" as const
+      bank: "Banco Santander",
+      account: "1234567890",
+      accountType: "Cuenta Corriente",
+      period: "Enero 2024",
+      status: "completed",
+      totalTransactions: 145,
+      matchedTransactions: 142,
+      unmatchedTransactions: 3,
+      totalAmount: 12500000,
+      matchedAmount: 12450000,
+      difference: 50000,
+      createdBy: "María González",
+      createdAt: "2024-01-15",
+      completedAt: "2024-01-15T14:30:00"
     },
     {
-      id: "2",
-      title: "Diferencia detectada",
-      description: "Banco Davivienda - Diferencia de $15,000",
-      timestamp: "Hace 4 horas",
-      type: "warning" as const
+      id: "2", 
+      bank: "Banco Davivienda",
+      account: "9876543210",
+      accountType: "Cuenta de Ahorros",
+      period: "Enero 2024",
+      status: "pending",
+      totalTransactions: 89,
+      matchedTransactions: 85,
+      unmatchedTransactions: 4,
+      totalAmount: 8500000,
+      matchedAmount: 8400000,
+      difference: 100000,
+      createdBy: "Carlos Rodríguez",
+      createdAt: "2024-01-16",
+      completedAt: null
     },
     {
       id: "3",
-      title: "Proceso iniciado",
-      description: "Banco Bogotá - Cuenta ahorros 987654321",
-      timestamp: "Hace 6 horas",
-      type: "info" as const
+      bank: "Banco de Bogotá",
+      account: "5555444433",
+      accountType: "Cuenta Corriente",
+      period: "Diciembre 2023",
+      status: "completed",
+      totalTransactions: 203,
+      matchedTransactions: 200,
+      unmatchedTransactions: 3,
+      totalAmount: 18500000,
+      matchedAmount: 18450000,
+      difference: 50000,
+      createdBy: "Ana Martínez",
+      createdAt: "2023-12-30",
+      completedAt: "2023-12-30T16:45:00"
+    },
+    {
+      id: "4",
+      bank: "BBVA Colombia",
+      account: "1111222233",
+      accountType: "Cuenta Corriente",
+      period: "Enero 2024",
+      status: "in_progress",
+      totalTransactions: 67,
+      matchedTransactions: 60,
+      unmatchedTransactions: 7,
+      totalAmount: 7200000,
+      matchedAmount: 7000000,
+      difference: 200000,
+      createdBy: "Luis Pérez",
+      createdAt: "2024-01-17",
+      completedAt: null
+    },
+    {
+      id: "5",
+      bank: "Scotiabank Colpatria",
+      account: "7777888899",
+      accountType: "Cuenta de Ahorros",
+      period: "Enero 2024",
+      status: "completed",
+      totalTransactions: 34,
+      matchedTransactions: 34,
+      unmatchedTransactions: 0,
+      totalAmount: 3200000,
+      matchedAmount: 3200000,
+      difference: 0,
+      createdBy: "Patricia López",
+      createdAt: "2024-01-18",
+      completedAt: "2024-01-18T10:15:00"
     }
   ]
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Completada</Badge>
+      case "in_progress":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Clock className="w-3 h-3 mr-1" />En Proceso</Badge>
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><AlertCircle className="w-3 h-3 mr-1" />Pendiente</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  const filteredReconciliations = reconciliations.filter(reconciliation => {
+    const matchesSearch = reconciliation.bank.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         reconciliation.account.includes(searchTerm) ||
+                         reconciliation.period.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === "all" || reconciliation.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
 
   return (
     <AreaLayout 
       areaId="accounting" 
       moduleId="reconciliation"
       actions={
-        <Button variant="outline" size="sm">
-          <Settings className="mr-2 h-4 w-4" />
-          Configurar
+        <Button onClick={() => router.push('/areas/accounting/reconciliation/new')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nueva Conciliación
         </Button>
       }
     >
       <div className="space-y-6">
-        {/* Development Notice */}
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
-              <AlertCircle className="h-5 w-5" />
-              Módulo en Desarrollo
-            </CardTitle>
-            <CardDescription className="text-orange-700">
-              Este módulo está actualmente en desarrollo. Las funcionalidades mostradas son ejemplos de lo que estará disponible próximamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
-                En Desarrollo
-              </Badge>
-              <span className="text-sm text-orange-700">
-                Fecha estimada de lanzamiento: Febrero 2024
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Metrics */}
-        <MetricsGrid metrics={metrics} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Main Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-500" />
-                Conciliación Bancaria Automática
-              </CardTitle>
-              <CardDescription>
-                Automatización del proceso de conciliación entre registros contables y extractos bancarios
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Funcionalidades Planeadas:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Importación automática de extractos bancarios
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Coincidencia automática de transacciones
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                      Detección de diferencias y excepciones
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                      Generación de reportes de conciliación
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                      Integración con múltiples bancos
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="pt-4 border-t">
-                  <h4 className="font-semibold mb-2">Beneficios Esperados:</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium text-green-600">Reducción de Tiempo</p>
-                      <p className="text-gray-600">80% menos tiempo manual</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-blue-600">Mayor Precisión</p>
-                      <p className="text-gray-600">99%+ de precisión</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-purple-600">Automatización</p>
-                      <p className="text-gray-600">Proceso 24/7</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-orange-600">Trazabilidad</p>
-                      <p className="text-gray-600">Auditoría completa</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Activity Feed */}
-          <ActivityFeed 
-            title="Actividad de Conciliación"
-            description="Historial de procesos de conciliación"
-            activities={activities}
-          />
-        </div>
-
-        {/* Technical Specifications */}
+        {/* Sección 1: Conciliaciones Realizadas */}
         <Card>
           <CardHeader>
-            <CardTitle>Especificaciones Técnicas</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-blue-500" />
+              Conciliaciones Realizadas
+            </CardTitle>
             <CardDescription>
-              Detalles técnicos del módulo de conciliación bancaria
+              Historial de conciliaciones bancarias realizadas y su estado actual
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className="font-semibold mb-3">Formatos Soportados</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Archivos Excel (.xlsx, .xls)</li>
-                  <li>• CSV delimitado</li>
-                  <li>• PDF con OCR</li>
-                  <li>• Archivos de texto plano</li>
-                  <li>• API bancarias directas</li>
-                </ul>
+            {/* Filtros */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Buscar por banco, cuenta o período..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-3">Algoritmos</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Coincidencia por monto exacto</li>
-                  <li>• Coincidencia por fecha</li>
-                  <li>• Análisis de texto descriptivo</li>
-                  <li>• Machine Learning para patrones</li>
-                  <li>• Validación cruzada</li>
-                </ul>
+              <div className="sm:w-48">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filtrar por estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="completed">Completadas</SelectItem>
+                    <SelectItem value="in_progress">En Proceso</SelectItem>
+                    <SelectItem value="pending">Pendientes</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-3">Integraciones</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Sistema contable principal</li>
-                  <li>• APIs bancarias</li>
-                  <li>• Módulo de reportes</li>
-                  <li>• Sistema de notificaciones</li>
-                  <li>• Auditoría y logs</li>
-                </ul>
-              </div>
+            </div>
+
+            {/* Lista de Conciliaciones */}
+            <div className="space-y-4">
+              {filteredReconciliations.map((reconciliation) => (
+                <Card key={reconciliation.id} className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg">{reconciliation.bank}</h3>
+                          {getStatusBadge(reconciliation.status)}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
+                          <div>
+                            <p className="font-medium">Cuenta: {reconciliation.account}</p>
+                            <p className="text-xs">{reconciliation.accountType}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Período: {reconciliation.period}</p>
+                            <p className="text-xs">Creada: {formatDate(reconciliation.createdAt)}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Transacciones: {reconciliation.totalTransactions}</p>
+                            <p className="text-xs">
+                              Conciliadas: {reconciliation.matchedTransactions} | 
+                              Sin conciliar: {reconciliation.unmatchedTransactions}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Total: {formatCurrency(reconciliation.totalAmount)}</p>
+                            <p className="text-xs">
+                              Diferencia: {formatCurrency(reconciliation.difference)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="w-4 h-4 mr-1" />
+                          Reporte
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </CardContent>
         </Card>
+
       </div>
     </AreaLayout>
   )
