@@ -8,38 +8,41 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { 
   ArrowLeft,
   Plus,
-  FileText,
-  Building2
+  Building2,
+  Calendar,
+  ChevronRight
 } from "lucide-react"
 
 export default function NewReconciliationPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    bank: "",
-    account: "",
-    accountType: "",
-    period: "",
-    description: ""
-  })
+  const [selectedBank, setSelectedBank] = useState("")
+  const [selectedPeriod, setSelectedPeriod] = useState("")
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const handleBankChange = (bank: string) => {
+    setSelectedBank(bank)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Aquí iría la lógica para crear la conciliación
-    console.log("Creando conciliación:", formData)
-    // Redirigir de vuelta a la lista de conciliaciones
-    router.push('/areas/accounting/reconciliation')
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period)
   }
+
+  const handleContinue = () => {
+    if (selectedBank && selectedPeriod) {
+      // Redirigir a la página específica del banco y período
+      if (selectedBank === 'bancolombia') {
+        router.push(`/areas/accounting/reconciliation/new/bancolombia/${selectedPeriod}`)
+      } else {
+        // Para otros bancos, usar la ruta genérica
+        const bankSlug = selectedBank.toLowerCase().replace(/\s+/g, '-')
+        router.push(`/areas/accounting/reconciliation/new/${bankSlug}/${selectedPeriod}`)
+      }
+    }
+  }
+
+  const isFormValid = selectedBank && selectedPeriod
 
   return (
     <AreaLayout 
@@ -61,112 +64,112 @@ export default function NewReconciliationPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-green-500" />
-              Crear Nueva Conciliación
+              Nueva Conciliación
             </CardTitle>
             <CardDescription>
-              Configure los parámetros para realizar una nueva conciliación bancaria
+              Seleccione el banco y el período para iniciar el proceso de conciliación
             </CardDescription>
           </CardHeader>
         </Card>
 
-        {/* Formulario */}
+        {/* Selección de Banco y Período */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-500" />
-              Información de la Conciliación
+              Configuración Inicial
             </CardTitle>
             <CardDescription>
-              Complete los datos requeridos para iniciar el proceso de conciliación
+              Elija el banco y el período que desea conciliar
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label htmlFor="bank">Banco *</Label>
+                  <Label htmlFor="bank" className="text-base font-medium">
+                    <Building2 className="inline w-4 h-4 mr-2" />
+                    Banco *
+                  </Label>
                   <Select 
-                    value={formData.bank} 
-                    onValueChange={(value) => handleInputChange('bank', value)}
+                    value={selectedBank} 
+                    onValueChange={handleBankChange}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12">
                       <SelectValue placeholder="Seleccionar banco" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="occidente">Banco de Occidente</SelectItem>
+                      <SelectItem value="banco-de-occidente">Banco de Occidente</SelectItem>
                       <SelectItem value="bancolombia">Bancolombia</SelectItem>
-                      <SelectItem value="davivienda">Banco Davivienda</SelectItem>
-                      <SelectItem value="bogota">Banco de Bogotá</SelectItem>
+                      <SelectItem value="banco-davivienda">Banco Davivienda</SelectItem>
+                      <SelectItem value="banco-de-bogota">Banco de Bogotá</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-3">
-                  <Label htmlFor="account">Número de Cuenta *</Label>
-                  <Input 
-                    id="account" 
-                    placeholder="Ingrese el número de cuenta"
-                    value={formData.account}
-                    onChange={(e) => handleInputChange('account', e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-3">
-                  <Label htmlFor="accountType">Tipo de Cuenta *</Label>
-                  <Select 
-                    value={formData.accountType} 
-                    onValueChange={(value) => handleInputChange('accountType', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="current">Cuenta Corriente</SelectItem>
-                      <SelectItem value="savings">Cuenta de Ahorros</SelectItem>
-                      <SelectItem value="credit">Tarjeta de Crédito</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-3">
-                  <Label htmlFor="period">Período de Conciliación *</Label>
+                  <Label htmlFor="period" className="text-base font-medium">
+                    <Calendar className="inline w-4 h-4 mr-2" />
+                    Período *
+                  </Label>
                   <Input 
                     id="period" 
                     type="month"
-                    value={formData.period}
-                    onChange={(e) => handleInputChange('period', e.target.value)}
+                    value={selectedPeriod}
+                    onChange={(e) => handlePeriodChange(e.target.value)}
+                    className="h-12"
                     required
                   />
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <Label htmlFor="description">Descripción (Opcional)</Label>
-                <Textarea 
-                  id="description" 
-                  placeholder="Agregue una descripción para esta conciliación..."
-                  rows={5}
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                />
-              </div>
+              {/* Información de la selección */}
+              {selectedBank && selectedPeriod && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-blue-800">
+                      <Building2 className="w-4 h-4" />
+                      <span className="font-medium">
+                        {selectedBank === 'banco-de-occidente' && 'Banco de Occidente'}
+                        {selectedBank === 'bancolombia' && 'Bancolombia'}
+                        {selectedBank === 'banco-davivienda' && 'Banco Davivienda'}
+                        {selectedBank === 'banco-de-bogota' && 'Banco de Bogotá'}
+                      </span>
+                      <span className="text-blue-600">•</span>
+                      <Calendar className="w-4 h-4" />
+                      <span className="font-medium">
+                        {new Date(selectedPeriod + '-01').toLocaleDateString('es-CO', { 
+                          year: 'numeric', 
+                          month: 'long' 
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-blue-600 mt-2">
+                      Procederá a configurar la conciliación para esta entidad y período.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
               
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                <Button type="submit" className="flex-1">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Iniciar Conciliación
+                <Button 
+                  onClick={handleContinue}
+                  disabled={!isFormValid}
+                  className="flex-1 h-12"
+                >
+                  <ChevronRight className="w-4 h-4 mr-2" />
+                  Continuar
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => router.push('/areas/accounting/reconciliation')}
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 sm:flex-none h-12"
                 >
                   Cancelar
                 </Button>
               </div>
-            </form>
+            </div>
           </CardContent>
         </Card>
       </div>
