@@ -768,6 +768,7 @@ export default function PaymentSchedulingPage() {
   const paymentSummary = useMemo(() => {
     const summary = {
       totalPaymentValue: 0,
+      totalBalance: 0,
       providersWithPayments: [] as Array<{
         providerName: string
         providerIdentification: string
@@ -775,12 +776,15 @@ export default function PaymentSchedulingPage() {
         documentCount: number
       }>,
       totalDocuments: 0,
-      totalProviders: 0
+      totalProviders: 0,
+      totalFilteredDocuments: 0
     }
 
     filteredProviders.forEach(group => {
       let groupTotalPayment = 0
+      let groupTotalBalance = 0
       let groupDocumentCount = 0
+      let groupFilteredDocumentCount = 0
 
       group.documents.forEach(doc => {
         // Aplicar filtro de cost center a nivel de documento
@@ -791,11 +795,22 @@ export default function PaymentSchedulingPage() {
           documentMatchesFilter = doc.costCenterName !== 'DEPOSITO'
         }
 
+        // Contar todos los documentos que coinciden con el filtro
+        if (documentMatchesFilter) {
+          groupTotalBalance += Number(doc.balance)
+          groupFilteredDocumentCount++
+        }
+
+        // Solo contar documentos con valores de pago
         if (documentMatchesFilter && doc.paymentValue && doc.paymentValue > 0) {
           groupTotalPayment += Number(doc.paymentValue)
           groupDocumentCount++
         }
       })
+
+      // Agregar al total de balance
+      summary.totalBalance += groupTotalBalance
+      summary.totalFilteredDocuments += groupFilteredDocumentCount
 
       if (groupTotalPayment > 0) {
         summary.totalPaymentValue += groupTotalPayment
@@ -1308,6 +1323,35 @@ export default function PaymentSchedulingPage() {
                          )}
                        </div>
                      </div>
+                     
+                     {/* Totales */}
+                     <div className="flex items-center gap-6">
+                       {/* Total Balance */}
+                       <div className="text-right">
+                         <div className="text-sm text-gray-600">Total Balance</div>
+                         <div className="text-xl font-bold text-green-600 flex items-center gap-1">
+                           <DollarSign className="h-4 w-4" />
+                           ${Math.round(paymentSummary.totalBalance).toLocaleString()}
+                         </div>
+                         <div className="text-xs text-gray-500">
+                           {paymentSummary.totalFilteredDocuments} documentos
+                         </div>
+                       </div>
+                       
+                       {/* Total Valores de Pago */}
+                       <div className="text-right">
+                         <div className="text-sm text-gray-600">Total Valores de Pago</div>
+                         <div className="text-2xl font-bold text-blue-600 flex items-center gap-1">
+                           <DollarSign className="h-5 w-5" />
+                           ${Math.round(paymentSummary.totalPaymentValue).toLocaleString()}
+                         </div>
+                         {paymentSummary.totalPaymentValue > 0 && (
+                           <div className="text-xs text-gray-500">
+                             {paymentSummary.totalProviders} proveedores • {paymentSummary.totalDocuments} documentos
+                           </div>
+                         )}
+                       </div>
+                     </div>
                    </div>
                    
                    {showFilters && (
@@ -1595,24 +1639,30 @@ export default function PaymentSchedulingPage() {
                   const summary = paymentSummary
                   return (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                           <p className="text-3xl font-bold text-green-600">
-                            ${Math.round(summary.totalPaymentValue).toLocaleString()}
+                            ${Math.round(summary.totalBalance).toLocaleString()}
                           </p>
-                          <p className="text-sm text-green-700 font-medium">Total a Pagar</p>
+                          <p className="text-sm text-green-700 font-medium">Total Balance</p>
                         </div>
                         <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <p className="text-3xl font-bold text-blue-600">
-                            {summary.totalProviders}
+                            ${Math.round(summary.totalPaymentValue).toLocaleString()}
                           </p>
-                          <p className="text-sm text-blue-700 font-medium">Proveedores</p>
+                          <p className="text-sm text-blue-700 font-medium">Total a Pagar</p>
                         </div>
                         <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                           <p className="text-3xl font-bold text-purple-600">
+                            {summary.totalProviders}
+                          </p>
+                          <p className="text-sm text-purple-700 font-medium">Proveedores</p>
+                        </div>
+                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                          <p className="text-3xl font-bold text-orange-600">
                             {summary.totalDocuments}
                           </p>
-                          <p className="text-sm text-purple-700 font-medium">Documentos</p>
+                          <p className="text-sm text-orange-700 font-medium">Documentos</p>
                         </div>
                       </div>
 
