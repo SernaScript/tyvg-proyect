@@ -12,9 +12,8 @@ export async function GET(request: NextRequest) {
     console.log(`Obteniendo datos de flypass_data - Página ${page}, Límite ${limit}, Solo pendientes: ${showOnlyPending}`)
     
     // Construir filtro where - pendientes = accounted: false, contabilizados = accounted: true
-    // Solo mostrar registros con documentType = "FC"
+    // Mostrar todos los tipos de documentos (FC, NC, etc.)
     const whereClause = {
-      documentType: "FC",
       ...(showOnlyPending ? { accounted: false } : {})
     }
     
