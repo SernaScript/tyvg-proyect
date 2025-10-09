@@ -39,6 +39,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuthState()
   }, [])
 
+  // Verificar el estado de autenticación cuando cambie la URL (después de login)
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (window.location.pathname === '/dashboard' && !user) {
+        // Si estamos en el dashboard pero no tenemos usuario, verificar el estado
+        checkAuthState()
+      }
+    }
+
+    // Verificar inmediatamente si estamos en dashboard sin usuario
+    handleRouteChange()
+
+    // Escuchar cambios de ruta
+    window.addEventListener('popstate', handleRouteChange)
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange)
+    }
+  }, [user])
+
   const checkAuthState = async () => {
     try {
       const response = await fetch('/api/auth/me', {
@@ -82,7 +102,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(data.message || 'Login failed')
       }
 
+      // Actualizar el estado del usuario inmediatamente
       setUser(data.user)
+      
+      // Pequeña pausa para asegurar que la cookie se establezca
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Redirect to dashboard or intended page
       const urlParams = new URLSearchParams(window.location.search)

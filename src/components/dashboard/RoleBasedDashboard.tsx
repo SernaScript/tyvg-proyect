@@ -22,7 +22,14 @@ export function RoleBasedDashboard() {
   }
 
   if (!user) {
-    return null
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando información del usuario...</p>
+        </div>
+      </div>
+    )
   }
 
   const role = user.role.name

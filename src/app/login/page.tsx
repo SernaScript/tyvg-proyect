@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useAuth } from "@/contexts/AuthContext"
 import { 
   Truck,
   Lock,
@@ -24,6 +25,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -36,26 +38,13 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
+      await login({
+        email: formData.email,
+        password: formData.password
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed')
-      }
-
-      // Redirect to dashboard on success
-      router.push("/dashboard")
+      
+      // El login del contexto ya maneja la redirección
+      // No necesitamos hacer router.push aquí
       
     } catch (error) {
       console.error('Login error:', error)
