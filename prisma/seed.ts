@@ -48,6 +48,18 @@ const TEST_USERS = [
     password: 'Viewer2024!',
     name: 'Usuario Solo Lectura',
     role: RoleName.VIEWER
+  },
+  {
+    email: 'conductor@tyvg.com',
+    password: 'Conductor2024!',
+    name: 'Conductor Ejemplo',
+    role: RoleName.DRIVER
+  },
+  {
+    email: 'cliente@tyvg.com',
+    password: 'Cliente2024!',
+    name: 'Cliente Ejemplo',
+    role: RoleName.CLIENT
   }
 ]
 
@@ -86,6 +98,16 @@ const ROLES_DATA = [
     name: RoleName.VIEWER,
     displayName: 'Solo Lectura',
     description: 'Acceso de solo lectura a todas las áreas'
+  },
+  {
+    name: RoleName.DRIVER,
+    displayName: 'Conductor',
+    description: 'Acceso para conductores de vehículos'
+  },
+  {
+    name: RoleName.CLIENT,
+    displayName: 'Cliente',
+    description: 'Acceso para clientes que solicitan servicios'
   }
 ]
 
@@ -154,7 +176,34 @@ const PERMISSIONS_DATA = [
   
   // Database permissions
   { name: 'database:view', resource: 'database', action: PermissionAction.VIEW, description: 'Ver base de datos' },
-  { name: 'database:manage', resource: 'database', action: PermissionAction.MANAGE, description: 'Gestión completa de base de datos' }
+  { name: 'database:manage', resource: 'database', action: PermissionAction.MANAGE, description: 'Gestión completa de base de datos' },
+  
+  // Logistics specific permissions
+  { name: 'logistics:clients:view', resource: 'logistics_clients', action: PermissionAction.VIEW, description: 'Ver clientes' },
+  { name: 'logistics:clients:create', resource: 'logistics_clients', action: PermissionAction.CREATE, description: 'Crear clientes' },
+  { name: 'logistics:clients:edit', resource: 'logistics_clients', action: PermissionAction.EDIT, description: 'Editar clientes' },
+  { name: 'logistics:projects:view', resource: 'logistics_projects', action: PermissionAction.VIEW, description: 'Ver proyectos/obras' },
+  { name: 'logistics:projects:create', resource: 'logistics_projects', action: PermissionAction.CREATE, description: 'Crear proyectos/obras' },
+  { name: 'logistics:projects:edit', resource: 'logistics_projects', action: PermissionAction.EDIT, description: 'Editar proyectos/obras' },
+  { name: 'logistics:materials:view', resource: 'logistics_materials', action: PermissionAction.VIEW, description: 'Ver materiales' },
+  { name: 'logistics:materials:create', resource: 'logistics_materials', action: PermissionAction.CREATE, description: 'Crear materiales' },
+  { name: 'logistics:materials:edit', resource: 'logistics_materials', action: PermissionAction.EDIT, description: 'Editar materiales' },
+  { name: 'logistics:drivers:view', resource: 'logistics_drivers', action: PermissionAction.VIEW, description: 'Ver conductores' },
+  { name: 'logistics:drivers:create', resource: 'logistics_drivers', action: PermissionAction.CREATE, description: 'Crear conductores' },
+  { name: 'logistics:drivers:edit', resource: 'logistics_drivers', action: PermissionAction.EDIT, description: 'Editar conductores' },
+  { name: 'logistics:vehicles:view', resource: 'logistics_vehicles', action: PermissionAction.VIEW, description: 'Ver vehículos' },
+  { name: 'logistics:vehicles:create', resource: 'logistics_vehicles', action: PermissionAction.CREATE, description: 'Crear vehículos' },
+  { name: 'logistics:vehicles:edit', resource: 'logistics_vehicles', action: PermissionAction.EDIT, description: 'Editar vehículos' },
+  { name: 'logistics:trips:view', resource: 'logistics_trips', action: PermissionAction.VIEW, description: 'Ver viajes' },
+  { name: 'logistics:trips:create', resource: 'logistics_trips', action: PermissionAction.CREATE, description: 'Crear viajes' },
+  { name: 'logistics:trips:edit', resource: 'logistics_trips', action: PermissionAction.EDIT, description: 'Editar viajes' },
+  { name: 'logistics:expenses:view', resource: 'logistics_expenses', action: PermissionAction.VIEW, description: 'Ver gastos' },
+  { name: 'logistics:expenses:approve', resource: 'logistics_expenses', action: PermissionAction.EDIT, description: 'Aprobar gastos' },
+  { name: 'logistics:advances:view', resource: 'logistics_advances', action: PermissionAction.VIEW, description: 'Ver anticipos' },
+  { name: 'logistics:advances:create', resource: 'logistics_advances', action: PermissionAction.CREATE, description: 'Crear anticipos' },
+  { name: 'logistics:advances:legalize', resource: 'logistics_advances', action: PermissionAction.EDIT, description: 'Legalizar anticipos' },
+  { name: 'logistics:alerts:view', resource: 'logistics_alerts', action: PermissionAction.VIEW, description: 'Ver alertas' },
+  { name: 'logistics:alerts:manage', resource: 'logistics_alerts', action: PermissionAction.MANAGE, description: 'Gestionar alertas' }
 ]
 
 // Role-Permission mappings
@@ -164,6 +213,15 @@ const ROLE_PERMISSIONS_MAPPING = {
     'accounting:manage',
     'treasury:manage',
     'logistics:manage',
+    'logistics:clients:view', 'logistics:clients:create', 'logistics:clients:edit',
+    'logistics:projects:view', 'logistics:projects:create', 'logistics:projects:edit',
+    'logistics:materials:view', 'logistics:materials:create', 'logistics:materials:edit',
+    'logistics:drivers:view', 'logistics:drivers:create', 'logistics:drivers:edit',
+    'logistics:vehicles:view', 'logistics:vehicles:create', 'logistics:vehicles:edit',
+    'logistics:trips:view', 'logistics:trips:create', 'logistics:trips:edit',
+    'logistics:expenses:view', 'logistics:expenses:approve',
+    'logistics:advances:view', 'logistics:advances:create', 'logistics:advances:legalize',
+    'logistics:alerts:view', 'logistics:alerts:manage',
     'billing:manage',
     'siigo:manage',
     'reports:manage',
@@ -177,6 +235,15 @@ const ROLE_PERMISSIONS_MAPPING = {
     'accounting:manage',
     'treasury:manage',
     'logistics:manage',
+    'logistics:clients:view', 'logistics:clients:create', 'logistics:clients:edit',
+    'logistics:projects:view', 'logistics:projects:create', 'logistics:projects:edit',
+    'logistics:materials:view', 'logistics:materials:create', 'logistics:materials:edit',
+    'logistics:drivers:view', 'logistics:drivers:create', 'logistics:drivers:edit',
+    'logistics:vehicles:view', 'logistics:vehicles:create', 'logistics:vehicles:edit',
+    'logistics:trips:view', 'logistics:trips:create', 'logistics:trips:edit',
+    'logistics:expenses:view', 'logistics:expenses:approve',
+    'logistics:advances:view', 'logistics:advances:create', 'logistics:advances:legalize',
+    'logistics:alerts:view', 'logistics:alerts:manage',
     'billing:manage',
     'siigo:view',
     'reports:view',
@@ -202,6 +269,15 @@ const ROLE_PERMISSIONS_MAPPING = {
   [RoleName.LOGISTICS]: [
     'dashboard:view',
     'logistics:manage',
+    'logistics:clients:view', 'logistics:clients:create', 'logistics:clients:edit',
+    'logistics:projects:view', 'logistics:projects:create', 'logistics:projects:edit',
+    'logistics:materials:view', 'logistics:materials:create', 'logistics:materials:edit',
+    'logistics:drivers:view', 'logistics:drivers:create', 'logistics:drivers:edit',
+    'logistics:vehicles:view', 'logistics:vehicles:create', 'logistics:vehicles:edit',
+    'logistics:trips:view', 'logistics:trips:create', 'logistics:trips:edit',
+    'logistics:expenses:view', 'logistics:expenses:approve',
+    'logistics:advances:view', 'logistics:advances:create', 'logistics:advances:legalize',
+    'logistics:alerts:view', 'logistics:alerts:manage',
     'siigo:view',
     'reports:view',
     'billing:view'
@@ -221,6 +297,18 @@ const ROLE_PERMISSIONS_MAPPING = {
     'billing:view',
     'siigo:view',
     'reports:view'
+  ],
+  [RoleName.DRIVER]: [
+    'dashboard:view',
+    'logistics:trips:view',
+    'logistics:expenses:view',
+    'logistics:advances:view',
+    'logistics:alerts:view'
+  ],
+  [RoleName.CLIENT]: [
+    'dashboard:view',
+    'logistics:projects:view',
+    'logistics:trips:view'
   ]
 }
 
