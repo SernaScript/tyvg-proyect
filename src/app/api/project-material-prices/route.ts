@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             type: true,
-            unit: true
+            unitOfMeasure: true
           }
         }
       },
@@ -80,12 +80,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { projectId, materialId, price, validFrom, validTo, isActive = true } = body
+    const { projectId, materialId, salePrice, outsourcedPrice, validFrom, validTo, isActive = true } = body
 
     // Validaciones
-    if (!projectId || !materialId || !price || !validFrom) {
+    if (!projectId || !materialId || !salePrice || !outsourcedPrice || !validFrom) {
       return NextResponse.json(
-        { error: 'Proyecto, material, precio y fecha de inicio son requeridos' },
+        { error: 'Proyecto, material, precios y fecha de inicio son requeridos' },
         { status: 400 }
       )
     }
@@ -114,6 +114,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validar precios
+    if (parseFloat(salePrice) <= 0 || parseFloat(outsourcedPrice) <= 0) {
+      return NextResponse.json(
+        { error: 'Los precios deben ser mayores a cero' },
+        { status: 400 }
+      )
+    }
+
     // Validar fechas si se proporcionan
     if (validFrom && validTo) {
       const start = new Date(validFrom)
@@ -135,12 +143,12 @@ export async function POST(request: NextRequest) {
         isActive: true,
         OR: [
           {
-            validFrom: { lte: new Date(validTo || '2099-12-31') },
-            validTo: { gte: new Date(validFrom) }
+            startDate: { lte: new Date(validTo || '2099-12-31') },
+            endDate: { gte: new Date(validFrom) }
           },
           {
-            validFrom: { lte: new Date(validTo || '2099-12-31') },
-            validTo: null
+            startDate: { lte: new Date(validTo || '2099-12-31') },
+            endDate: null
           }
         ]
       }
@@ -158,9 +166,10 @@ export async function POST(request: NextRequest) {
       data: {
         projectId,
         materialId,
-        price: parseFloat(price),
-        validFrom: new Date(validFrom),
-        validTo: validTo ? new Date(validTo) : null,
+        salePrice: parseFloat(salePrice),
+        outsourcedPrice: parseFloat(outsourcedPrice),
+        startDate: new Date(validFrom),
+        endDate: validTo ? new Date(validTo) : null,
         isActive
       },
       include: {
@@ -182,7 +191,7 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             type: true,
-            unit: true
+            unitOfMeasure: true
           }
         }
       }

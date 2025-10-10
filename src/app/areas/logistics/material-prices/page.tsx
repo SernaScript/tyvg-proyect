@@ -26,9 +26,10 @@ import { CreateMaterialPriceModal } from "@/components/modals/CreateMaterialPric
 // Interface para los datos de precios de materiales
 interface ProjectMaterialPrice {
   id: string
-  price: number
-  validFrom: Date
-  validTo?: Date
+  salePrice: number
+  outsourcedPrice: number
+  startDate: Date
+  endDate?: Date
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -168,10 +169,10 @@ export default function MaterialPricesPage() {
   // Función para verificar si el precio está vigente
   const isPriceValid = (price: ProjectMaterialPrice) => {
     const today = new Date()
-    const validFrom = new Date(price.validFrom)
-    const validTo = price.validTo ? new Date(price.validTo) : null
+    const startDate = new Date(price.startDate)
+    const endDate = price.endDate ? new Date(price.endDate) : null
     
-    return today >= validFrom && (!validTo || today <= validTo)
+    return today >= startDate && (!endDate || today <= endDate)
   }
 
   return (
@@ -391,14 +392,25 @@ export default function MaterialPricesPage() {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                           <span>Cliente: {price.project.client.name}</span>
-                          <span className="font-semibold text-lg text-green-600">
-                            {formatPrice(price.price)}
-                          </span>
+                          <div className="flex gap-4">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500">Venta</p>
+                              <span className="font-semibold text-lg text-green-600">
+                                {formatPrice(price.salePrice)}
+                              </span>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500">Subcontratación</p>
+                              <span className="font-semibold text-lg text-blue-600">
+                                {formatPrice(price.outsourcedPrice)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                          <span>Válido desde: {formatDate(price.validFrom)}</span>
-                          {price.validTo && (
-                            <span>Hasta: {formatDate(price.validTo)}</span>
+                          <span>Válido desde: {formatDate(price.startDate)}</span>
+                          {price.endDate && (
+                            <span>Hasta: {formatDate(price.endDate)}</span>
                           )}
                           <span>Creado: {formatDate(price.createdAt)}</span>
                         </div>

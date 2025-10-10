@@ -22,6 +22,7 @@ interface Material {
   name: string
   type: string
   unitOfMeasure: string
+  isActive: boolean
 }
 
 interface CreateMaterialPriceModalProps {
@@ -42,7 +43,8 @@ export function CreateMaterialPriceModal({
   const [formData, setFormData] = useState({
     projectId: '',
     materialId: '',
-    price: '',
+    salePrice: '',
+    outsourcedPrice: '',
     validFrom: '',
     validTo: '',
     isActive: true
@@ -57,8 +59,8 @@ export function CreateMaterialPriceModal({
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
       setFormData(prev => ({ ...prev, [name]: checked }))
-    } else if (name === 'price') {
-      // Solo permitir números y punto decimal para el precio
+    } else if (name === 'salePrice' || name === 'outsourcedPrice') {
+      // Solo permitir números y punto decimal para los precios
       const numericValue = value.replace(/[^0-9.]/g, '')
       setFormData(prev => ({ ...prev, [name]: numericValue }))
     } else {
@@ -89,7 +91,8 @@ export function CreateMaterialPriceModal({
         },
         body: JSON.stringify({
           ...formData,
-          price: parseFloat(formData.price),
+          salePrice: parseFloat(formData.salePrice),
+          outsourcedPrice: parseFloat(formData.outsourcedPrice),
           validFrom: formData.validFrom || new Date().toISOString().split('T')[0],
           validTo: formData.validTo || null
         }),
@@ -119,7 +122,8 @@ export function CreateMaterialPriceModal({
     setFormData({
       projectId: '',
       materialId: '',
-      price: '',
+      salePrice: '',
+      outsourcedPrice: '',
       validFrom: '',
       validTo: '',
       isActive: true
@@ -142,9 +146,17 @@ export function CreateMaterialPriceModal({
   // Obtener información del material seleccionado
   const selectedMaterial = activeMaterials.find(m => m.id === formData.materialId)
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleClose}
+    >
+      <Card 
+        className="w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-yellow-600" />
@@ -204,14 +216,14 @@ export function CreateMaterialPriceModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price">Precio por Unidad *</Label>
+                <Label htmlFor="salePrice">Precio de Venta *</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    id="price"
-                    name="price"
+                    id="salePrice"
+                    name="salePrice"
                     type="text"
-                    value={formData.price}
+                    value={formData.salePrice}
                     onChange={handleInputChange}
                     placeholder="0.00"
                     required
@@ -221,7 +233,30 @@ export function CreateMaterialPriceModal({
                 </div>
                 {selectedMaterial && (
                   <p className="text-sm text-gray-500">
-                    Precio por {selectedMaterial.unitOfMeasure}
+                    Precio de venta por {selectedMaterial.unitOfMeasure}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="outsourcedPrice">Precio de Subcontratación *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="outsourcedPrice"
+                    name="outsourcedPrice"
+                    type="text"
+                    value={formData.outsourcedPrice}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+                {selectedMaterial && (
+                  <p className="text-sm text-gray-500">
+                    Precio de subcontratación por {selectedMaterial.unitOfMeasure}
                   </p>
                 )}
               </div>
@@ -284,6 +319,8 @@ export function CreateMaterialPriceModal({
                 <div>
                   <h4 className="font-medium text-blue-900">Información sobre Precios</h4>
                   <div className="text-sm text-blue-800 mt-1 space-y-1">
+                    <p>• <strong>Precio de Venta:</strong> Precio al que se vende el material al cliente</p>
+                    <p>• <strong>Precio de Subcontratación:</strong> Precio que se paga a proveedores externos</p>
                     <p>• Los precios se aplican por unidad del material seleccionado</p>
                     <p>• Un proyecto puede tener múltiples precios para el mismo material con diferentes vigencia</p>
                     <p>• El sistema usará el precio vigente más reciente para cada material</p>
@@ -320,7 +357,7 @@ export function CreateMaterialPriceModal({
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || !formData.projectId || !formData.materialId || !formData.price}
+                disabled={isLoading || !formData.projectId || !formData.materialId || !formData.salePrice || !formData.outsourcedPrice}
                 className="flex-1 bg-yellow-600 hover:bg-yellow-700"
               >
                 {isLoading ? (
