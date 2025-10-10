@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
         { address: { contains: search, mode: 'insensitive' } },
         { client: { name: { contains: search, mode: 'insensitive' } } },
         { client: { identification: { contains: search } } }
@@ -42,11 +41,12 @@ export async function GET(request: NextRequest) {
             identification: true
           }
         },
-        materials: {
+        materialPrices: {
           where: { isActive: true },
           select: {
             id: true,
-            price: true,
+            salePrice: true,
+            outsourcedPrice: true,
             material: {
               select: {
                 id: true,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, address, clientId, startDate, endDate, isActive = true } = body
+    const { name, address, clientId, startDate, endDate, isActive = true } = body
 
     // Validaciones
     if (!name || !clientId) {
@@ -130,10 +130,9 @@ export async function POST(request: NextRequest) {
     const project = await prisma.project.create({
       data: {
         name,
-        description: description || null,
         address: address || null,
         clientId,
-        startDate: startDate ? new Date(startDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         isActive
       },
@@ -145,11 +144,12 @@ export async function POST(request: NextRequest) {
             identification: true
           }
         },
-        materials: {
+        materialPrices: {
           where: { isActive: true },
           select: {
             id: true,
-            price: true,
+            salePrice: true,
+            outsourcedPrice: true,
             material: {
               select: {
                 id: true,

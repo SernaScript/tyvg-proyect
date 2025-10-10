@@ -27,7 +27,6 @@ import { CreateProjectModal } from "@/components/modals/CreateProjectModal"
 interface Project {
   id: string
   name: string
-  description?: string
   address?: string
   startDate?: Date
   endDate?: Date
@@ -39,7 +38,7 @@ interface Project {
     name: string
     identification: string
   }
-  materials?: ProjectMaterial[]
+  materialPrices?: ProjectMaterial[]
 }
 
 interface ProjectMaterial {
@@ -108,7 +107,6 @@ export default function ProjectsPage() {
   const filteredProjects = projects.filter(project => {
     const matchesSearch = 
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.client.identification.includes(searchTerm)
     
@@ -199,7 +197,7 @@ export default function ProjectsPage() {
                     id="search"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Nombre, descripción o cliente..."
+                    placeholder="Nombre o cliente..."
                     className="pl-10"
                   />
                 </div>
@@ -362,11 +360,6 @@ export default function ProjectsPage() {
                             </div>
                             <span>ID: {project.client.identification}</span>
                           </div>
-                          {project.description && (
-                            <p className="text-sm text-muted-foreground mt-1 truncate">
-                              {project.description}
-                            </p>
-                          )}
                           {project.address && (
                             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                               <MapPin className="h-3 w-3" />
@@ -387,8 +380,8 @@ export default function ProjectsPage() {
                                 )}
                               </span>
                             )}
-                            {project.materials && project.materials.length > 0 && (
-                              <span>• {project.materials.length} material(es)</span>
+                            {project.materialPrices && project.materialPrices.length > 0 && (
+                              <span>• {project.materialPrices.length} material(es)</span>
                             )}
                           </div>
                         </div>

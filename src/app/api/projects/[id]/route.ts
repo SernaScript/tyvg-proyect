@@ -19,17 +19,18 @@ export async function GET(
             phone: true
           }
         },
-        materials: {
+        materialPrices: {
           select: {
             id: true,
-            price: true,
+            salePrice: true,
+            outsourcedPrice: true,
             isActive: true,
             material: {
               select: {
                 id: true,
                 name: true,
                 type: true,
-                unit: true
+                unitOfMeasure: true
               }
             }
           }
@@ -61,7 +62,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, description, address, clientId, startDate, endDate, isActive } = body
+    const { name, address, clientId, startDate, endDate, isActive } = body
 
     // Validaciones
     if (!name || !clientId) {
@@ -129,10 +130,9 @@ export async function PUT(
       where: { id: params.id },
       data: {
         name,
-        description: description || null,
         address: address || null,
         clientId,
-        startDate: startDate ? new Date(startDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         isActive
       },
@@ -144,11 +144,12 @@ export async function PUT(
             identification: true
           }
         },
-        materials: {
+        materialPrices: {
           where: { isActive: true },
           select: {
             id: true,
-            price: true,
+            salePrice: true,
+            outsourcedPrice: true,
             material: {
               select: {
                 id: true,
@@ -181,7 +182,7 @@ export async function DELETE(
     const existingProject = await prisma.project.findUnique({
       where: { id: params.id },
       include: {
-        materials: true,
+        materialPrices: true,
         tripRequests: true
       }
     })

@@ -223,6 +223,22 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
+        id: "materials",
+        name: "Gestión de Materiales",
+        description: "Administración de materiales y inventarios",
+        icon: Package,
+        href: "/areas/logistics/materials",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "material-prices",
+        name: "Precios de Materiales",
+        description: "Configuración de precios por proyecto",
+        icon: DollarSign,
+        href: "/areas/logistics/material-prices",
+        status: ModuleStatus.ACTIVE
+      },
+      {
         id: "logistics-reports",
         name: "Reportes de Logística",
         description: "Reportes de movimientos y rotación de inventarios",
