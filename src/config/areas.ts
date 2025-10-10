@@ -207,6 +207,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
+        id: "clients",
+        name: "Gestión de Clientes",
+        description: "Administración de clientes y proyectos",
+        icon: Users,
+        href: "/areas/logistics/clients",
+        status: ModuleStatus.ACTIVE
+      },
+      {
         id: "logistics-reports",
         name: "Reportes de Logística",
         description: "Reportes de movimientos y rotación de inventarios",
