@@ -94,7 +94,9 @@ export default function UsuariosPage() {
       'TREASURY': 'bg-green-100 text-green-800',
       'LOGISTICS': 'bg-purple-100 text-purple-800',
       'BILLING': 'bg-indigo-100 text-indigo-800',
-      'VIEWER': 'bg-gray-100 text-gray-800'
+      'VIEWER': 'bg-gray-100 text-gray-800',
+      'DRIVER': 'bg-yellow-100 text-yellow-800',
+      'CLIENT': 'bg-cyan-100 text-cyan-800'
     };
     return colors[roleName] || 'bg-gray-100 text-gray-800';
   };
@@ -168,6 +170,8 @@ export default function UsuariosPage() {
                   <option value="LOGISTICS">Logística</option>
                   <option value="BILLING">Facturación</option>
                   <option value="VIEWER">Solo Lectura</option>
+                  <option value="DRIVER">Conductor</option>
+                  <option value="CLIENT">Cliente</option>
                 </select>
               </div>
               <div className="flex items-end">
