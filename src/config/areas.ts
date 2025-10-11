@@ -247,6 +247,22 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
+        id: "drivers",
+        name: "Conductores",
+        description: "Gestión de conductores y documentación vehicular",
+        icon: Users,
+        href: "/areas/logistics/drivers",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "trips",
+        name: "Gestión de Viajes",
+        description: "Programación y seguimiento de viajes de transporte",
+        icon: Truck,
+        href: "/areas/logistics/trips",
+        status: ModuleStatus.ACTIVE
+      },
+      {
         id: "logistics-reports",
         name: "Reportes de Logística",
         description: "Reportes de movimientos y rotación de inventarios",
