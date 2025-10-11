@@ -224,9 +224,7 @@ export default function TripsPage() {
     total: trips.length,
     scheduled: trips.filter(t => t.status === 'SCHEDULED').length,
     inTransit: trips.filter(t => t.status === 'IN_TRANSIT').length,
-    completed: trips.filter(t => t.status === 'COMPLETED').length,
-    totalExpenses: trips.reduce((total, trip) => total + getTotalExpenses(trip.expenses || []), 0),
-    totalMaterials: trips.reduce((total, trip) => total + getTotalMaterials(trip.materials || []), 0)
+    completed: trips.filter(t => t.status === 'COMPLETED').length
   }
 
   if (loading) {
@@ -250,7 +248,7 @@ export default function TripsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Gestión de Viajes</h1>
             <p className="text-muted-foreground">
-              Programa y gestiona los viajes de transporte de materiales
+              Programa y gestiona los viajes de transporte desde solicitudes
             </p>
           </div>
           <Button onClick={() => setIsCreateModalOpen(true)}>
@@ -289,26 +287,26 @@ export default function TripsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gastos Totales</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">En Tránsito</CardTitle>
+              <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalExpenses)}</div>
+              <div className="text-2xl font-bold">{stats.inTransit}</div>
               <p className="text-xs text-muted-foreground">
-                Promedio por viaje: {formatCurrency(stats.total > 0 ? stats.totalExpenses / stats.total : 0)}
+                Viajes en ejecución
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Materiales</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Programados</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalMaterials.toFixed(1)}</div>
+              <div className="text-2xl font-bold">{stats.scheduled}</div>
               <p className="text-xs text-muted-foreground">
-                Unidades transportadas
+                Viajes programados
               </p>
             </CardContent>
           </Card>
@@ -371,7 +369,7 @@ export default function TripsPage() {
           <CardHeader>
             <CardTitle>Viajes ({filteredTrips.length})</CardTitle>
             <CardDescription>
-              Lista de todos los viajes programados y en ejecución
+              Lista de viajes programados desde solicitudes de transporte
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -379,23 +377,22 @@ export default function TripsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Guía</TableHead>
-                    <TableHead>Proyecto</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Conductor</TableHead>
-                    <TableHead>Vehículo</TableHead>
-                    <TableHead>Fecha Programada</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Prioridad</TableHead>
-                    <TableHead>Materiales</TableHead>
-                    <TableHead>Gastos</TableHead>
-                    <TableHead className="w-[70px]"></TableHead>
+                    <TableHead className="text-xs">Guía</TableHead>
+                    <TableHead className="text-xs">Obra</TableHead>
+                    <TableHead className="text-xs">Cliente</TableHead>
+                    <TableHead className="text-xs">Conductor</TableHead>
+                    <TableHead className="text-xs">Placa</TableHead>
+                    <TableHead className="text-xs">Fecha Programada</TableHead>
+                    <TableHead className="text-xs">Estado</TableHead>
+                    <TableHead className="text-xs">Prioridad</TableHead>
+                    <TableHead className="text-xs">Materiales</TableHead>
+                    <TableHead className="w-[70px] text-xs"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTrips.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8">
+                      <TableCell colSpan={10} className="text-center py-8">
                         <div className="text-center">
                           <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                           <h3 className="text-lg font-semibold mb-2">No hay viajes</h3>
@@ -417,76 +414,52 @@ export default function TripsPage() {
                   ) : (
                     filteredTrips.map((trip) => (
                       <TableRow key={trip.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-sm">
                           {trip.waybillNumber || (
-                            <span className="text-muted-foreground text-sm">Sin guía</span>
+                            <span className="text-muted-foreground text-xs">Sin guía</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p className="font-medium">{trip.tripRequest.project.name}</p>
-                            {trip.tripRequest.project.address && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate">{trip.tripRequest.project.address}</span>
-                              </div>
-                            )}
-                          </div>
+                          <p className="font-medium text-sm">{trip.tripRequest.project.name}</p>
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p className="font-medium">{trip.tripRequest.project.client.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Doc: {trip.tripRequest.project.client.identification}
-                            </p>
-                          </div>
+                          <p className="font-medium text-sm">{trip.tripRequest.project.client.name}</p>
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p className="font-medium">{trip.driver.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Lic: {trip.driver.license}
-                            </p>
-                          </div>
+                          <p className="font-medium text-sm">{trip.driver.name}</p>
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p className="font-medium">{trip.vehicle.plate}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {trip.vehicle.brand} {trip.vehicle.model}
-                            </p>
-                          </div>
+                          <p className="font-medium text-sm">{trip.vehicle.plate}</p>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{formatDate(trip.scheduledDate)}</span>
+                            <span className="text-xs">{formatDate(trip.scheduledDate)}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(trip.status)}>
+                          <Badge className={`${getStatusColor(trip.status)} text-xs`}>
                             {getStatusText(trip.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getPriorityColor(trip.tripRequest.priority)}>
+                          <Badge className={`${getPriorityColor(trip.tripRequest.priority)} text-xs`}>
                             {getPriorityText(trip.tripRequest.priority)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            <p className="font-medium">{getTotalMaterials(trip.materials || [])}</p>
-                            <p className="text-muted-foreground">
-                              {(trip.materials || []).length} tipo{(trip.materials || []).length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p className="font-medium">{formatCurrency(getTotalExpenses(trip.expenses || []))}</p>
-                            <p className="text-muted-foreground">
-                              {(trip.expenses || []).length} gasto{(trip.expenses || []).length !== 1 ? 's' : ''}
-                            </p>
+                          <div className="text-xs">
+                            {trip.tripRequest.materials && trip.tripRequest.materials.length > 0 ? (
+                              <div className="space-y-1">
+                                {trip.tripRequest.materials.map((material, index) => (
+                                  <p key={index} className="font-medium text-xs">
+                                    {material.material.name}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-muted-foreground text-xs">Sin materiales</p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
