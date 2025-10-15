@@ -2,8 +2,18 @@
 
 import { PrismaClient, RoleName, PermissionAction } from '@prisma/client'
 import { hashPassword } from '../src/lib/auth'
+import { config } from 'dotenv'
 
-const prisma = new PrismaClient()
+// Cargar variables de entorno
+config()
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DIRECT_URL || process.env.DATABASE_URL
+    }
+  }
+})
 
 // Test user credentials - CHANGE IN PRODUCTION!
 const TEST_USERS = [

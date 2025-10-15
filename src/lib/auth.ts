@@ -16,7 +16,7 @@ import {
 
 // JWT Configuration
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+  process.env.JWT_SECRET || 'qzqGCqpxpQ5G8v7YJ^RoisxX^o^~C6sa'
 )
 const JWT_EXPIRES_IN = '10h'
 
