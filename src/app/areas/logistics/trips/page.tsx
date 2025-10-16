@@ -28,6 +28,9 @@ import {
   Trash2
 } from 'lucide-react'
 import { CreateTripModal } from '@/components/modals/CreateTripModal'
+import { ViewTripModal } from '@/components/modals/ViewTripModal'
+import { EditTripModal } from '@/components/modals/EditTripModal'
+import { DeleteTripModal } from '@/components/modals/DeleteTripModal'
 
 interface Trip {
   id: string
@@ -110,6 +113,18 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [selectedTripId, setSelectedTripId] = useState<string>('')
+  const [selectedTripInfo, setSelectedTripInfo] = useState<{
+    waybillNumber?: string
+    projectName: string
+    clientName: string
+    scheduledDate: Date
+    status: string
+  } | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchTrips = async () => {
     try {
@@ -176,6 +191,65 @@ export default function TripsPage() {
       case 'URGENT': return 'Urgente'
       default: return priority
     }
+  }
+
+  const handleViewTrip = (tripId: string) => {
+    setSelectedTripId(tripId)
+    setIsViewModalOpen(true)
+  }
+
+  const handleEditTrip = (tripId: string) => {
+    setSelectedTripId(tripId)
+    setIsEditModalOpen(true)
+  }
+
+  const handleDeleteTrip = (trip: Trip) => {
+    setSelectedTripId(trip.id)
+    setSelectedTripInfo({
+      waybillNumber: trip.waybillNumber,
+      projectName: trip.tripRequest.project.name,
+      clientName: trip.tripRequest.project.client.name,
+      scheduledDate: trip.scheduledDate,
+      status: trip.status
+    })
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDeleteTrip = async () => {
+    setDeleteLoading(true)
+    try {
+      const response = await fetch(`/api/trips/${selectedTripId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Recargar la lista de viajes
+        fetchTrips()
+        setIsDeleteModalOpen(false)
+        setSelectedTripId('')
+        setSelectedTripInfo(null)
+      } else {
+        const errorData = await response.json()
+        alert(`Error al eliminar el viaje: ${errorData.message}`)
+      }
+    } catch (error) {
+      console.error('Error deleting trip:', error)
+      alert('Error de conexión al eliminar el viaje')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  const handleModalClose = () => {
+    setIsViewModalOpen(false)
+    setIsEditModalOpen(false)
+    setIsDeleteModalOpen(false)
+    setSelectedTripId('')
+    setSelectedTripInfo(null)
+  }
+
+  const handleModalSuccess = () => {
+    fetchTrips()
   }
 
   const formatDate = (date: Date) => {
@@ -470,15 +544,18 @@ export default function TripsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewTrip(trip.id)}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver Detalles
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditTrip(trip.id)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => handleDeleteTrip(trip)}
+                              >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Eliminar
                               </DropdownMenuItem>
@@ -503,6 +580,30 @@ export default function TripsPage() {
           setIsCreateModalOpen(false)
           fetchTrips()
         }}
+      />
+
+      {/* View Trip Modal */}
+      <ViewTripModal
+        isOpen={isViewModalOpen}
+        onClose={handleModalClose}
+        tripId={selectedTripId}
+      />
+
+      {/* Edit Trip Modal */}
+      <EditTripModal
+        isOpen={isEditModalOpen}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        tripId={selectedTripId}
+      />
+
+      {/* Delete Trip Modal */}
+      <DeleteTripModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleModalClose}
+        onConfirm={confirmDeleteTrip}
+        tripInfo={selectedTripInfo || undefined}
+        loading={deleteLoading}
       />
     </AreaLayout>
   )
