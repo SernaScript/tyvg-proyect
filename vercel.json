@@ -13,10 +13,11 @@
       "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
       "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright",
       "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "true",
+      "PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION": "true",
       "DEBIAN_FRONTEND": "noninteractive"
     }
   },
   "outputDirectory": ".next",
-  "installCommand": "npm install --production=false && npm run install-playwright-deps",
+  "installCommand": "npm install --production=false",
   "buildCommand": "npm run build:with-playwright"
 }

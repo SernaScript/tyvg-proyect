@@ -42,21 +42,26 @@ export class PlaywrightWrapper {
     try {
       const { execSync } = require('child_process');
       console.log('Verificando instalación de navegadores de Playwright...');
-      execSync('npx playwright install chromium --with-deps', { 
+      
+      // Intentar instalar sin dependencias del sistema para Vercel
+      execSync('npx playwright install chromium', { 
         stdio: 'inherit',
-        timeout: 300000 // 5 minutos timeout
+        timeout: 300000, // 5 minutos timeout
+        env: {
+          ...process.env,
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 'true',
+          PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION: 'true'
+        }
       });
       console.log('Navegadores de Playwright instalados correctamente');
     } catch (error) {
       console.warn('No se pudieron instalar los navegadores de Playwright automáticamente:', error);
+      console.log('Continuando sin instalación automática...');
     }
   }
 
   async init(): Promise<void> {
     try {
-      // Verificar e instalar navegadores si es necesario
-      await this.ensureBrowsersInstalled();
-      
       const playwright = await this.loadPlaywright();
       const { chromium, firefox, webkit } = playwright;
       
