@@ -2,7 +2,7 @@
 
 // Unauthorized access page
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,7 +56,8 @@ const REASON_MESSAGES = {
   }
 }
 
-export default function UnauthorizedPage() {
+// Componente que maneja los search params
+function UnauthorizedContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, logout } = useAuth()
@@ -190,6 +191,40 @@ export default function UnauthorizedPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// Componente de carga para Suspense
+function UnauthorizedLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="max-w-md w-full space-y-6">
+        <Card className="border-red-200 shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-red-100 rounded-full">
+                <Shield className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-gray-900">
+              Cargando...
+            </CardTitle>
+            <CardDescription className="text-base text-gray-600">
+              Verificando permisos de acceso...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// Componente principal que envuelve en Suspense
+export default function UnauthorizedPage() {
+  return (
+    <Suspense fallback={<UnauthorizedLoading />}>
+      <UnauthorizedContent />
+    </Suspense>
   )
 }
 
