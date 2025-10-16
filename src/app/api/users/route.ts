@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { authenticateRequest, hasPermission } from '@/lib/auth';
 import { PermissionAction } from '@/types/auth';
+import { EmailService } from '@/lib/EmailService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -212,10 +213,31 @@ export async function POST(request: NextRequest) {
     // Remover la contraseña de la respuesta
     const { password: _, ...userWithoutPassword } = newUser;
 
+    // Enviar correo de activación al nuevo usuario
+    let emailSent = false;
+    let emailError = null;
+    
+    try {
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/login`;
+      
+      emailSent = await EmailService.sendUserActivationEmail({
+        email: newUser.email,
+        name: newUser.name,
+        password: password, // Usar la contraseña original, no la encriptada
+        roleName: newUser.role.displayName,
+        loginUrl
+      });
+    } catch (error) {
+      console.error('Error enviando correo de activación:', error);
+      emailError = error instanceof Error ? error.message : 'Error desconocido';
+    }
+
     return NextResponse.json({
       success: true,
       data: userWithoutPassword,
-      message: 'Usuario creado exitosamente'
+      message: 'Usuario creado exitosamente',
+      emailSent,
+      emailError: emailError || null
     }, { status: 201 });
 
   } catch (error) {

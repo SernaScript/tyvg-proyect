@@ -48,6 +48,7 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Cargar roles al abrir el modal
   useEffect(() => {
@@ -135,6 +136,18 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
       const result = await response.json();
 
       if (result.success) {
+        // Mostrar mensaje de éxito con información del correo
+        let message = 'Usuario creado exitosamente.';
+        if (result.emailSent) {
+          message += ' Se ha enviado un correo con los datos de acceso.';
+        } else if (result.emailError) {
+          message += ` Usuario creado, pero hubo un problema enviando el correo: ${result.emailError}`;
+        } else {
+          message += ' El correo no pudo ser enviado (SendGrid no configurado).';
+        }
+        
+        setSuccessMessage(message);
+        
         // Limpiar formulario
         setFormData({
           email: '',
@@ -143,8 +156,12 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
           confirmPassword: '',
           roleId: ''
         });
-        onUserCreated();
-        onClose();
+        
+        // Cerrar modal después de un breve delay para mostrar el mensaje
+        setTimeout(() => {
+          onUserCreated();
+          onClose();
+        }, 2000);
       } else {
         setError(result.error || 'Error creando usuario');
       }
@@ -166,6 +183,7 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
         roleId: ''
       });
       setError('');
+      setSuccessMessage('');
       onClose();
     }
   };
@@ -187,6 +205,12 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert>
+              <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           )}
 
