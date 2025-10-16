@@ -31,7 +31,7 @@ const staticNavigation = [
 const adminNavigation = [
   {
     name: "Reportes",
-    href: "/reportes",
+    href: "/report",
     icon: BarChart3,
   },
   {
