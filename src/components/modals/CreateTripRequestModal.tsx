@@ -15,13 +15,18 @@ import {
   User,
   Calendar,
   AlertTriangle,
-  Info
+  Info,
+  Search
 } from "lucide-react"
+import { ProjectAutocomplete } from '@/components/ui/ProjectAutocomplete'
+import { MaterialAutocomplete } from '@/components/ui/MaterialAutocomplete'
 
 // Interface para proyectos
 interface Project {
   id: string
   name: string
+  description?: string
+  location?: string
   client: {
     id: string
     name: string
@@ -35,7 +40,10 @@ interface Material {
   name: string
   type: string
   unitOfMeasure: string
+  description?: string
   isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface CreateTripRequestModalProps {
@@ -58,10 +66,9 @@ export function CreateTripRequestModal({
     priority: 'NORMAL',
     observations: ''
   })
-  const [selectedMaterials, setSelectedMaterials] = useState<Array<{
-    materialId: string
-    quantity: string
-  }>>([])
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedMaterials, setSelectedMaterials] = useState<Material[]>([])
+  const [materialQuantities, setMaterialQuantities] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -71,19 +78,36 @@ export function CreateTripRequestModal({
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleAddMaterial = () => {
-    setSelectedMaterials(prev => [...prev, { materialId: '', quantity: '' }])
+  const handleProjectSelect = (project: Project | null) => {
+    setSelectedProject(project)
+    setFormData(prev => ({ ...prev, projectId: project?.id || '' }))
   }
 
-  const handleRemoveMaterial = (index: number) => {
-    setSelectedMaterials(prev => prev.filter((_, i) => i !== index))
+  const handleMaterialSelect = (materials: Material[]) => {
+    setSelectedMaterials(materials)
+    // Inicializar cantidades en 1 para materiales nuevos
+    const newQuantities = { ...materialQuantities }
+    materials.forEach(material => {
+      if (!newQuantities[material.id]) {
+        newQuantities[material.id] = '1'
+      }
+    })
+    setMaterialQuantities(newQuantities)
   }
 
-  const handleMaterialChange = (index: number, field: 'materialId' | 'quantity', value: string) => {
-    setSelectedMaterials(prev => prev.map((material, i) => 
-      i === index ? { ...material, [field]: value } : material
-    ))
+  const handleQuantityChange = (materialId: string, quantity: string) => {
+    setMaterialQuantities(prev => ({ ...prev, [materialId]: quantity }))
   }
+
+  const removeMaterial = (materialId: string) => {
+    setSelectedMaterials(prev => prev.filter(m => m.id !== materialId))
+    setMaterialQuantities(prev => {
+      const newQuantities = { ...prev }
+      delete newQuantities[materialId]
+      return newQuantities
+    })
+  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,13 +115,21 @@ export function CreateTripRequestModal({
     setError('')
 
     try {
+      // Validar que se haya seleccionado un proyecto
+      if (!formData.projectId) {
+        throw new Error('Debe seleccionar un proyecto')
+      }
+
       // Validar que se hayan seleccionado materiales
       if (selectedMaterials.length === 0) {
         throw new Error('Debe seleccionar al menos un material')
       }
 
       // Validar que todos los materiales tengan cantidad
-      const invalidMaterials = selectedMaterials.some(m => !m.materialId || !m.quantity || parseFloat(m.quantity) <= 0)
+      const invalidMaterials = selectedMaterials.some(m => {
+        const quantity = materialQuantities[m.id]
+        return !quantity || parseFloat(quantity) <= 0
+      })
       if (invalidMaterials) {
         throw new Error('Todos los materiales deben tener una cantidad válida')
       }
@@ -109,9 +141,9 @@ export function CreateTripRequestModal({
         },
         body: JSON.stringify({
           ...formData,
-          materials: selectedMaterials.map(m => ({
-            materialId: m.materialId,
-            requestedQuantity: parseFloat(m.quantity)
+          materials: selectedMaterials.map(material => ({
+            materialId: material.id,
+            requestedQuantity: parseFloat(materialQuantities[material.id])
           }))
         }),
       })
@@ -140,7 +172,9 @@ export function CreateTripRequestModal({
       priority: 'NORMAL',
       observations: ''
     })
+    setSelectedProject(null)
     setSelectedMaterials([])
+    setMaterialQuantities({})
   }
 
   const handleClose = () => {
@@ -155,9 +189,6 @@ export function CreateTripRequestModal({
   // Filtrar solo proyectos activos
   const activeProjects = projects.filter(project => project.client)
   const activeMaterials = materials.filter(material => material.isActive)
-
-  // Obtener información del proyecto seleccionado
-  const selectedProject = activeProjects.find(p => p.id === formData.projectId)
 
   if (!isOpen) return null
 
@@ -189,30 +220,14 @@ export function CreateTripRequestModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Proyecto */}
-              <div className="space-y-2">
-                <Label htmlFor="projectId">Proyecto *</Label>
-                <select
-                  id="projectId"
-                  name="projectId"
-                  value={formData.projectId}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="">Seleccione un proyecto</option>
-                  {activeProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name} - {project.client.name}
-                    </option>
-                  ))}
-                </select>
-                {selectedProject && (
-                  <p className="text-sm text-gray-500">
-                    Cliente: {selectedProject.client.name} ({selectedProject.client.identification})
-                  </p>
-                )}
-              </div>
+              <ProjectAutocomplete
+                label="Proyecto"
+                placeholder="Buscar proyecto..."
+                value={selectedProject}
+                onChange={handleProjectSelect}
+                disabled={isLoading}
+                required
+              />
 
               {/* Prioridad */}
               <div className="space-y-2">
@@ -248,97 +263,52 @@ export function CreateTripRequestModal({
 
             {/* Materiales */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Materiales Solicitados *</Label>
-                <Button
-                  type="button"
-                  onClick={handleAddMaterial}
-                  variant="outline"
-                  size="sm"
-                  disabled={isLoading}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Material
-                </Button>
-              </div>
+              <MaterialAutocomplete
+                label="Materiales Solicitados"
+                placeholder="Buscar materiales..."
+                selectedMaterials={selectedMaterials}
+                onMaterialsChange={handleMaterialSelect}
+                disabled={isLoading}
+                required
+                multiple={true}
+              />
 
-              {selectedMaterials.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">No hay materiales seleccionados</p>
-                  <Button
-                    type="button"
-                    onClick={handleAddMaterial}
-                    variant="outline"
-                    disabled={isLoading}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Primer Material
-                  </Button>
-                </div>
-              ) : (
+              {/* Cantidades de Materiales */}
+              {selectedMaterials.length > 0 && (
                 <div className="space-y-3">
-                  {selectedMaterials.map((material, index) => {
-                    const selectedMaterial = activeMaterials.find(m => m.id === material.materialId)
-                    return (
-                      <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label htmlFor={`material-${index}`}>Material *</Label>
-                            <select
-                              id={`material-${index}`}
-                              value={material.materialId}
-                              onChange={(e) => handleMaterialChange(index, 'materialId', e.target.value)}
-                              required
-                              disabled={isLoading}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            >
-                              <option value="">Seleccione un material</option>
-                              {activeMaterials.map((mat) => (
-                                <option key={mat.id} value={mat.id}>
-                                  {mat.name} ({mat.unitOfMeasure})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label htmlFor={`quantity-${index}`}>Cantidad *</Label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id={`quantity-${index}`}
-                                type="number"
-                                step="0.001"
-                                min="0"
-                                value={material.quantity}
-                                onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                                placeholder="0.000"
-                                required
-                                disabled={isLoading}
-                                className="flex-1"
-                              />
-                              {selectedMaterial && (
-                                <span className="text-sm text-gray-500 whitespace-nowrap">
-                                  {selectedMaterial.unitOfMeasure}
-                                </span>
-                              )}
-                            </div>
+                  <Label className="text-base font-medium">Cantidades</Label>
+                  {selectedMaterials.map((material) => (
+                    <div key={material.id} className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg bg-gray-50">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div>
+                            <p className="font-semibold text-sm">{material.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {material.unitOfMeasure}
+                            </p>
                           </div>
                         </div>
-                        
-                        <Button
-                          type="button"
-                          onClick={() => handleRemoveMaterial(index)}
-                          variant="outline"
-                          size="sm"
-                          disabled={isLoading}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`quantity-${material.id}`} className="text-xs">Cantidad:</Label>
+                          <Input
+                            id={`quantity-${material.id}`}
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={materialQuantities[material.id] || ''}
+                            onChange={(e) => handleQuantityChange(material.id, e.target.value)}
+                            placeholder="0.000"
+                            required
+                            disabled={isLoading}
+                            className="w-24 h-8 text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {material.unitOfMeasure}
+                          </span>
+                        </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

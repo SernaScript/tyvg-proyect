@@ -17,8 +17,11 @@ import {
   MapPin,
   Clock,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Search
 } from 'lucide-react'
+import { ProjectAutocomplete } from '@/components/ui/ProjectAutocomplete'
+import { MaterialAutocomplete } from '@/components/ui/MaterialAutocomplete'
 
 interface TripRequest {
   id: string
@@ -67,6 +70,30 @@ interface Vehicle {
   isActive: boolean
 }
 
+interface Project {
+  id: string
+  name: string
+  description?: string
+  location?: string
+  status: string
+  client: {
+    id: string
+    name: string
+    identification: string
+  }
+}
+
+interface Material {
+  id: string
+  name: string
+  type: string
+  unitOfMeasure: string
+  description?: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 interface CreateTripModalProps {
   isOpen: boolean
   onClose: () => void
@@ -75,7 +102,7 @@ interface CreateTripModalProps {
 
 export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalProps) {
   const [formData, setFormData] = useState({
-    tripRequestId: '',
+    projectId: '',
     driverId: '',
     vehicleId: '',
     waybillNumber: '',
@@ -84,7 +111,8 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
     observations: ''
   })
 
-  const [tripRequests, setTripRequests] = useState<TripRequest[]>([])
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedMaterials, setSelectedMaterials] = useState<Material[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(false)
@@ -92,22 +120,21 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
   useEffect(() => {
     if (isOpen) {
-      fetchTripRequests()
       fetchDrivers()
       fetchVehicles()
     }
   }, [isOpen])
 
-  const fetchTripRequests = async () => {
-    try {
-      const response = await fetch('/api/trip-requests?status=PENDING')
-      if (response.ok) {
-        const data = await response.json()
-        setTripRequests(data)
-      }
-    } catch (error) {
-      console.error('Error fetching trip requests:', error)
+  const handleProjectSelect = (project: Project | null) => {
+    setSelectedProject(project)
+    setFormData(prev => ({ ...prev, projectId: project?.id || '' }))
+    if (errors.projectId) {
+      setErrors(prev => ({ ...prev, projectId: '' }))
     }
+  }
+
+  const handleMaterialSelect = (materials: Material[]) => {
+    setSelectedMaterials(materials)
   }
 
   const fetchDrivers = async () => {
@@ -144,8 +171,8 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.tripRequestId) {
-      newErrors.tripRequestId = 'La solicitud de viaje es requerida'
+    if (!formData.projectId) {
+      newErrors.projectId = 'El proyecto es requerido'
     }
 
     if (!formData.driverId) {
@@ -181,22 +208,53 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
     setLoading(true)
     try {
-      const response = await fetch('/api/trips', {
+      // Primero crear la solicitud de viaje
+      const tripRequestResponse = await fetch('/api/trip-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
-          certifiedWeight: formData.certifiedWeight ? parseFloat(formData.certifiedWeight) : null
+          projectId: formData.projectId,
+          priority: 'MEDIUM',
+          materials: selectedMaterials.map(material => ({
+            materialId: material.id,
+            quantity: 1 // Cantidad por defecto, se puede ajustar después
+          })),
+          observations: formData.observations
         }),
       })
 
-      if (response.ok) {
+      if (!tripRequestResponse.ok) {
+        const errorData = await tripRequestResponse.json()
+        setErrors({ submit: errorData.message || 'Error al crear la solicitud de viaje' })
+        return
+      }
+
+      const tripRequest = await tripRequestResponse.json()
+
+      // Luego crear el viaje
+      const tripResponse = await fetch('/api/trips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tripRequestId: tripRequest.id,
+          driverId: formData.driverId,
+          vehicleId: formData.vehicleId,
+          waybillNumber: formData.waybillNumber || null,
+          scheduledDate: formData.scheduledDate,
+          certifiedWeight: formData.certifiedWeight ? parseFloat(formData.certifiedWeight) : null,
+          observations: formData.observations
+        }),
+      })
+
+      if (tripResponse.ok) {
         onSuccess()
         resetForm()
       } else {
-        const errorData = await response.json()
+        const errorData = await tripResponse.json()
         setErrors({ submit: errorData.message || 'Error al crear el viaje' })
       }
     } catch (error) {
@@ -209,7 +267,7 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
   const resetForm = () => {
     setFormData({
-      tripRequestId: '',
+      projectId: '',
       driverId: '',
       vehicleId: '',
       waybillNumber: '',
@@ -217,6 +275,8 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
       certifiedWeight: '',
       observations: ''
     })
+    setSelectedProject(null)
+    setSelectedMaterials([])
     setErrors({})
   }
 
@@ -225,7 +285,6 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
     onClose()
   }
 
-  const selectedTripRequest = tripRequests.find(tr => tr.id === formData.tripRequestId)
   const selectedDriver = drivers.find(d => d.id === formData.driverId)
   const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId)
 
@@ -268,41 +327,63 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Trip Request Selection */}
+            {/* Project Selection */}
+            <ProjectAutocomplete
+              label="Proyecto"
+              placeholder="Buscar proyecto..."
+              value={selectedProject}
+              onChange={handleProjectSelect}
+              error={errors.projectId}
+              disabled={loading}
+              required
+            />
+
+            {/* Material Selection */}
             <div className="space-y-2">
-              <Label htmlFor="tripRequestId">Solicitud de Viaje *</Label>
-              <Select value={formData.tripRequestId} onValueChange={(value) => handleInputChange('tripRequestId', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una solicitud de viaje" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tripRequests.map((request) => (
-                    <SelectItem key={request.id} value={request.id}>
-                      <div className="flex items-center justify-between w-full">
+              <Label>Materiales a Transportar</Label>
+              <div className="space-y-3">
+                {selectedMaterials.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedMaterials.map((material) => (
+                      <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                         <div>
-                          <p className="font-medium">{request.project.name}</p>
+                          <p className="font-semibold">{material.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {request.project.client.name} • {request.materials.length} material{request.materials.length !== 1 ? 'es' : ''}
+                            {material.type} • {material.unitOfMeasure}
                           </p>
                         </div>
-                        <Badge className={getPriorityColor(request.priority)}>
-                          {getPriorityText(request.priority)}
-                        </Badge>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedMaterials(selectedMaterials.filter(m => m.id !== material.id))}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.tripRequestId && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.tripRequestId}
-                </p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                    <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-muted-foreground">No hay materiales seleccionados</p>
+                  </div>
+                )}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {}}
+                  className="w-full"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {selectedMaterials.length > 0 ? 'Agregar Más Materiales' : 'Seleccionar Materiales'}
+                </Button>
+              </div>
             </div>
 
-            {/* Selected Trip Request Details */}
-            {selectedTripRequest && (
+            {/* Selected Project Details */}
+            {selectedProject && (
               <Card className="bg-muted/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Detalles de la Solicitud</CardTitle>
@@ -311,46 +392,27 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Proyecto</Label>
-                      <p className="font-medium">{selectedTripRequest.project.name}</p>
-                      {selectedTripRequest.project.address && (
+                      <p className="font-medium">{selectedProject.name}</p>
+                      {selectedProject.location && (
                         <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                           <MapPin className="h-3 w-3" />
-                          <span>{selectedTripRequest.project.address}</span>
+                          <span>{selectedProject.location}</span>
                         </div>
                       )}
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Cliente</Label>
-                      <p className="font-medium">{selectedTripRequest.project.client.name}</p>
+                      <p className="font-medium">{selectedProject.client.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Doc: {selectedTripRequest.project.client.identification}
+                        Doc: {selectedProject.client.identification}
                       </p>
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Materiales Solicitados</Label>
-                    <div className="mt-2 space-y-2">
-                      {selectedTripRequest.materials.map((material) => (
-                        <div key={material.id} className="flex items-center justify-between p-2 bg-background rounded border">
-                          <div>
-                            <p className="font-medium">{material.material.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {material.material.type} • {material.material.unitOfMeasure}
-                            </p>
-                          </div>
-                          <Badge variant="outline">
-                            {material.quantity} {material.material.unitOfMeasure}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedTripRequest.observations && (
+                  {selectedProject.description && (
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Observaciones</Label>
-                      <p className="text-sm mt-1">{selectedTripRequest.observations}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">Descripción</Label>
+                      <p className="text-sm mt-1">{selectedProject.description}</p>
                     </div>
                   )}
                 </CardContent>
@@ -536,7 +598,7 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
               </Button>
               <Button 
                 type="submit" 
-                disabled={loading || !formData.tripRequestId || !formData.driverId || !formData.vehicleId || !formData.scheduledDate}
+                disabled={loading || !formData.projectId || !formData.driverId || !formData.vehicleId || !formData.scheduledDate}
               >
                 {loading ? 'Programando...' : 'Programar Viaje'}
               </Button>
@@ -544,6 +606,7 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
           </form>
         </CardContent>
       </Card>
+
     </div>
   )
 }
