@@ -49,6 +49,7 @@ const adminNavigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const [expandedAreas, setExpandedAreas] = useState<string[]>([])
+  const [expandedSubsections, setExpandedSubsections] = useState<string[]>([])
   const { canAccessArea, canAccessModule, hasPermission, user } = useAuth()
 
   const toggleArea = (areaId: string) => {
@@ -56,6 +57,14 @@ export function Sidebar() {
       prev.includes(areaId) 
         ? prev.filter(id => id !== areaId)
         : [...prev, areaId]
+    )
+  }
+
+  const toggleSubsection = (subsectionId: string) => {
+    setExpandedSubsections(prev => 
+      prev.includes(subsectionId) 
+        ? prev.filter(id => id !== subsectionId)
+        : [...prev, subsectionId]
     )
   }
 
@@ -183,6 +192,7 @@ export function Sidebar() {
                   {/* Area Modules */}
                   {isExpanded && (
                     <div className="ml-6 mt-1 space-y-1">
+                      {/* Regular modules */}
                       {area.modules
                         .filter(module => canAccessModule(area.id, module.id))
                         .map((module) => {
@@ -213,6 +223,74 @@ export function Sidebar() {
                               )}
                             </Button>
                           </Link>
+                        )
+                      })}
+
+                      {/* Subsections */}
+                      {area.subsections?.map((subsection) => {
+                        const isSubsectionExpanded = expandedSubsections.includes(subsection.id)
+                        const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
+                        
+                        if (!hasAccessibleModules) return null
+
+                        return (
+                          <div key={subsection.id} className="mt-2">
+                            {/* Subsection Header */}
+                            <div className="flex items-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start gap-2 text-left text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                onClick={() => toggleSubsection(subsection.id)}
+                              >
+                                <Settings className="h-3 w-3" />
+                                <span className="flex-1 truncate">{subsection.name}</span>
+                                {isSubsectionExpanded ? (
+                                  <ChevronDown className="h-3 w-3" />
+                                ) : (
+                                  <ChevronRight className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </div>
+
+                            {/* Subsection Modules */}
+                            {isSubsectionExpanded && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {subsection.modules
+                                  .filter(module => canAccessModule(area.id, module.id))
+                                  .map((module) => {
+                                  const ModuleIcon = module.icon
+                                  const isModActive = isModuleActive(module.href)
+
+                                  return (
+                                    <Link key={module.id} href={module.href}>
+                                      <Button
+                                        variant={isModActive ? "default" : "ghost"}
+                                        size="sm"
+                                        disabled={module.status === ModuleStatus.PLANNED}
+                                        className={cn(
+                                          "w-full justify-start gap-2 text-left text-sm h-8",
+                                          isModActive && "bg-primary text-primary-foreground",
+                                          module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
+                                        )}
+                                      >
+                                        <ModuleIcon className="h-3 w-3" />
+                                        <span className="flex-1 truncate">{module.name}</span>
+                                        {module.status && module.status !== ModuleStatus.ACTIVE && (
+                                          <Badge 
+                                            variant="secondary" 
+                                            className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
+                                          >
+                                            {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
+                                          </Badge>
+                                        )}
+                                      </Button>
+                                    </Link>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>

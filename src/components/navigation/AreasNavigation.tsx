@@ -10,6 +10,7 @@ import {
   AREAS_CONFIG, 
   type AreaConfig, 
   type ModuleConfig,
+  type ModuleSubsection,
   getAreaColorClasses,
   getModuleStatusDisplayName,
   getModuleStatusBadgeClasses,
@@ -17,6 +18,7 @@ import {
 } from "@/config/areas"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
+import { Settings } from "lucide-react"
 
 interface AreasNavigationProps {
   className?: string
@@ -183,16 +185,60 @@ export function AreaModules({ areaId, className }: AreaModulesProps) {
   if (!area || !canAccessArea(areaId)) return null
 
   return (
-    <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
-      {area.modules.map((module) => (
-        <ModuleCard
-          key={module.id}
-          module={module}
-          areaColor={area.color}
-          isActive={pathname === module.href}
-          areaId={area.id}
-        />
-      ))}
+    <div className={cn("space-y-6", className)}>
+      {/* Regular modules */}
+      {area.modules.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {area.modules.map((module) => (
+            <ModuleCard
+              key={module.id}
+              module={module}
+              areaColor={area.color}
+              isActive={pathname === module.href}
+              areaId={area.id}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Subsections */}
+      {area.subsections?.map((subsection) => {
+        const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
+        
+        if (!hasAccessibleModules) return null
+
+        return (
+          <div key={subsection.id} className="space-y-4">
+            {/* Subsection Header */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                <Settings className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {subsection.name}
+                </h3>
+                <p className="text-muted-foreground">
+                  Configuración y administración del sistema
+                </p>
+              </div>
+            </div>
+
+            {/* Subsection Modules */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {subsection.modules.map((module) => (
+                <ModuleCard
+                  key={module.id}
+                  module={module}
+                  areaColor={area.color}
+                  isActive={pathname === module.href}
+                  areaId={area.id}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

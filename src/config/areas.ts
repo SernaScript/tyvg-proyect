@@ -51,6 +51,12 @@ export interface ModuleConfig {
   status?: ModuleStatus
 }
 
+export interface ModuleSubsection {
+  id: string
+  name: string
+  modules: ModuleConfig[]
+}
+
 export interface AreaConfig {
   id: string
   name: string
@@ -58,6 +64,7 @@ export interface AreaConfig {
   icon: LucideIcon
   color: AreaColor
   modules: ModuleConfig[]
+  subsections?: ModuleSubsection[]
 }
 
 export const AREAS_CONFIG: AreaConfig[] = [
@@ -199,59 +206,11 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
-        id: "vehicles",
-        name: "Vehículos",
-        description: "Gestión de flota vehicular y mantenimiento",
-        icon: Car,
-        href: "/areas/logistics/vehicles",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "clients",
-        name: "Gestión de Clientes",
-        description: "Administración de clientes y proyectos",
-        icon: Users,
-        href: "/areas/logistics/clients",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "projects",
-        name: "Gestión de Proyectos",
-        description: "Administración de proyectos y obras",
-        icon: Building2,
-        href: "/areas/logistics/projects",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "materials",
-        name: "Gestión de Materiales",
-        description: "Administración de materiales y inventarios",
-        icon: Package,
-        href: "/areas/logistics/materials",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "material-prices",
-        name: "Precios de Materiales",
-        description: "Configuración de precios por proyecto",
-        icon: DollarSign,
-        href: "/areas/logistics/material-prices",
-        status: ModuleStatus.ACTIVE
-      },
-      {
         id: "trip-requests",
         name: "Solicitudes de Viaje",
         description: "Gestión de solicitudes de transporte de materiales",
         icon: ClipboardList,
         href: "/areas/logistics/trip-requests",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "drivers",
-        name: "Conductores",
-        description: "Gestión de conductores y documentación vehicular",
-        icon: Users,
-        href: "/areas/logistics/drivers",
         status: ModuleStatus.ACTIVE
       },
       {
@@ -269,6 +228,62 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: BarChart3,
         href: "/areas/logistics/reports",
         status: ModuleStatus.DEVELOPMENT
+      }
+    ],
+    subsections: [
+      {
+        id: "configuration",
+        name: "Configuración",
+        modules: [
+          {
+            id: "vehicles",
+            name: "Vehículos",
+            description: "Gestión de flota vehicular y mantenimiento",
+            icon: Car,
+            href: "/areas/logistics/vehicles",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "clients",
+            name: "Gestión de Clientes",
+            description: "Administración de clientes y proyectos",
+            icon: Users,
+            href: "/areas/logistics/clients",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "projects",
+            name: "Gestión de Proyectos",
+            description: "Administración de proyectos y obras",
+            icon: Building2,
+            href: "/areas/logistics/projects",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "materials",
+            name: "Gestión de Materiales",
+            description: "Administración de materiales y inventarios",
+            icon: Package,
+            href: "/areas/logistics/materials",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "material-prices",
+            name: "Precios de Materiales",
+            description: "Configuración de precios por proyecto",
+            icon: DollarSign,
+            href: "/areas/logistics/material-prices",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "drivers",
+            name: "Conductores",
+            description: "Gestión de conductores y documentación vehicular",
+            icon: Users,
+            href: "/areas/logistics/drivers",
+            status: ModuleStatus.ACTIVE
+          }
+        ]
       }
     ]
   },
