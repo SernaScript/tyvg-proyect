@@ -1,0 +1,29 @@
+# Archivos de desarrollo
+node_modules/.cache
+.next/cache
+*.log
+*.tmp
+
+# Archivos de descarga
+downloads/
+*.xlsx
+*.xls
+
+# Archivos de configuración local
+.env.local
+.env.development
+
+# Archivos de testing
+coverage/
+.nyc_output/
+
+# Archivos de IDE
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de Playwright (se instalarán en runtime)
+node_modules/playwright/.local-browsers

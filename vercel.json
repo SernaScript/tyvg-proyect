@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "src/app/api/flypass-scraping/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/process-excel/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "outputDirectory": ".next",
+  "installCommand": "npm install --production=false",
+  "buildCommand": "npm run build"
+}

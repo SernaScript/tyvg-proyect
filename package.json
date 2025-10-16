@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "prisma generate && next build && npx playwright install",
+    "build": "npm run clean:cache && prisma generate && next build",
+    "build:with-playwright": "npm run clean:cache && prisma generate && next build && npx playwright install",
     "start": "next start",
     "lint": "eslint",
+    "clean:cache": "tsx scripts/clean-cache.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

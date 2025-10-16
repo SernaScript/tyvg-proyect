@@ -1,4 +1,4 @@
-import WebScraper, { ScrapingResult } from './WebScraper';
+import { PlaywrightWrapper, ScrapingResult } from './PlaywrightWrapper';
 import { processFlypassExcel, ProcessResult } from './ExcelProcessor';
 import { FlypassDataMapper } from './FlypassDataMapper';
 import path from 'path';
@@ -13,63 +13,52 @@ export interface FlypassCredentials {
 }
 
 export class FlypassScraper {
-  private scraper: WebScraper;
+  private scraper: PlaywrightWrapper;
 
   constructor() {
-    this.scraper = new WebScraper({
+    this.scraper = new PlaywrightWrapper({
       browserType: 'chromium',
-      headless: false, // Cambiar a true en producción
+      headless: process.env.NODE_ENV === 'production', // Headless en producción
       timeout: 30000,
       downloadPath: path.join(process.cwd(), 'downloads') // Ruta absoluta
     });
   }
 
   async scrapeFlypass(credentials: FlypassCredentials): Promise<ScrapingResult> {
-    console.log('🚀 Iniciando scraper de Flypass...');
     
     try {
       // PASO 1: Inicializar el navegador
-      console.log('📱 Inicializando navegador...');
       await this.scraper.init();
       
       // PASO 2: Ir a la página de Flypass
-      console.log('🌐 Navegando a Flypass...');
       this.scraper.navigateTo('https://clientes.flypass.com.co/');
       
       // PASO 3: Esperar y llenar el formulario de login
       await this.scraper.waitForSelector('input[name="username"]');
       await this.scraper.waitForSelector('input[name="password"]');
 
-      console.log('✍️ Llenando credenciales...');
       await this.scraper.type('input[name="username"]', credentials.nit);
       await this.scraper.type('input[name="password"]', credentials.password);
       
       // PASO 4: Intentar hacer login con diferentes selectores
-      console.log('🔐 Intentando hacer login...');
       await this.attemptLogin();
       
-      console.log('✅ Login realizado con éxito!');
       
       // PASO 5: Navegar a la sección de facturas
-      console.log('⏳ Esperando que cargue la página principal...');
       await this.navigateToInvoices();
       
       // PASO 6: Configurar filtros de búsqueda
-      console.log('🔧 Configurando filtros de búsqueda...');
       await this.configureSearchFilters(credentials.startDate, credentials.endDate);
       
       // PASO 7: Descargar resultados
-      console.log('📥 Iniciando descarga...');
       await this.downloadResults();
       
       // PASO 8: Procesar a la base de datos si está habilitado
       let processResult: ProcessResult | undefined;
       
       if (credentials.processToDatabase) {
-        console.log('🗄️ Procesando archivo a la base de datos...');
         try {
           // Esperar un momento para que el archivo se complete de escribir
-          console.log('⏳ Esperando que se complete la descarga...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           // Obtener la ruta del archivo descargado
@@ -77,7 +66,6 @@ export class FlypassScraper {
           
           // Verificar que el directorio existe
           if (!fs.existsSync(downloadsDir)) {
-            console.warn('⚠️ Directorio de descargas no existe');
             return {
               success: true,
               message: 'Scraping completado exitosamente. Archivo descargado.',
@@ -100,11 +88,9 @@ export class FlypassScraper {
           
           if (files.length > 0) {
             const latestFile = files[0];
-            console.log(`📄 Procesando archivo: ${latestFile.name}`);
             
             // Verificar que el archivo existe y es accesible
             if (!fs.existsSync(latestFile.path)) {
-              console.warn('⚠️ Archivo no encontrado:', latestFile.path);
               return {
                 success: true,
                 message: 'Scraping completado exitosamente. Archivo descargado.',
@@ -128,7 +114,6 @@ export class FlypassScraper {
               } catch (error) {
                 retries++;
                 if (retries < maxRetries) {
-                  console.log(`⏳ Archivo en uso, esperando... (intento ${retries}/${maxRetries})`);
                   await new Promise(resolve => setTimeout(resolve, 1000));
                 } else {
                   throw new Error('Archivo bloqueado después de múltiples intentos');
@@ -137,9 +122,7 @@ export class FlypassScraper {
             }
             
             // Usar el mapeador de Flypass para migración específica
-            console.log('🔄 Ejecutando migración de datos Flypass...');
             const migrationResult = await FlypassDataMapper.processExcelFile(latestFile.path);
-            console.log(`✅ Migración completada: ${migrationResult.processedRows}/${migrationResult.totalRows} registros`);
             
             // Convertir resultado de migración a formato ProcessResult
             processResult = {
@@ -153,21 +136,17 @@ export class FlypassScraper {
             
             // Esperar 5 segundos antes de eliminar el archivo
             if (processResult.success) {
-              console.log('⏳ Esperando 5 segundos antes de eliminar el archivo...');
               await new Promise(resolve => setTimeout(resolve, 5000));
               
               try {
                 fs.unlinkSync(latestFile.path);
-                console.log(`🗑️ Archivo Excel eliminado después de 5 segundos: ${latestFile.name}`);
               } catch (deleteError) {
-                console.warn('⚠️ No se pudo eliminar el archivo Excel:', deleteError);
               }
             }
           } else {
-            console.warn('⚠️ No se encontró archivo Excel para procesar');
           }
         } catch (dbError) {
-          console.error('❌ Error procesando a la base de datos:', dbError);
+          console.error('Error processing to database:', dbError);
           // No fallar el scraping, solo reportar el error
         }
       }
@@ -191,13 +170,13 @@ export class FlypassScraper {
       };
       
     } catch (error) {
-      console.error('❌ Error en el scraper:', error);
+      console.error('Error in scraper:', error);
       
       // Tomar captura de pantalla para debug
       try {
         await this.scraper.takeScreenshot(`error-debug-${Date.now()}.png`);
       } catch (screenshotError) {
-        console.error('No se pudo tomar captura de pantalla:', screenshotError);
+        console.error('Could not take screenshot:', screenshotError);
       }
       
       return {
@@ -216,30 +195,23 @@ export class FlypassScraper {
     try {
       // Intento 1: Buscar por ID
       await this.scraper.waitForSelector('#btnEnterpriseLoginLogin', 5000);
-      console.log('✅ Botón encontrado con ID!');
       await this.scraper.click('#btnEnterpriseLoginLogin');
       return;
     } catch (error1) {
-      console.log('❌ No se encontró con ID, probando con type=submit...');
       
       try {
         // Intento 2: Buscar por type=submit
         await this.scraper.waitForSelector('button[type="submit"]', 5000);
-        console.log('✅ Botón encontrado con type=submit!');
         await this.scraper.click('button[type="submit"]');
         return;
       } catch (error2) {
-        console.log('❌ No se encontró con type=submit, probando con texto...');
         
         try {
           // Intento 3: Buscar por texto
           await this.scraper.waitForSelector('button:has-text("sesión")', 5000);
-          console.log('✅ Botón encontrado con texto!');
           await this.scraper.click('button:has-text("sesión")');
           return;
         } catch (error3) {
-          console.log('❌ No se pudo encontrar el botón de ninguna manera');
-          console.log('📸 Tomando captura para debug...');
           await this.scraper.takeScreenshot('debug-no-se-encuentra-boton.png');
           throw new Error('No se pudo encontrar el botón de login');
         }
@@ -260,21 +232,16 @@ export class FlypassScraper {
     await this.scraper.click('a:has-text("Consulta tus facturas")');
     await this.scraper.click('#consolidatedInform');
 
-    console.log('🔄 Esperando nueva ventana...');
     await this.scraper.page!.waitForTimeout(2000);
 
     // Cambiar a la nueva ventana si existe
     const pages = await this.scraper.page!.context().pages();
-    console.log(`📊 Ventanas abiertas: ${pages.length}`);
 
     if (pages.length > 1) {
       const nuevaVentana = pages[pages.length - 1];
       this.scraper.page = nuevaVentana;
       
-      console.log('✅ Cambiado a la nueva ventana!');
-      console.log(`🌐 URL nueva ventana: ${await this.scraper.page.url()}`);
     } else {
-      console.log('ℹ️ No se detectó nueva ventana, continuando...');
     }
 
     await this.scraper.page!.waitForLoadState('networkidle');
@@ -285,7 +252,6 @@ export class FlypassScraper {
       await this.scraper.waitForSelector('#docGLTipo', 10000);
       await this.scraper.page!.selectOption('#docGLTipo', 'todos');
     } catch (error) {
-      console.warn('⚠️ No se pudo configurar tipo de documento:', error);
     }
     
     try {
@@ -386,7 +352,6 @@ export async function processDownloadedFile(): Promise<ProcessResult | null> {
       try {
         fs.unlinkSync(tempFilePath);
       } catch (tempDeleteError) {
-        console.warn('⚠️ No se pudo eliminar archivo temporal:', tempDeleteError);
       }
       
     } catch (copyError) {
@@ -402,7 +367,6 @@ export async function processDownloadedFile(): Promise<ProcessResult | null> {
           try {
             fs.unlinkSync(latestFile.path);
           } catch (retryError) {
-            console.warn('⚠️ No se pudo eliminar el archivo Excel:', retryError);
           }
         }, 5000);
       }
@@ -411,7 +375,7 @@ export async function processDownloadedFile(): Promise<ProcessResult | null> {
     return processResult;
     
   } catch (error) {
-    console.error('❌ Error procesando archivo a la base de datos:', error);
+    console.error('Error processing file to database:', error);
     return null;
   }
 }
