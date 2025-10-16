@@ -63,17 +63,24 @@ model ScrapingLog {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  password  String
-  isActive  Boolean   @default(true)
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  roleId    String
-  sessions  Session[]
-  role      Role      @relation(fields: [roleId], references: [id])
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  name                  String?
+  password              String
+  isActive              Boolean               @default(true)
+  lastLogin             DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  roleId                String
+  approvedLegalizations AdvanceLegalization[] @relation("AdvanceLegalizationApprover")
+  attendedAlerts        Alert[]               @relation("AlertAttendee")
+  driver                Driver?
+  sessions              Session[]
+  tripAudits            TripAudit[]
+  tripEvidences         TripEvidence[]        @relation("TripEvidenceUser")
+  approvedExpenses      TripExpense[]         @relation("TripExpenseApprover")
+  tripRequests          TripRequest[]         @relation("TripRequestUser")
+  role                  Role                  @relation(fields: [roleId], references: [id])
 
   @@map("users")
 }
@@ -130,14 +137,22 @@ model Session {
 }
 
 model Owner {
-  id        String    @id @default(cuid())
-  document  String    @unique
-  firstName String
-  lastName  String
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  vehicles  Vehicle[]
+  id               String    @id @default(cuid())
+  document         String    @unique
+  firstName        String
+  lastName         String
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  bankAccount      String?
+  bankEntity       String?
+  companyName      String?
+  contact          String?
+  email            String?
+  nit              String?   @unique
+  phone            String?
+  vehicles         Vehicle[]
+  providedVehicles Vehicle[] @relation("VehicleProvider")
 
   @@map("owners")
 }
@@ -154,9 +169,17 @@ model Vehicle {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   ownerId       String?
+  capacityM3    Decimal?       @db.Decimal(10, 2)
+  capacityTons  Decimal?       @db.Decimal(10, 2)
+  ownershipType OwnershipType  @default(OWNED)
+  providerId    String?
+  ratePerTrip   Decimal?       @db.Decimal(12, 2)
   fuelPurchases FuelPurchase[]
+  trips         Trip[]
   owner         Owner?         @relation(fields: [ownerId], references: [id])
+  provider      Owner?         @relation("VehicleProvider", fields: [providerId], references: [id])
 
+  @@index([ownershipType, isActive])
   @@map("vehicles")
 }
 
@@ -247,16 +270,16 @@ model SiigoAccountsPayable {
   providerIdentification String
   providerBranchOffice   Int
   providerName           String
-  costCenterCode         Int
   costCenterName         String
   currencyCode           String
   currencyBalance        Decimal                       @db.Decimal(15, 2)
-  paymentValue           Decimal?                      @db.Decimal(15, 2)
-  approved               Boolean                       @default(false)
-  paid                   Boolean                       @default(false)
   createdAt              DateTime                      @default(now())
   updatedAt              DateTime                      @updatedAt
   generatedRequestId     String
+  costCenterCode         Int
+  approved               Boolean                       @default(false)
+  paid                   Boolean                       @default(false)
+  paymentValue           Decimal?                      @db.Decimal(15, 2)
   generatedRequest       SiigoAccountsPayableGenerated @relation(fields: [generatedRequestId], references: [id], onDelete: Cascade)
 
   @@map("siigo_accounts_payable")
@@ -271,16 +294,325 @@ model SiigoAccountsPayableGenerated {
   totalResults     Int
   recordsProcessed Int
   status           String
-  state            String                 @default("pending")
   errorMessage     String?
   duration         Int?
   userAgent        String?
   ipAddress        String?
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
+  state            String                 @default("pending")
   accountsPayable  SiigoAccountsPayable[]
 
   @@map("siigo_accounts_payable_generated")
+}
+
+model Client {
+  id             String        @id @default(cuid())
+  identification String        @unique
+  name           String
+  address        String?
+  email          String?
+  phone          String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  projects       Project[]
+  tripRequests   TripRequest[]
+
+  @@index([identification])
+  @@index([isActive])
+  @@map("clients")
+}
+
+model Project {
+  id             String                 @id @default(cuid())
+  clientId       String
+  name           String
+  address        String?
+  isActive       Boolean                @default(true)
+  startDate      DateTime               @db.Date
+  endDate        DateTime?              @db.Date
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  materialPrices ProjectMaterialPrice[]
+  client         Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tripRequests   TripRequest[]
+
+  @@index([clientId, isActive])
+  @@map("projects")
+}
+
+model Material {
+  id                   String                 @id @default(cuid())
+  name                 String
+  type                 MaterialType
+  unitOfMeasure        String
+  weightPerUnit        Decimal?               @db.Decimal(10, 3)
+  description          String?
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  projectPrices        ProjectMaterialPrice[]
+  tripMaterials        TripMaterial[]
+  tripRequestMaterials TripRequestMaterial[]
+
+  @@map("materials")
+}
+
+model ProjectMaterialPrice {
+  id              String    @id @default(cuid())
+  projectId       String
+  materialId      String
+  salePrice       Decimal   @db.Decimal(12, 2)
+  outsourcedPrice Decimal   @db.Decimal(12, 2)
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  material        Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, materialId, startDate])
+  @@index([projectId, materialId, isActive])
+  @@map("project_material_prices")
+}
+
+model Driver {
+  id             String           @id @default(cuid())
+  userId         String           @unique
+  name           String
+  identification String           @unique
+  license        String
+  phone          String?
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  advances       Advance[]
+  documents      DriverDocument[]
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripExpenses   TripExpense[]
+  trips          Trip[]
+
+  @@index([isActive])
+  @@map("drivers")
+}
+
+model DriverDocument {
+  id             String       @id @default(cuid())
+  driverId       String
+  documentType   DocumentType
+  documentNumber String
+  issueDate      DateTime     @db.Date
+  expirationDate DateTime     @db.Date
+  fileUrl        String?
+  isActive       Boolean      @default(true)
+  isAlerted      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  driver         Driver       @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, expirationDate, isActive])
+  @@map("driver_documents")
+}
+
+model TripRequest {
+  id               String                @id @default(cuid())
+  projectId        String
+  clientId         String
+  requestingUserId String
+  requestDate      DateTime              @default(now())
+  priority         TripRequestPriority   @default(NORMAL)
+  status           TripRequestStatus     @default(PENDING)
+  observations     String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  materials        TripRequestMaterial[]
+  client           Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestingUser   User                  @relation("TripRequestUser", fields: [requestingUserId], references: [id], onDelete: Cascade)
+  trips            Trip[]
+
+  @@map("trip_requests")
+}
+
+model TripRequestMaterial {
+  id                String      @id @default(cuid())
+  tripRequestId     String
+  materialId        String
+  requestedQuantity Decimal     @db.Decimal(12, 3)
+  unitOfMeasure     String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  material          Material    @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  tripRequest       TripRequest @relation(fields: [tripRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([tripRequestId, materialId])
+  @@map("trip_request_materials")
+}
+
+model Trip {
+  id              String         @id @default(cuid())
+  tripRequestId   String
+  driverId        String
+  vehicleId       String
+  waybillNumber   String?
+  scheduledDate   DateTime
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
+  status          TripStatus     @default(SCHEDULED)
+  certifiedWeight Decimal?       @db.Decimal(12, 3)
+  observations    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  audits          TripAudit[]
+  evidences       TripEvidence[]
+  expenses        TripExpense[]
+  materials       TripMaterial[]
+  driver          Driver         @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  tripRequest     TripRequest    @relation(fields: [tripRequestId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledDate])
+  @@index([driverId, status])
+  @@index([tripRequestId])
+  @@map("trips")
+}
+
+model TripMaterial {
+  id                 String   @id @default(cuid())
+  tripId             String
+  materialId         String
+  programmedQuantity Decimal  @db.Decimal(12, 3)
+  loadedQuantity     Decimal? @db.Decimal(12, 3)
+  deliveredQuantity  Decimal? @db.Decimal(12, 3)
+  difference         Decimal? @db.Decimal(12, 3)
+  observations       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  material           Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  trip               Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, materialId])
+  @@map("trip_materials")
+}
+
+model TripEvidence {
+  id               String       @id @default(cuid())
+  tripId           String
+  evidenceType     EvidenceType
+  photoUrl         String
+  description      String?
+  latitude         Decimal?     @db.Decimal(10, 8)
+  longitude        Decimal?     @db.Decimal(11, 8)
+  dateTime         DateTime
+  uploadedByUserId String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  trip             Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  uploadedByUser   User         @relation("TripEvidenceUser", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+
+  @@map("trip_evidences")
+}
+
+model Advance {
+  id           String               @id @default(cuid())
+  driverId     String
+  amount       Decimal              @db.Decimal(12, 2)
+  period       String
+  advanceDate  DateTime             @db.Date
+  status       AdvanceStatus        @default(PENDING)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  legalization AdvanceLegalization?
+  driver       Driver               @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  expenses     TripExpense[]
+
+  @@map("advances")
+}
+
+model TripExpense {
+  id               String      @id @default(cuid())
+  tripId           String
+  advanceId        String?
+  driverId         String
+  expenseType      ExpenseType
+  amount           Decimal     @db.Decimal(12, 2)
+  description      String?
+  receiptPhotoUrl  String?
+  expenseDate      DateTime    @db.Date
+  isApproved       Boolean     @default(false)
+  approvedByUserId String?
+  approvalDate     DateTime?
+  observations     String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  advance          Advance?    @relation(fields: [advanceId], references: [id])
+  approvedByUser   User?       @relation("TripExpenseApprover", fields: [approvedByUserId], references: [id])
+  driver           Driver      @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  trip             Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([driverId, isApproved])
+  @@index([advanceId])
+  @@map("trip_expenses")
+}
+
+model AdvanceLegalization {
+  id               String             @id @default(cuid())
+  advanceId        String             @unique
+  totalSpent       Decimal            @db.Decimal(12, 2)
+  balanceInFavor   Decimal            @db.Decimal(12, 2)
+  balanceInDebt    Decimal            @db.Decimal(12, 2)
+  legalizationDate DateTime           @db.Date
+  isApproved       Boolean            @default(false)
+  approvedByUserId String?
+  approvalDate     DateTime?
+  status           LegalizationStatus @default(PENDING)
+  observations     String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  advance          Advance            @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+  approvedByUser   User?              @relation("AdvanceLegalizationApprover", fields: [approvedByUserId], references: [id])
+
+  @@map("advance_legalizations")
+}
+
+model Alert {
+  id               String        @id @default(cuid())
+  alertType        AlertType
+  referenceTable   String
+  referenceId      String
+  message          String
+  priority         AlertPriority
+  status           AlertStatus   @default(PENDING)
+  creationDate     DateTime      @default(now())
+  attendedByUserId String?
+  attendanceDate   DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  attendedByUser   User?         @relation("AlertAttendee", fields: [attendedByUserId], references: [id])
+
+  @@index([status, priority])
+  @@index([referenceTable, referenceId])
+  @@map("alerts")
+}
+
+model TripAudit {
+  id           String   @id @default(cuid())
+  tripId       String
+  userId       String
+  action       String
+  previousData Json?
+  newData      Json?
+  ipAddress    String?
+  userAgent    String?
+  timestamp    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  trip         Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trip_audits")
 }
 
 enum RoleName {
@@ -291,6 +623,8 @@ enum RoleName {
   LOGISTICS
   BILLING
   VIEWER
+  DRIVER
+  CLIENT
 }
 
 enum PermissionAction {
@@ -299,4 +633,95 @@ enum PermissionAction {
   EDIT
   DELETE
   MANAGE
+}
+
+enum OwnershipType {
+  OWNED
+  OUTSOURCED
+}
+
+enum MaterialType {
+  STOCKED
+  NON_STOCKED
+}
+
+enum TripRequestPriority {
+  NORMAL
+  URGENT
+}
+
+enum TripRequestStatus {
+  PENDING
+  SCHEDULED
+  CANCELLED
+}
+
+enum TripStatus {
+  SCHEDULED
+  LOADING
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  INVOICED
+}
+
+enum DocumentType {
+  LICENSE
+  MEDICAL_EXAM
+  TRAINING
+  CERTIFICATE
+  SOAT
+  TECHNICAL_REVIEW
+}
+
+enum EvidenceType {
+  WAYBILL
+  LOADING
+  UNLOADING
+  ODOMETER
+  SCALE
+  OTHER
+}
+
+enum ExpenseType {
+  FUEL
+  FOOD
+  TOLL
+  STRAPS
+  PARKING
+  OTHER
+}
+
+enum LegalizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AdvanceStatus {
+  PENDING
+  PARTIALLY_LEGALIZED
+  LEGALIZED
+}
+
+enum AlertType {
+  TRIP_NOT_STARTED
+  DOCUMENT_EXPIRING
+  DOCUMENT_EXPIRED
+  EXCESSIVE_EXPENSE
+  TRIP_DELAYED
+  LEGALIZATION_PENDING
+  MATERIAL_DIFFERENCE
+}
+
+enum AlertPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AlertStatus {
+  PENDING
+  ATTENDED
+  IGNORED
 }

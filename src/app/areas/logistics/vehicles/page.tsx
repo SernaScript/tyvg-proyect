@@ -32,13 +32,26 @@ interface Vehicle {
   model: string
   type: string
   status: string
-  driver?: string
+  ownershipType: 'OWNED' | 'OUTSOURCED'
+  providerId?: string
+  capacityTons?: number
+  capacityM3?: number
+  ratePerTrip?: number
   isActive: boolean
   owner?: {
     id: string
     document: string
     firstName: string
     lastName: string
+    isActive: boolean
+  }
+  provider?: {
+    id: string
+    document: string
+    firstName: string
+    lastName: string
+    companyName?: string
+    nit?: string
     isActive: boolean
   }
 }
@@ -48,6 +61,13 @@ interface Owner {
   document: string
   firstName: string
   lastName: string
+  companyName?: string
+  nit?: string
+  contact?: string
+  phone?: string
+  email?: string
+  bankAccount?: string
+  bankEntity?: string
   isActive: boolean
   vehicles: Vehicle[]
 }
@@ -531,7 +551,8 @@ export default function VehiclesPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
-                            Documento: {owner.document}
+                            {owner.companyName ? `${owner.companyName} • ` : ''}Doc: {owner.document}
+                            {owner.bankEntity && ` • ${owner.bankEntity}`}
                           </p>
                         </div>
                       </div>

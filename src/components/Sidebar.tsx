@@ -31,21 +31,16 @@ const staticNavigation = [
 const adminNavigation = [
   {
     name: "Reportes",
-    href: "/reportes",
+    href: "/report",
     icon: BarChart3,
   },
   {
-    name: "Users",
+    name: "Usuarios",
     href: "/users",
     icon: Users,
   },
   {
-    name: "Base de Datos",
-    href: "/base-datos",
-    icon: Database,
-  },
-  {
-    name: "Settings",
+    name: "Configuración",
     href: "/settings",
     icon: Settings,
   },
@@ -80,11 +75,9 @@ export function Sidebar() {
     switch (item.name) {
       case "Reportes":
         return hasPermission("reports", PermissionAction.VIEW)
-      case "Users":
+      case "Usuarios":
         return hasPermission("users", PermissionAction.VIEW)
-      case "Base de Datos":
-        return hasPermission("database", PermissionAction.VIEW)
-      case "Settings":
+      case "Configuración":
         return hasPermission("settings", PermissionAction.VIEW)
       default:
         return false

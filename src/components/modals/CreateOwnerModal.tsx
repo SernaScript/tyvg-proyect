@@ -18,17 +18,25 @@ export function CreateOwnerModal({ isOpen, onClose, onSuccess }: CreateOwnerModa
     document: '',
     firstName: '',
     lastName: '',
+    companyName: '',
+    nit: '',
+    contact: '',
+    phone: '',
+    email: '',
+    bankAccount: '',
+    bankEntity: '',
     isActive: true
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
     
-    if (name === 'document') {
-      // Solo permitir números
+    if (name === 'document' || name === 'nit') {
+      // Solo permitir números para documento y NIT
       const numericValue = value.replace(/\D/g, '')
       setFormData(prev => ({ ...prev, [name]: numericValue }))
     } else if (type === 'checkbox') {
@@ -66,6 +74,13 @@ export function CreateOwnerModal({ isOpen, onClose, onSuccess }: CreateOwnerModa
           document: '',
           firstName: '',
           lastName: '',
+          companyName: '',
+          nit: '',
+          contact: '',
+          phone: '',
+          email: '',
+          bankAccount: '',
+          bankEntity: '',
           isActive: true
         })
       }, 1500)
@@ -83,6 +98,13 @@ export function CreateOwnerModal({ isOpen, onClose, onSuccess }: CreateOwnerModa
         document: '',
         firstName: '',
         lastName: '',
+        companyName: '',
+        nit: '',
+        contact: '',
+        phone: '',
+        email: '',
+        bankAccount: '',
+        bankEntity: '',
         isActive: true
       })
       setError('')
@@ -95,7 +117,7 @@ export function CreateOwnerModal({ isOpen, onClose, onSuccess }: CreateOwnerModa
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-blue-600" />
@@ -113,46 +135,144 @@ export function CreateOwnerModal({ isOpen, onClose, onSuccess }: CreateOwnerModa
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="document">Número de Documento *</Label>
-              <Input
-                id="document"
-                name="document"
-                type="text"
-                value={formData.document}
-                onChange={handleInputChange}
-                placeholder="Solo números"
-                required
-                disabled={isLoading}
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="document">Número de Documento *</Label>
+                <Input
+                  id="document"
+                  name="document"
+                  type="text"
+                  value={formData.document}
+                  onChange={handleInputChange}
+                  placeholder="Solo números"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nombre *</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder="Ingrese el nombre"
-                required
-                disabled={isLoading}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nombre *</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese el nombre"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Apellido *</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder="Ingrese el apellido"
-                required
-                disabled={isLoading}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Apellido *</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese el apellido"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Nombre de Empresa</Label>
+                <Input
+                  id="companyName"
+                  name="companyName"
+                  type="text"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  placeholder="Nombre de la empresa (opcional)"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nit">NIT</Label>
+                <Input
+                  id="nit"
+                  name="nit"
+                  type="text"
+                  value={formData.nit}
+                  onChange={handleInputChange}
+                  placeholder="Número de identificación tributaria"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact">Contacto</Label>
+                <Input
+                  id="contact"
+                  name="contact"
+                  type="text"
+                  value={formData.contact}
+                  onChange={handleInputChange}
+                  placeholder="Persona de contacto"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="Número de teléfono"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="Correo electrónico"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankEntity">Entidad Bancaria</Label>
+                <select
+                  id="bankEntity"
+                  name="bankEntity"
+                  value={formData.bankEntity}
+                  onChange={handleInputChange}
+                  disabled={isLoading}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Seleccionar entidad bancaria</option>
+                  <option value="Banco de Bogotá">Banco de Bogotá</option>
+                  <option value="Banco de Occidente">Banco de Occidente</option>
+                  <option value="Bancolombia">Bancolombia</option>
+                  <option value="Banco Davivienda">Banco Davivienda</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankAccount">Cuenta Bancaria</Label>
+                <Input
+                  id="bankAccount"
+                  name="bankAccount"
+                  type="text"
+                  value={formData.bankAccount}
+                  onChange={handleInputChange}
+                  placeholder="Número de cuenta bancaria"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 pt-2">

@@ -207,6 +207,62 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
+        id: "clients",
+        name: "Gestión de Clientes",
+        description: "Administración de clientes y proyectos",
+        icon: Users,
+        href: "/areas/logistics/clients",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "projects",
+        name: "Gestión de Proyectos",
+        description: "Administración de proyectos y obras",
+        icon: Building2,
+        href: "/areas/logistics/projects",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "materials",
+        name: "Gestión de Materiales",
+        description: "Administración de materiales y inventarios",
+        icon: Package,
+        href: "/areas/logistics/materials",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "material-prices",
+        name: "Precios de Materiales",
+        description: "Configuración de precios por proyecto",
+        icon: DollarSign,
+        href: "/areas/logistics/material-prices",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "trip-requests",
+        name: "Solicitudes de Viaje",
+        description: "Gestión de solicitudes de transporte de materiales",
+        icon: ClipboardList,
+        href: "/areas/logistics/trip-requests",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "drivers",
+        name: "Conductores",
+        description: "Gestión de conductores y documentación vehicular",
+        icon: Users,
+        href: "/areas/logistics/drivers",
+        status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "trips",
+        name: "Gestión de Viajes",
+        description: "Programación y seguimiento de viajes de transporte",
+        icon: Truck,
+        href: "/areas/logistics/trips",
+        status: ModuleStatus.ACTIVE
+      },
+      {
         id: "logistics-reports",
         name: "Reportes de Logística",
         description: "Reportes de movimientos y rotación de inventarios",
@@ -264,38 +320,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
     icon: LinkIcon,
     color: AreaColor.BLUE,
     modules: [
-      {
-        id: "siigo-credentials",
-        name: "Credenciales Siigo",
-        description: "Configuración de credenciales y conexión con Siigo",
-        icon: Key,
-        href: "/areas/siigo-integration/credentials",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "siigo-connection-test",
-        name: "Prueba de Conexión",
-        description: "Verificación de conectividad con la API de Siigo",
-        icon: TestTube,
-        href: "/areas/siigo-integration/connection-test",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "siigo-sync",
-        name: "Sincronización de Datos",
-        description: "Sincronización automática de datos con Siigo",
-        icon: Zap,
-        href: "/areas/siigo-integration/sync",
-        status: ModuleStatus.DEVELOPMENT
-      },
-      {
-        id: "siigo-logs",
-        name: "Logs de Integración",
-        description: "Registro de actividades y errores de integración",
-        icon: FileBarChart,
-        href: "/areas/siigo-integration/logs",
-        status: ModuleStatus.DEVELOPMENT
-      },
       {
         id: "siigo-database-integration",
         name: "Integración de Bases de Datos",

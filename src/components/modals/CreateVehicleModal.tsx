@@ -29,7 +29,11 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
     model: '',
     type: '',
     status: 'active',
-    driver: '',
+    ownershipType: 'OWNED' as 'OWNED' | 'OUTSOURCED',
+    providerId: '',
+    capacityTons: '',
+    capacityM3: '',
+    ratePerTrip: '',
     isActive: true,
     ownerId: ''
   })
@@ -64,7 +68,7 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
     if (type === 'checkbox') {
       setFormData(prev => ({ ...prev, [name]: checked }))
     } else if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }))
+      setFormData(prev => ({ ...prev, [name]: value }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
@@ -121,7 +125,11 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
       model: '',
       type: '',
       status: 'active',
-      driver: '',
+      ownershipType: 'OWNED' as 'OWNED' | 'OUTSOURCED',
+      providerId: '',
+      capacityTons: '',
+      capacityM3: '',
+      ratePerTrip: '',
       isActive: true,
       ownerId: ''
     })
@@ -254,21 +262,85 @@ export function CreateVehicleModal({ isOpen, onClose, onSuccess }: CreateVehicle
                 />
               </div>
 
+
               <div className="space-y-2">
-                <Label htmlFor="driver">Conductor</Label>
+                <Label htmlFor="ownershipType">Tipo de Propiedad *</Label>
+                <CustomSelect
+                  options={[
+                    { value: "OWNED", label: "Propio" },
+                    { value: "OUTSOURCED", label: "Tercerizado" }
+                  ]}
+                  value={formData.ownershipType}
+                  onChange={(value) => handleSelectChange('ownershipType', value)}
+                  placeholder="Seleccionar tipo de propiedad"
+                  disabled={isLoading}
+                  ariaLabel="Tipo de propiedad del vehículo"
+                />
+              </div>
+
+              {formData.ownershipType === 'OUTSOURCED' && (
+                <div className="space-y-2">
+                  <Label htmlFor="providerId">Proveedor</Label>
+                  <CustomSelect
+                    options={[
+                      { value: "", label: "Sin proveedor" },
+                      ...owners.map((owner) => ({
+                        value: owner.id,
+                        label: `${owner.firstName} ${owner.lastName} (${owner.document})`
+                      }))
+                    ]}
+                    value={formData.providerId}
+                    onChange={(value) => handleSelectChange('providerId', value)}
+                    placeholder="Seleccionar proveedor"
+                    disabled={isLoading}
+                    ariaLabel="Proveedor del vehículo"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="capacityTons">Capacidad (Toneladas)</Label>
                 <Input
-                  id="driver"
-                  name="driver"
-                  type="text"
-                  value={formData.driver}
+                  id="capacityTons"
+                  name="capacityTons"
+                  type="number"
+                  step="0.01"
+                  value={formData.capacityTons}
                   onChange={handleInputChange}
-                  placeholder="Nombre del conductor"
+                  placeholder="0.00"
                   disabled={isLoading}
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="capacityM3">Capacidad (m³)</Label>
+                <Input
+                  id="capacityM3"
+                  name="capacityM3"
+                  type="number"
+                  step="0.01"
+                  value={formData.capacityM3}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                  disabled={isLoading}
+                />
+              </div>
 
-
+              {formData.ownershipType === 'OUTSOURCED' && (
+                <div className="space-y-2">
+                  <Label htmlFor="ratePerTrip">Tarifa por Viaje</Label>
+                  <Input
+                    id="ratePerTrip"
+                    name="ratePerTrip"
+                    type="number"
+                    step="0.01"
+                    value={formData.ratePerTrip}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
             </div>
 

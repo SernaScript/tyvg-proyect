@@ -21,6 +21,7 @@ import {
   Globe
 } from "lucide-react"
 import { SiigoCredentialsModal } from '@/components/modals/SiigoCredentialsModal'
+import { RoleDetailsModal } from '@/components/modals/RoleDetailsModal'
 
 interface Role {
   id: string;
@@ -57,6 +58,8 @@ export default function SettingsPage() {
   const [siigoLoading, setSiigoLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("roles");
   const [showSiigoModal, setShowSiigoModal] = useState(false);
+  const [showRoleDetailsModal, setShowRoleDetailsModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   const loadRoles = async () => {
     setLoading(true);
@@ -226,6 +229,11 @@ export default function SettingsPage() {
     }
   };
 
+  const handleViewRoleDetails = (role: Role) => {
+    setSelectedRole(role);
+    setShowRoleDetailsModal(true);
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -269,14 +277,14 @@ export default function SettingsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Role Management</CardTitle>
+                    <CardTitle>Gestión de Roles</CardTitle>
                     <CardDescription>
-                      Manage system roles and their permissions
+                      Administra los roles del sistema y sus permisos
                     </CardDescription>
                   </div>
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Role
+                    Crear Rol
                   </Button>
                 </div>
               </CardHeader>
@@ -284,46 +292,81 @@ export default function SettingsPage() {
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading roles...</p>
+                    <p className="mt-2 text-gray-600">Cargando roles...</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
-                    {roles.map((role) => (
-                      <Card key={role.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge className={getRoleColor(role.name)}>
-                              {role.displayName}
-                            </Badge>
-                            <div>
-                              <h3 className="font-medium">{role.displayName}</h3>
-                              <p className="text-sm text-gray-600">{role.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        {/* Permisos del rol */}
-                        <div className="mt-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {role.permissions.map((permission) => (
-                              <Badge key={permission.id} variant="outline" className="text-xs">
-                                {getResourceIcon(permission.resource)}
-                                {permission.resource}:{permission.action}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 font-medium">Rol</th>
+                          <th className="text-left py-3 px-4 font-medium">Descripción</th>
+                          <th className="text-left py-3 px-4 font-medium">Permisos</th>
+                          <th className="text-left py-3 px-4 font-medium">Estado</th>
+                          <th className="text-left py-3 px-4 font-medium">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {roles.map((role) => (
+                          <tr key={role.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <Badge className={getRoleColor(role.name)}>
+                                  {role.displayName}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <p className="text-sm text-gray-600 max-w-xs truncate">
+                                {role.description || 'Sin descripción'}
+                              </p>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm text-gray-500">
+                                  {role.permissions.length} permisos
+                                </span>
+                                <div className="flex flex-wrap gap-1 max-w-xs">
+                                  {role.permissions.slice(0, 3).map((permission) => (
+                                    <Badge key={permission.id} variant="outline" className="text-xs">
+                                      {permission.resource}
+                                    </Badge>
+                                  ))}
+                                  {role.permissions.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{role.permissions.length - 3}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant={role.isActive ? "default" : "secondary"}>
+                                {role.isActive ? 'Activo' : 'Inactivo'}
                               </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  title="Ver detalles"
+                                  onClick={() => handleViewRoleDetails(role)}
+                                >
+                                  <Shield className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" title="Editar">
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" title="Eliminar">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>
@@ -336,46 +379,67 @@ export default function SettingsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Permission Management</CardTitle>
+                    <CardTitle>Gestión de Permisos</CardTitle>
                     <CardDescription>
-                      Manage available system permissions
+                      Administra los permisos disponibles en el sistema
                     </CardDescription>
                   </div>
                   <Button className="bg-green-600 hover:bg-green-700">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Permission
+                    Crear Permiso
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {permissions.map((permission) => (
-                    <Card key={permission.id} className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge className={getActionColor(permission.action)}>
-                            {permission.action}
-                          </Badge>
-                          <div>
-                            <h3 className="font-medium">{permission.name}</h3>
-                            <p className="text-sm text-gray-600">{permission.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-medium">Permiso</th>
+                        <th className="text-left py-3 px-4 font-medium">Recurso</th>
+                        <th className="text-left py-3 px-4 font-medium">Acción</th>
+                        <th className="text-left py-3 px-4 font-medium">Descripción</th>
+                        <th className="text-left py-3 px-4 font-medium">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {permissions.map((permission) => (
+                        <tr key={permission.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
                               {getResourceIcon(permission.resource)}
-                              <span className="text-xs text-gray-500">{permission.resource}</span>
+                              <span className="font-medium">{permission.name}</span>
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge variant="outline" className="text-xs">
+                              {permission.resource}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={getActionColor(permission.action)}>
+                              {permission.action}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="text-sm text-gray-600 max-w-xs truncate">
+                              {permission.description || 'Sin descripción'}
+                            </p>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" title="Editar">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" title="Eliminar">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -564,6 +628,13 @@ export default function SettingsPage() {
           onSave={handleSaveSiigoCredentials}
           existingCredentials={siigoCredentials}
           loading={siigoLoading}
+        />
+
+        {/* Modal de Detalles del Rol */}
+        <RoleDetailsModal
+          isOpen={showRoleDetailsModal}
+          onClose={() => setShowRoleDetailsModal(false)}
+          role={selectedRole}
         />
       </div>
     </MainLayout>

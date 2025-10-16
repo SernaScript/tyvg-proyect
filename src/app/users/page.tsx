@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { CreateUserModal } from '@/components/modals/CreateUserModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { PermissionAction } from '@/types/auth';
 import { 
   Users, 
   UserPlus, 
@@ -41,11 +44,17 @@ interface UsersResponse {
 }
 
 export default function UsersPage() {
+  const { user, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [showInactive, setShowInactive] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Verificar permisos
+  const canViewUsers = hasPermission('users', PermissionAction.VIEW);
+  const canCreateUsers = hasPermission('users', PermissionAction.CREATE);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -112,8 +121,29 @@ export default function UsersPage() {
 
   // Cargar usuarios al montar el componente
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (canViewUsers) {
+      loadUsers();
+    }
+  }, [canViewUsers]);
+
+  // Si no tiene permisos para ver usuarios, mostrar mensaje
+  if (!canViewUsers) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Acceso Denegado
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300">
+              No tiene permisos para acceder a la gestión de usuarios.
+            </p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -199,12 +229,17 @@ export default function UsersPage() {
         </Card>
 
         {/* Botón de crear usuario */}
-        <div className="flex justify-end">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Crear Nuevo Usuario
-          </Button>
-        </div>
+        {canCreateUsers && (
+          <div className="flex justify-end">
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Crear Nuevo Usuario
+            </Button>
+          </div>
+        )}
 
         {/* Tabla de usuarios */}
         <Card>
@@ -282,6 +317,15 @@ export default function UsersPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de crear usuario */}
+        {canCreateUsers && (
+          <CreateUserModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onUserCreated={loadUsers}
+          />
+        )}
       </div>
     </MainLayout>
   )
