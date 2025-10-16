@@ -38,8 +38,25 @@ export class PlaywrightWrapper {
     return this.playwright;
   }
 
+  private async ensureBrowsersInstalled() {
+    try {
+      const { execSync } = require('child_process');
+      console.log('Verificando instalación de navegadores de Playwright...');
+      execSync('npx playwright install chromium --with-deps', { 
+        stdio: 'inherit',
+        timeout: 300000 // 5 minutos timeout
+      });
+      console.log('Navegadores de Playwright instalados correctamente');
+    } catch (error) {
+      console.warn('No se pudieron instalar los navegadores de Playwright automáticamente:', error);
+    }
+  }
+
   async init(): Promise<void> {
     try {
+      // Verificar e instalar navegadores si es necesario
+      await this.ensureBrowsersInstalled();
+      
       const playwright = await this.loadPlaywright();
       const { chromium, firefox, webkit } = playwright;
       
