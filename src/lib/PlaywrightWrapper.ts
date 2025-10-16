@@ -43,15 +43,29 @@ export class PlaywrightWrapper {
       const playwright = await this.loadPlaywright();
       const { chromium, firefox, webkit } = playwright;
       
+      // Configuración específica para Vercel
+      const launchOptions = {
+        headless: this.config.headless,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu'
+        ]
+      };
+      
       switch (this.config.browserType) {
         case 'firefox':
-          this.browser = await firefox.launch({ headless: this.config.headless });
+          this.browser = await firefox.launch(launchOptions);
           break;
         case 'webkit':
-          this.browser = await webkit.launch({ headless: this.config.headless });
+          this.browser = await webkit.launch(launchOptions);
           break;
         default:
-          this.browser = await chromium.launch({ headless: this.config.headless });
+          this.browser = await chromium.launch(launchOptions);
       }
 
       // Configurar contexto con directorio de descarga si se especifica
@@ -81,6 +95,12 @@ export class PlaywrightWrapper {
       }
     } catch (error) {
       console.error('Error initializing browser:', error);
+      
+      // Verificar si es un error de instalación de Playwright
+      if (error instanceof Error && error.message.includes('Executable doesn\'t exist')) {
+        throw new Error('Playwright browsers not installed. Please run: npx playwright install chromium');
+      }
+      
       throw error;
     }
   }

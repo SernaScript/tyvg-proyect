@@ -9,10 +9,12 @@
   },
   "build": {
     "env": {
-      "NODE_ENV": "production"
+      "NODE_ENV": "production",
+      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
+      "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright"
     }
   },
   "outputDirectory": ".next",
-  "installCommand": "npm install --production=false",
-  "buildCommand": "npm run build"
+  "installCommand": "npm install --production=false && npx playwright install chromium",
+  "buildCommand": "npm run build:with-playwright"
 }
