@@ -6,10 +6,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, DollarSign, AlertCircle, CheckCircle, Calendar, Package, Building2 } from "lucide-react"
+import { ProjectAutocomplete } from "@/components/ui/ProjectAutocomplete"
+import { MaterialAutocompleteSingle } from "@/components/ui/MaterialAutocompleteSingle"
 
 interface Project {
   id: string
   name: string
+  description?: string
+  address?: string
+  status?: string
+  isActive: boolean
   client: {
     id: string
     name: string
@@ -22,23 +28,22 @@ interface Material {
   name: string
   type: string
   unitOfMeasure: string
+  description?: string
   isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface CreateMaterialPriceModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  projects: Project[]
-  materials: Material[]
 }
 
 export function CreateMaterialPriceModal({ 
   isOpen, 
   onClose, 
-  onSuccess, 
-  projects, 
-  materials 
+  onSuccess
 }: CreateMaterialPriceModalProps) {
   const [formData, setFormData] = useState({
     projectId: '',
@@ -49,6 +54,8 @@ export function CreateMaterialPriceModal({
     validTo: '',
     isActive: true
   })
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -66,6 +73,16 @@ export function CreateMaterialPriceModal({
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
+  }
+
+  const handleProjectSelect = (project: Project | null) => {
+    setSelectedProject(project)
+    setFormData(prev => ({ ...prev, projectId: project?.id || '' }))
+  }
+
+  const handleMaterialSelect = (material: Material | null) => {
+    setSelectedMaterial(material)
+    setFormData(prev => ({ ...prev, materialId: material?.id || '' }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,6 +145,8 @@ export function CreateMaterialPriceModal({
       validTo: '',
       isActive: true
     })
+    setSelectedProject(null)
+    setSelectedMaterial(null)
   }
 
   const handleClose = () => {
@@ -139,12 +158,7 @@ export function CreateMaterialPriceModal({
     }
   }
 
-  // Filtrar solo proyectos y materiales activos
-  const activeProjects = projects.filter(project => project.client)
-  const activeMaterials = materials.filter(material => material.isActive)
 
-  // Obtener información del material seleccionado
-  const selectedMaterial = activeMaterials.find(m => m.id === formData.materialId)
 
   if (!isOpen) return null
 
@@ -176,43 +190,25 @@ export function CreateMaterialPriceModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="projectId">Proyecto *</Label>
-                <select
-                  id="projectId"
-                  name="projectId"
-                  value={formData.projectId}
-                  onChange={handleInputChange}
-                  required
+                <ProjectAutocomplete
+                  label="Proyecto"
+                  placeholder="Buscar proyecto..."
+                  value={selectedProject}
+                  onChange={handleProjectSelect}
                   disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                >
-                  <option value="">Seleccione un proyecto</option>
-                  {activeProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name} - {project.client.name}
-                    </option>
-                  ))}
-                </select>
+                  required
+                />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="materialId">Material *</Label>
-                <select
-                  id="materialId"
-                  name="materialId"
-                  value={formData.materialId}
-                  onChange={handleInputChange}
-                  required
+                <MaterialAutocompleteSingle
+                  label="Material"
+                  placeholder="Buscar material..."
+                  value={selectedMaterial}
+                  onChange={handleMaterialSelect}
                   disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                >
-                  <option value="">Seleccione un material</option>
-                  {activeMaterials.map((material) => (
-                    <option key={material.id} value={material.id}>
-                      {material.name} ({material.unitOfMeasure})
-                    </option>
-                  ))}
-                </select>
+                  required
+                />
               </div>
 
               <div className="space-y-2">

@@ -6,22 +6,42 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Building2, AlertCircle, CheckCircle, Calendar, MapPin, Users } from "lucide-react"
+import { ClientAutocomplete } from "@/components/ui/ClientAutocomplete"
+import { MaterialPriceManager } from "@/components/ui/MaterialPriceManager"
 
 interface Client {
   id: string
   identification: string
   name: string
+  email?: string
+  phone?: string
   isActive: boolean
+}
+
+interface Material {
+  id: string
+  name: string
+  type: string
+  unitOfMeasure: string
+  description?: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface MaterialPrice {
+  materialId: string
+  material: Material
+  price: number
 }
 
 interface CreateProjectModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  clients: Client[]
 }
 
-export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: CreateProjectModalProps) {
+export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -30,6 +50,8 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
     endDate: '',
     isActive: true
   })
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [materialPrices, setMaterialPrices] = useState<MaterialPrice[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -43,6 +65,15 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
+  }
+
+  const handleClientSelect = (client: Client | null) => {
+    setSelectedClient(client)
+    setFormData(prev => ({ ...prev, clientId: client?.id || '' }))
+  }
+
+  const handleMaterialPricesChange = (prices: MaterialPrice[]) => {
+    setMaterialPrices(prices)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +100,11 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
         body: JSON.stringify({
           ...formData,
           startDate: formData.startDate || null,
-          endDate: formData.endDate || null
+          endDate: formData.endDate || null,
+          materialPrices: materialPrices.map(mp => ({
+            materialId: mp.materialId,
+            price: mp.price
+          }))
         }),
       })
 
@@ -102,6 +137,8 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
       endDate: '',
       isActive: true
     })
+    setSelectedClient(null)
+    setMaterialPrices([])
   }
 
   const handleClose = () => {
@@ -114,7 +151,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
   }
 
   // Filtrar solo clientes activos
-  const activeClients = clients.filter(client => client.isActive)
 
   if (!isOpen) return null
 
@@ -160,23 +196,14 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientId">Cliente *</Label>
-                <select
-                  id="clientId"
-                  name="clientId"
-                  value={formData.clientId}
-                  onChange={handleInputChange}
-                  required
+                <ClientAutocomplete
+                  label="Cliente"
+                  placeholder="Buscar cliente..."
+                  value={selectedClient}
+                  onChange={handleClientSelect}
                   disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="">Seleccione un cliente</option>
-                  {activeClients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name} ({client.identification})
-                    </option>
-                  ))}
-                </select>
+                  required
+                />
               </div>
 
 
@@ -243,6 +270,13 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess, clients }: Crea
               />
               <Label htmlFor="isActive">Proyecto activo</Label>
             </div>
+
+            {/* Gestión de precios de materiales */}
+            <MaterialPriceManager
+              materialPrices={materialPrices}
+              onMaterialPricesChange={handleMaterialPricesChange}
+              disabled={isLoading}
+            />
 
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">

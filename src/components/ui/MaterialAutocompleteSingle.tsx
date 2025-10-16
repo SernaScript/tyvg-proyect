@@ -6,50 +6,45 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { 
   Search, 
-  Building2, 
+  Package, 
   Check,
   ChevronDown,
-  X,
-  User,
-  MapPin
+  X
 } from 'lucide-react'
 
-interface Project {
+interface Material {
   id: string
   name: string
+  type: string
+  unitOfMeasure: string
   description?: string
-  address?: string
-  status?: string
   isActive: boolean
-  client: {
-    id: string
-    name: string
-    identification: string
-  }
+  createdAt: Date
+  updatedAt: Date
 }
 
-interface ProjectAutocompleteProps {
+interface MaterialAutocompleteSingleProps {
   label?: string
   placeholder?: string
-  value?: Project | null
-  onChange: (project: Project | null) => void
+  value?: Material | null
+  onChange: (material: Material | null) => void
   error?: string
   disabled?: boolean
   required?: boolean
 }
 
-export function ProjectAutocomplete({
-  label = "Proyecto",
-  placeholder = "Buscar proyecto...",
+export function MaterialAutocompleteSingle({
+  label = "Material",
+  placeholder = "Buscar material...",
   value,
   onChange,
   error,
   disabled = false,
   required = false
-}: ProjectAutocompleteProps) {
+}: MaterialAutocompleteSingleProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [projects, setProjects] = useState<Project[]>([])
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [filteredMaterials, setFilteredMaterials] = useState<Material[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -59,23 +54,22 @@ export function ProjectAutocomplete({
 
   useEffect(() => {
     if (isOpen && searchTerm.length >= 2) {
-      fetchProjects()
+      fetchMaterials()
     }
   }, [searchTerm, isOpen])
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
-      const filtered = projects.filter(project => 
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.client.identification.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (project.address && project.address.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = materials.filter(material => 
+        material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (material.description && material.description.toLowerCase().includes(searchTerm.toLowerCase()))
       )
-      setFilteredProjects(filtered)
+      setFilteredMaterials(filtered)
     } else {
-      setFilteredProjects([])
+      setFilteredMaterials([])
     }
-  }, [projects, searchTerm])
+  }, [materials, searchTerm])
 
   useEffect(() => {
     if (value) {
@@ -85,16 +79,16 @@ export function ProjectAutocomplete({
     }
   }, [value])
 
-  const fetchProjects = async () => {
+  const fetchMaterials = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/projects?isActive=true')
+      const response = await fetch('/api/materials?isActive=true')
       if (response.ok) {
         const data = await response.json()
-        setProjects(data)
+        setMaterials(data)
       }
     } catch (error) {
-      console.error('Error fetching projects:', error)
+      console.error('Error fetching materials:', error)
     } finally {
       setLoading(false)
     }
@@ -133,7 +127,7 @@ export function ProjectAutocomplete({
       case 'ArrowDown':
         e.preventDefault()
         setHighlightedIndex(prev => 
-          prev < filteredProjects.length - 1 ? prev + 1 : prev
+          prev < filteredMaterials.length - 1 ? prev + 1 : prev
         )
         break
       case 'ArrowUp':
@@ -142,8 +136,8 @@ export function ProjectAutocomplete({
         break
       case 'Enter':
         e.preventDefault()
-        if (highlightedIndex >= 0 && highlightedIndex < filteredProjects.length) {
-          handleSelectProject(filteredProjects[highlightedIndex])
+        if (highlightedIndex >= 0 && highlightedIndex < filteredMaterials.length) {
+          handleSelectMaterial(filteredMaterials[highlightedIndex])
         }
         break
       case 'Escape':
@@ -154,9 +148,9 @@ export function ProjectAutocomplete({
     }
   }
 
-  const handleSelectProject = (project: Project) => {
-    setSearchTerm(project.name)
-    onChange(project)
+  const handleSelectMaterial = (material: Material) => {
+    setSearchTerm(material.name)
+    onChange(material)
     setIsOpen(false)
     setHighlightedIndex(-1)
     inputRef.current?.blur()
@@ -170,28 +164,10 @@ export function ProjectAutocomplete({
     inputRef.current?.focus()
   }
 
-  const getStatusColor = (status: string | undefined | null) => {
-    if (!status) return 'bg-gray-100 text-gray-800'
-    
-    switch (status.toLowerCase()) {
-      case 'activo':
-      case 'en progreso':
-        return 'bg-green-100 text-green-800'
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'completado':
-        return 'bg-blue-100 text-blue-800'
-      case 'cancelado':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   return (
     <div className="space-y-2 relative">
       {label && (
-        <Label htmlFor="project-search">
+        <Label htmlFor="material-search">
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
       )}
@@ -201,7 +177,7 @@ export function ProjectAutocomplete({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             ref={inputRef}
-            id="project-search"
+            id="material-search"
             type="text"
             value={searchTerm}
             onChange={handleInputChange}
@@ -237,54 +213,50 @@ export function ProjectAutocomplete({
             {loading ? (
               <div className="p-4 text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Buscando proyectos...</p>
+                <p className="text-sm text-muted-foreground">Buscando materiales...</p>
               </div>
-            ) : filteredProjects.length === 0 ? (
+            ) : filteredMaterials.length === 0 ? (
               <div className="p-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   {searchTerm.length < 2 
                     ? 'Escribe al menos 2 caracteres para buscar'
-                    : 'No se encontraron proyectos'
+                    : 'No se encontraron materiales'
                   }
                 </p>
               </div>
             ) : (
               <div className="py-1">
-                {filteredProjects.map((project, index) => (
+                {filteredMaterials.map((material, index) => (
                   <div
-                    key={project.id}
+                    key={material.id}
                     className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
                       index === highlightedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => handleSelectProject(project)}
+                    onClick={() => handleSelectMaterial(material)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-sm truncate">{project.name}</p>
-                          {value?.id === project.id && (
+                          <p className="font-semibold text-sm truncate">{material.name}</p>
+                          {value?.id === material.id && (
                             <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                          <User className="h-3 w-3" />
-                          <span>{project.client.name} (ID: {project.client.identification})</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {material.type}
+                          </Badge>
+                          <span>{material.unitOfMeasure}</span>
                         </div>
-                        {project.address && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span className="truncate">{project.address}</span>
-                          </div>
+                        {material.description && (
+                          <p className="text-xs text-muted-foreground truncate mt-1">
+                            {material.description}
+                          </p>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 ml-2 flex-shrink-0">
-                        <Badge className={`${getStatusColor(project.status)} text-xs`}>
-                          {project.status || 'Sin estado'}
-                        </Badge>
-                        <Badge className={`${project.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
-                          {project.isActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </div>
+                      <Badge className={`${material.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs ml-2 flex-shrink-0`}>
+                        {material.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -298,29 +270,27 @@ export function ProjectAutocomplete({
         <p className="text-sm text-red-600">{error}</p>
       )}
 
-      {/* Selected Project Info */}
+      {/* Selected Material Info */}
       {value && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="font-semibold text-blue-900">{value.name}</p>
-              <p className="text-sm text-blue-700">
-                Cliente: {value.client.name} (ID: {value.client.identification})
-              </p>
-              {value.address && (
-                <p className="text-sm text-blue-700">
-                  Dirección: {value.address}
+              <div className="flex items-center gap-2 text-sm text-blue-700">
+                <Badge variant="outline" className="text-xs">
+                  {value.type}
+                </Badge>
+                <span>{value.unitOfMeasure}</span>
+              </div>
+              {value.description && (
+                <p className="text-sm text-blue-700 mt-1">
+                  {value.description}
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-1">
-              <Badge className={`${getStatusColor(value.status)} text-xs`}>
-                {value.status || 'Sin estado'}
-              </Badge>
-              <Badge className={`${value.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
-                {value.isActive ? 'Activo' : 'Inactivo'}
-              </Badge>
-            </div>
+            <Badge className={`${value.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
+              {value.isActive ? 'Activo' : 'Inactivo'}
+            </Badge>
           </div>
         </div>
       )}

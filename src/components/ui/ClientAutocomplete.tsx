@@ -6,50 +6,43 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { 
   Search, 
-  Building2, 
+  User, 
   Check,
   ChevronDown,
-  X,
-  User,
-  MapPin
+  X
 } from 'lucide-react'
 
-interface Project {
+interface Client {
   id: string
   name: string
-  description?: string
-  address?: string
-  status?: string
+  identification: string
+  email?: string
+  phone?: string
   isActive: boolean
-  client: {
-    id: string
-    name: string
-    identification: string
-  }
 }
 
-interface ProjectAutocompleteProps {
+interface ClientAutocompleteProps {
   label?: string
   placeholder?: string
-  value?: Project | null
-  onChange: (project: Project | null) => void
+  value?: Client | null
+  onChange: (client: Client | null) => void
   error?: string
   disabled?: boolean
   required?: boolean
 }
 
-export function ProjectAutocomplete({
-  label = "Proyecto",
-  placeholder = "Buscar proyecto...",
+export function ClientAutocomplete({
+  label = "Cliente",
+  placeholder = "Buscar cliente...",
   value,
   onChange,
   error,
   disabled = false,
   required = false
-}: ProjectAutocompleteProps) {
+}: ClientAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [projects, setProjects] = useState<Project[]>([])
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -59,23 +52,22 @@ export function ProjectAutocomplete({
 
   useEffect(() => {
     if (isOpen && searchTerm.length >= 2) {
-      fetchProjects()
+      fetchClients()
     }
   }, [searchTerm, isOpen])
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
-      const filtered = projects.filter(project => 
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.client.identification.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (project.address && project.address.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = clients.filter(client => 
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.identification.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
       )
-      setFilteredProjects(filtered)
+      setFilteredClients(filtered)
     } else {
-      setFilteredProjects([])
+      setFilteredClients([])
     }
-  }, [projects, searchTerm])
+  }, [clients, searchTerm])
 
   useEffect(() => {
     if (value) {
@@ -85,16 +77,16 @@ export function ProjectAutocomplete({
     }
   }, [value])
 
-  const fetchProjects = async () => {
+  const fetchClients = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/projects?isActive=true')
+      const response = await fetch('/api/clients?isActive=true')
       if (response.ok) {
         const data = await response.json()
-        setProjects(data)
+        setClients(data)
       }
     } catch (error) {
-      console.error('Error fetching projects:', error)
+      console.error('Error fetching clients:', error)
     } finally {
       setLoading(false)
     }
@@ -133,7 +125,7 @@ export function ProjectAutocomplete({
       case 'ArrowDown':
         e.preventDefault()
         setHighlightedIndex(prev => 
-          prev < filteredProjects.length - 1 ? prev + 1 : prev
+          prev < filteredClients.length - 1 ? prev + 1 : prev
         )
         break
       case 'ArrowUp':
@@ -142,8 +134,8 @@ export function ProjectAutocomplete({
         break
       case 'Enter':
         e.preventDefault()
-        if (highlightedIndex >= 0 && highlightedIndex < filteredProjects.length) {
-          handleSelectProject(filteredProjects[highlightedIndex])
+        if (highlightedIndex >= 0 && highlightedIndex < filteredClients.length) {
+          handleSelectClient(filteredClients[highlightedIndex])
         }
         break
       case 'Escape':
@@ -154,9 +146,9 @@ export function ProjectAutocomplete({
     }
   }
 
-  const handleSelectProject = (project: Project) => {
-    setSearchTerm(project.name)
-    onChange(project)
+  const handleSelectClient = (client: Client) => {
+    setSearchTerm(client.name)
+    onChange(client)
     setIsOpen(false)
     setHighlightedIndex(-1)
     inputRef.current?.blur()
@@ -170,28 +162,10 @@ export function ProjectAutocomplete({
     inputRef.current?.focus()
   }
 
-  const getStatusColor = (status: string | undefined | null) => {
-    if (!status) return 'bg-gray-100 text-gray-800'
-    
-    switch (status.toLowerCase()) {
-      case 'activo':
-      case 'en progreso':
-        return 'bg-green-100 text-green-800'
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'completado':
-        return 'bg-blue-100 text-blue-800'
-      case 'cancelado':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   return (
     <div className="space-y-2 relative">
       {label && (
-        <Label htmlFor="project-search">
+        <Label htmlFor="client-search">
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
       )}
@@ -201,7 +175,7 @@ export function ProjectAutocomplete({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             ref={inputRef}
-            id="project-search"
+            id="client-search"
             type="text"
             value={searchTerm}
             onChange={handleInputChange}
@@ -237,54 +211,48 @@ export function ProjectAutocomplete({
             {loading ? (
               <div className="p-4 text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Buscando proyectos...</p>
+                <p className="text-sm text-muted-foreground">Buscando clientes...</p>
               </div>
-            ) : filteredProjects.length === 0 ? (
+            ) : filteredClients.length === 0 ? (
               <div className="p-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   {searchTerm.length < 2 
                     ? 'Escribe al menos 2 caracteres para buscar'
-                    : 'No se encontraron proyectos'
+                    : 'No se encontraron clientes'
                   }
                 </p>
               </div>
             ) : (
               <div className="py-1">
-                {filteredProjects.map((project, index) => (
+                {filteredClients.map((client, index) => (
                   <div
-                    key={project.id}
+                    key={client.id}
                     className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
                       index === highlightedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => handleSelectProject(project)}
+                    onClick={() => handleSelectClient(client)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-sm truncate">{project.name}</p>
-                          {value?.id === project.id && (
+                          <p className="font-semibold text-sm truncate">{client.name}</p>
+                          {value?.id === client.id && (
                             <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
                           )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <User className="h-3 w-3" />
-                          <span>{project.client.name} (ID: {project.client.identification})</span>
+                          <span>ID: {client.identification}</span>
                         </div>
-                        {project.address && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span className="truncate">{project.address}</span>
-                          </div>
+                        {client.email && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {client.email}
+                          </p>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 ml-2 flex-shrink-0">
-                        <Badge className={`${getStatusColor(project.status)} text-xs`}>
-                          {project.status || 'Sin estado'}
-                        </Badge>
-                        <Badge className={`${project.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
-                          {project.isActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </div>
+                      <Badge className={`${client.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs ml-2 flex-shrink-0`}>
+                        {client.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -298,29 +266,24 @@ export function ProjectAutocomplete({
         <p className="text-sm text-red-600">{error}</p>
       )}
 
-      {/* Selected Project Info */}
+      {/* Selected Client Info */}
       {value && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="font-semibold text-blue-900">{value.name}</p>
               <p className="text-sm text-blue-700">
-                Cliente: {value.client.name} (ID: {value.client.identification})
+                ID: {value.identification}
               </p>
-              {value.address && (
+              {value.email && (
                 <p className="text-sm text-blue-700">
-                  Dirección: {value.address}
+                  Email: {value.email}
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-1">
-              <Badge className={`${getStatusColor(value.status)} text-xs`}>
-                {value.status || 'Sin estado'}
-              </Badge>
-              <Badge className={`${value.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
-                {value.isActive ? 'Activo' : 'Inactivo'}
-              </Badge>
-            </div>
+            <Badge className={`${value.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs`}>
+              {value.isActive ? 'Activo' : 'Inactivo'}
+            </Badge>
           </div>
         </div>
       )}

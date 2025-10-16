@@ -408,7 +408,6 @@ export default function ProjectsPage() {
           isOpen={isCreateProjectModalOpen}
           onClose={() => setIsCreateProjectModalOpen(false)}
           onSuccess={handleProjectCreated}
-          clients={clients}
         />
       </div>
     </AreaLayout>

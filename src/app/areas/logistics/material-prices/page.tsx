@@ -437,8 +437,6 @@ export default function MaterialPricesPage() {
           isOpen={isCreateMaterialPriceModalOpen}
           onClose={() => setIsCreateMaterialPriceModalOpen(false)}
           onSuccess={handleMaterialPriceCreated}
-          projects={projects}
-          materials={materials}
         />
       </div>
     </AreaLayout>
