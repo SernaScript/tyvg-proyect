@@ -321,38 +321,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
     color: AreaColor.BLUE,
     modules: [
       {
-        id: "siigo-credentials",
-        name: "Credenciales Siigo",
-        description: "Configuración de credenciales y conexión con Siigo",
-        icon: Key,
-        href: "/areas/siigo-integration/credentials",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "siigo-connection-test",
-        name: "Prueba de Conexión",
-        description: "Verificación de conectividad con la API de Siigo",
-        icon: TestTube,
-        href: "/areas/siigo-integration/connection-test",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "siigo-sync",
-        name: "Sincronización de Datos",
-        description: "Sincronización automática de datos con Siigo",
-        icon: Zap,
-        href: "/areas/siigo-integration/sync",
-        status: ModuleStatus.DEVELOPMENT
-      },
-      {
-        id: "siigo-logs",
-        name: "Logs de Integración",
-        description: "Registro de actividades y errores de integración",
-        icon: FileBarChart,
-        href: "/areas/siigo-integration/logs",
-        status: ModuleStatus.DEVELOPMENT
-      },
-      {
         id: "siigo-database-integration",
         name: "Integración de Bases de Datos",
         description: "Consultas y sincronización con endpoints de Siigo (warehouses, cost-centers, movements, etc.)",

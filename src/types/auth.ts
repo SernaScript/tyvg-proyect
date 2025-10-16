@@ -237,38 +237,6 @@ export const AREA_PERMISSIONS_MAP: Record<string, AreaPermission> = {
     },
     modules: [
       {
-        moduleId: 'siigo-credentials',
-        displayName: 'Credenciales Siigo',
-        requiredPermission: {
-          resource: 'siigo',
-          action: PermissionAction.MANAGE
-        }
-      },
-      {
-        moduleId: 'siigo-connection-test',
-        displayName: 'Prueba de Conexión',
-        requiredPermission: {
-          resource: 'siigo',
-          action: PermissionAction.VIEW
-        }
-      },
-      {
-        moduleId: 'siigo-sync',
-        displayName: 'Sincronización de Datos',
-        requiredPermission: {
-          resource: 'siigo',
-          action: PermissionAction.MANAGE
-        }
-      },
-      {
-        moduleId: 'siigo-logs',
-        displayName: 'Logs de Integración',
-        requiredPermission: {
-          resource: 'siigo',
-          action: PermissionAction.VIEW
-        }
-      },
-      {
         moduleId: 'siigo-database-integration',
         displayName: 'Integración de Bases de Datos',
         requiredPermission: {
