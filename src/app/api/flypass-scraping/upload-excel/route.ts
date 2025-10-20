@@ -3,6 +3,21 @@ import { FlypassDataMapper } from '@/lib/FlypassDataMapper';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Función helper para limpiar archivos temporales
+function cleanupTempFile(filePath: string): void {
+  const isTempFile = filePath.includes('/tmp') && filePath.includes('flypass_');
+  if (isTempFile) {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`✅ Archivo temporal limpiado: ${filePath}`);
+      }
+    } catch (cleanupError) {
+      console.error('❌ Error limpiando archivo temporal:', cleanupError);
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type');
@@ -30,8 +45,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Crear directorio temporal si no existe
-      const tempDir = path.join(process.cwd(), 'temp');
+      // Crear directorio temporal en /tmp (compatible con Vercel)
+      const tempDir = '/tmp';
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
@@ -100,17 +115,7 @@ export async function POST(request: NextRequest) {
       const result = await FlypassDataMapper.processExcelFile(filePath);
       
       // Limpiar archivo temporal si fue creado (solo para archivos subidos)
-      const isTempFile = filePath.includes('temp') && filePath.includes('flypass_');
-      
-      if (isTempFile) {
-        try {
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (cleanupError) {
-          console.error('Error limpiando archivo temporal:', cleanupError);
-        }
-      }
+      cleanupTempFile(filePath);
       
       return NextResponse.json({
         success: true,
@@ -126,6 +131,8 @@ export async function POST(request: NextRequest) {
       });
       
     } catch (mapperError) {
+      // Limpiar archivo temporal en caso de error también
+      cleanupTempFile(filePath);
       throw new Error(`Error en FlypassDataMapper: ${mapperError instanceof Error ? mapperError.message : 'Error desconocido'}`);
     }
     

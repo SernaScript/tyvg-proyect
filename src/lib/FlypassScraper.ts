@@ -20,7 +20,7 @@ export class FlypassScraper {
       browserType: 'chromium',
       headless: process.env.NODE_ENV === 'production', // Headless en producción
       timeout: 30000,
-      downloadPath: path.join(process.cwd(), 'downloads') // Ruta absoluta
+      downloadPath: '/tmp' // Compatible con Vercel
     });
   }
 
@@ -62,7 +62,7 @@ export class FlypassScraper {
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           // Obtener la ruta del archivo descargado
-          const downloadsDir = path.join(process.cwd(), 'downloads');
+          const downloadsDir = '/tmp';
           
           // Verificar que el directorio existe
           if (!fs.existsSync(downloadsDir)) {
@@ -300,7 +300,7 @@ export async function processDownloadedFile(): Promise<ProcessResult | null> {
   try {
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    const downloadsDir = path.join(process.cwd(), 'downloads');
+    const downloadsDir = '/tmp';
     
     if (!fs.existsSync(downloadsDir)) {
       return null;

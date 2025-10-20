@@ -366,7 +366,7 @@ export async function processDownloadedExcel(
   const processor = new ExcelProcessor();
   
   // Buscar el archivo más reciente en el directorio de descargas
-  const downloadsPath = path.join(process.cwd(), downloadDir);
+  const downloadsPath = '/tmp';
   
   if (!fs.existsSync(downloadsPath)) {
     throw new Error(`Directorio de descargas no encontrado: ${downloadsPath}`);
@@ -402,7 +402,7 @@ export async function processFlypassExcel(
   
   // Si no se especifica archivo, buscar el más reciente en downloads
   if (!targetFile) {
-    const downloadsPath = path.join(process.cwd(), downloadDir);
+    const downloadsPath = '/tmp';
     
     if (!fs.existsSync(downloadsPath)) {
       throw new Error(`Directorio de descargas no encontrado: ${downloadsPath}`);

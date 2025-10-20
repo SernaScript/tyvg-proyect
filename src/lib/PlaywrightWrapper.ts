@@ -174,7 +174,7 @@ export class PlaywrightWrapper {
 
     const download = await this.page.waitForEvent('download', { timeout });
     const path = require('path');
-    const filePath = path.join(this.config.downloadPath || './downloads', download.suggestedFilename() || 'download');
+    const filePath = path.join(this.config.downloadPath || '/tmp', download.suggestedFilename() || 'download');
     
     await download.saveAs(filePath);
     

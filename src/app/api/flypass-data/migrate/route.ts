@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Iniciando migración de archivo Excel de Flypass...');
     
     // Verificar que existe el directorio de descargas
-    const downloadsDir = path.join(process.cwd(), 'downloads');
+    const downloadsDir = '/tmp';
     
     if (!fs.existsSync(downloadsDir)) {
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function GET() {
     const stats = await FlypassDataMapper.getStatistics();
     
     // Verificar archivos disponibles
-    const downloadsDir = path.join(process.cwd(), 'downloads');
+    const downloadsDir = '/tmp';
     let availableFiles: Array<{
       name: string;
       size: number;
