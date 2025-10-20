@@ -61,6 +61,12 @@ export default function FlypassSiigoMigrationPage() {
     currentItem?: { licensePlate: string; cufe?: string }
     type?: 'purchase' | 'journal'
   } | null>(null)
+  const [migrationStats, setMigrationStats] = useState<{
+    successful: number
+    failed: number
+    total: number
+    isActive: boolean
+  }>({ successful: 0, failed: 0, total: 0, isActive: false })
   const [journalStats, setJournalStats] = useState<{
     totalPending: number
     byDocumentType: Record<string, number>
@@ -294,6 +300,7 @@ export default function FlypassSiigoMigrationPage() {
     setIsMigrating(true)
     setError(null)
     setMigrationProgress(null)
+    setMigrationStats({ successful: 0, failed: 0, total: 0, isActive: false })
     
     try {
       // Obtener la lista de registros pendientes para procesar uno por uno
@@ -311,6 +318,14 @@ export default function FlypassSiigoMigrationPage() {
         addNotification('info', 'Sin Registros', 'No hay registros pendientes de migración')
         return
       }
+
+      // Inicializar estadísticas de migración
+      setMigrationStats({
+        successful: 0,
+        failed: 0,
+        total: records.length,
+        isActive: true
+      })
 
       setMigrationProgress({
         current: 0,
@@ -342,16 +357,23 @@ export default function FlypassSiigoMigrationPage() {
 
           if (result.success) {
             processed++
-            addNotification('success', '✅ Factura Contabilizada', 
-              `Placa ${record.licensePlate} contabilizada como Purchase en Siigo`)
+            setMigrationStats(prev => ({
+              ...prev,
+              successful: prev.successful + 1
+            }))
           } else {
             errors++
-            addNotification('error', '❌ Error de Contabilización', 
-              `Placa ${record.licensePlate}: ${result.error}`)
+            setMigrationStats(prev => ({
+              ...prev,
+              failed: prev.failed + 1
+            }))
           }
         } catch (error) {
           errors++
-          addNotification('error', 'Error', `Error de conexión migrando placa ${record.licensePlate}`)
+          setMigrationStats(prev => ({
+            ...prev,
+            failed: prev.failed + 1
+          }))
         }
 
         // Pequeña pausa para no sobrecargar la API
@@ -361,13 +383,18 @@ export default function FlypassSiigoMigrationPage() {
       // Recargar datos después de la migración
       await loadPendingFlypassData(currentPage)
       
-      const successRate = records.length > 0 ? Math.round((processed / records.length) * 100) : 0
-      addNotification('info', '🎉 Migración de Facturas Completada', 
-        `✅ ${processed} facturas contabilizadas • ❌ ${errors} errores • 📊 ${successRate}% éxito`)
+      // Finalizar estadísticas
+      setMigrationStats(prev => ({
+        ...prev,
+        isActive: false
+      }))
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error desconocido')
-      addNotification('error', 'Error', 'Error durante la migración masiva')
+      setMigrationStats(prev => ({
+        ...prev,
+        isActive: false
+      }))
     } finally {
       setIsMigrating(false)
       setMigrationProgress(null)
@@ -408,6 +435,7 @@ export default function FlypassSiigoMigrationPage() {
     setIsMigratingJournals(true)
     setError(null)
     setMigrationProgress(null)
+    setMigrationStats({ successful: 0, failed: 0, total: 0, isActive: false })
     
     try {
       // Obtener la lista de registros pendientes para procesar uno por uno
@@ -425,6 +453,14 @@ export default function FlypassSiigoMigrationPage() {
         addNotification('info', 'Sin Registros', 'No hay journals pendientes de migración')
         return
       }
+
+      // Inicializar estadísticas de migración
+      setMigrationStats({
+        successful: 0,
+        failed: 0,
+        total: records.length,
+        isActive: true
+      })
 
       setMigrationProgress({
         current: 0,
@@ -456,16 +492,23 @@ export default function FlypassSiigoMigrationPage() {
 
           if (result.success) {
             processed++
-            addNotification('success', '✅ Journal Contabilizado', 
-              `Placa ${record.licensePlate} contabilizada como Journal en Siigo`)
+            setMigrationStats(prev => ({
+              ...prev,
+              successful: prev.successful + 1
+            }))
           } else {
             errors++
-            addNotification('error', '❌ Error de Contabilización', 
-              `Placa ${record.licensePlate}: ${result.error}`)
+            setMigrationStats(prev => ({
+              ...prev,
+              failed: prev.failed + 1
+            }))
           }
         } catch (error) {
           errors++
-          addNotification('error', 'Error', `Error de conexión migrando placa ${record.licensePlate}`)
+          setMigrationStats(prev => ({
+            ...prev,
+            failed: prev.failed + 1
+          }))
         }
 
         // Pequeña pausa para no sobrecargar la API
@@ -476,13 +519,18 @@ export default function FlypassSiigoMigrationPage() {
       await loadPendingFlypassData(currentPage)
       await loadJournalStats()
       
-      const successRate = records.length > 0 ? Math.round((processed / records.length) * 100) : 0
-      addNotification('info', '🎉 Migración de Journals Completada', 
-        `✅ ${processed} journals contabilizados • ❌ ${errors} errores • 📊 ${successRate}% éxito`)
+      // Finalizar estadísticas
+      setMigrationStats(prev => ({
+        ...prev,
+        isActive: false
+      }))
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error desconocido')
-      addNotification('error', 'Error', 'Error durante la migración masiva de journals')
+      setMigrationStats(prev => ({
+        ...prev,
+        isActive: false
+      }))
     } finally {
       setIsMigratingJournals(false)
       setMigrationProgress(null)
@@ -603,43 +651,125 @@ export default function FlypassSiigoMigrationPage() {
         )}
 
 
-        {/* Progreso de migración */}
-        {migrationProgress && (
-          <Card className="border-blue-200 bg-blue-50">
+        {/* Barra de progreso con estadísticas */}
+        {migrationStats.isActive && (
+          <Card className="border-green-200 bg-green-50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-800">
+              <CardTitle className="flex items-center gap-2 text-green-800">
                 <RefreshCw className="h-5 w-5 animate-spin" />
-                Contabilizando {migrationProgress.type === 'purchase' ? 'Facturas' : 'Notas Crédito'} en Siigo
+                Progreso de Migración
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">
-                    Procesando registro {migrationProgress.current} de {migrationProgress.total}
+                    Procesados: {migrationStats.successful + migrationStats.failed} de {migrationStats.total}
                   </span>
-                  <span className="font-bold text-blue-600">
-                    {Math.round((migrationProgress.current / migrationProgress.total) * 100)}%
+                  <span className="font-bold text-green-600">
+                    {migrationStats.total > 0 ? Math.round(((migrationStats.successful + migrationStats.failed) / migrationStats.total) * 100) : 0}%
                   </span>
                 </div>
-                <div className="w-full bg-blue-200 rounded-full h-3">
+                <div className="w-full bg-green-200 rounded-full h-4 relative overflow-hidden">
                   <div 
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${(migrationProgress.current / migrationProgress.total) * 100}%` }}
+                    className="bg-green-600 h-4 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${migrationStats.total > 0 ? ((migrationStats.successful + migrationStats.failed) / migrationStats.total) * 100 : 0}%` }}
+                  />
+                  <div 
+                    className="bg-red-500 h-4 rounded-full transition-all duration-500 ease-out absolute top-0"
+                    style={{ 
+                      width: `${migrationStats.total > 0 ? (migrationStats.failed / migrationStats.total) * 100 : 0}%`,
+                      left: `${migrationStats.total > 0 ? (migrationStats.successful / migrationStats.total) * 100 : 0}%`
+                    }}
                   />
                 </div>
-                {migrationProgress.currentItem && (
-                  <div className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                {migrationProgress?.currentItem && (
+                  <div className="text-sm text-green-700 bg-green-100 p-2 rounded">
                     <span className="font-medium">Procesando:</span> Placa {migrationProgress.currentItem.licensePlate}
                     {migrationProgress.currentItem.cufe && ` • CUFE: ${migrationProgress.currentItem.cufe}`}
                   </div>
                 )}
-                <div className="text-xs text-blue-600">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                      <span className="text-green-700">Exitosos: {migrationStats.successful}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-red-700">Errores: {migrationStats.failed}</span>
+                    </div>
+                  </div>
+                  <div className="text-green-600 font-medium">
+                    {migrationStats.total > 0 ? Math.round((migrationStats.successful / migrationStats.total) * 100) : 0}% éxito
+                  </div>
+                </div>
+                <div className="text-xs text-green-600">
                   💡 Los registros se procesan individualmente para garantizar la integridad de los datos
                 </div>
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Icono SVG de estadísticas en esquina */}
+        {(migrationStats.successful > 0 || migrationStats.failed > 0) && !migrationStats.isActive && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <div className="bg-white rounded-lg shadow-lg border p-3 hover:shadow-xl transition-shadow group">
+              <div className="flex items-center gap-2">
+                <svg width="40" height="40" viewBox="0 0 40 40" className="drop-shadow-sm">
+                  {/* Círculo de fondo */}
+                  <circle cx="20" cy="20" r="18" fill="#f3f4f6" stroke="#e5e7eb" strokeWidth="2"/>
+                  
+                  {/* Sección de éxitos (verde) */}
+                  {migrationStats.successful > 0 && (
+                    <path
+                      d={`M 20 20 L 20 2 A 18 18 0 ${migrationStats.successful / (migrationStats.successful + migrationStats.failed) > 0.5 ? 1 : 0} 1 ${20 + 18 * Math.cos((migrationStats.successful / (migrationStats.successful + migrationStats.failed)) * 2 * Math.PI - Math.PI/2)} ${20 + 18 * Math.sin((migrationStats.successful / (migrationStats.successful + migrationStats.failed)) * 2 * Math.PI - Math.PI/2)} Z`}
+                      fill="#10b981"
+                      className="transition-all duration-500"
+                    />
+                  )}
+                  
+                  {/* Sección de errores (rojo) */}
+                  {migrationStats.failed > 0 && (
+                    <path
+                      d={`M 20 20 L ${20 + 18 * Math.cos((migrationStats.successful / (migrationStats.successful + migrationStats.failed)) * 2 * Math.PI - Math.PI/2)} ${20 + 18 * Math.sin((migrationStats.successful / (migrationStats.successful + migrationStats.failed)) * 2 * Math.PI - Math.PI/2)} A 18 18 0 ${migrationStats.failed / (migrationStats.successful + migrationStats.failed) > 0.5 ? 1 : 0} 1 20 2 Z`}
+                      fill="#ef4444"
+                      className="transition-all duration-500"
+                    />
+                  )}
+                  
+                  {/* Icono central */}
+                  <circle cx="20" cy="20" r="8" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+                  <text x="20" y="24" textAnchor="middle" className="text-xs font-bold fill-gray-700">
+                    {migrationStats.successful + migrationStats.failed}
+                  </text>
+                </svg>
+                
+                {/* Botón para limpiar estadísticas */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMigrationStats({ successful: 0, failed: 0, total: 0, isActive: false })}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              {/* Tooltip con información */}
+              <div className="absolute bottom-full right-0 mb-2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>{migrationStats.successful} exitosos</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span>{migrationStats.failed} errores</span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Botones de migración masiva */}
