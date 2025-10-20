@@ -129,19 +129,18 @@ export class FlypassDataMapper {
         throw new Error('El archivo no existe: ' + filePath);
       }
 
-      // Crear copia temporal para evitar conflictos de acceso
-      const tempFilePath = filePath.replace('.xlsx', `_temp_${Date.now()}.xlsx`);
-      fs.copyFileSync(filePath, tempFilePath);
-      
+      // Leer el archivo directamente
       let workbook: XLSX.WorkBook;
       try {
-        workbook = XLSX.readFile(tempFilePath);
-        fs.unlinkSync(tempFilePath);
-      } catch (error) {
-        try {
-          fs.unlinkSync(tempFilePath);
-        } catch {}
         workbook = XLSX.readFile(filePath);
+      } catch (error) {
+        // Intentar solución alternativa: leer como buffer
+        try {
+          const buffer = fs.readFileSync(filePath);
+          workbook = XLSX.read(buffer, { type: 'buffer' });
+        } catch (bufferError) {
+          throw new Error(`No se pudo leer el archivo Excel ni como archivo ni como buffer: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
       }
       
       const sheetName = workbook.SheetNames[0];
@@ -156,10 +155,10 @@ export class FlypassDataMapper {
 
       // Obtener headers (primera fila)
       const headers = jsonData[0] as string[];
-      console.log('📋 Headers encontrados:', headers);
 
       // Convertir filas a objetos con headers como claves
       const rows: FlypassExcelRow[] = [];
+      
       for (let i = 1; i < jsonData.length; i++) {
         const row = jsonData[i] as any[];
         if (row && row.length > 0) {
@@ -174,8 +173,6 @@ export class FlypassDataMapper {
           }
         }
       }
-
-      console.log(`📊 Total de filas con CUFE: ${rows.length}`);
 
       // Procesar cada fila
       for (const row of rows) {
