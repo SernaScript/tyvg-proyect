@@ -43,20 +43,47 @@ export class PlaywrightWrapper {
       const { execSync } = require('child_process');
       console.log('Verificando instalación de navegadores de Playwright...');
       
+      // Configuración específica para Vercel
+      const env = {
+        ...process.env,
+        PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 'true',
+        PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION: 'true',
+        PLAYWRIGHT_BROWSERS_PATH: '/tmp/playwright',
+        PLAYWRIGHT_DOWNLOAD_HOST: 'https://playwright.azureedge.net',
+        DEBIAN_FRONTEND: 'noninteractive'
+      };
+      
       // Intentar instalar sin dependencias del sistema para Vercel
       execSync('npx playwright install chromium', { 
         stdio: 'inherit',
         timeout: 300000, // 5 minutos timeout
-        env: {
-          ...process.env,
-          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 'true',
-          PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION: 'true'
-        }
+        env
       });
       console.log('Navegadores de Playwright instalados correctamente');
     } catch (error) {
       console.warn('No se pudieron instalar los navegadores de Playwright automáticamente:', error);
       console.log('Continuando sin instalación automática...');
+      
+      // En Vercel, intentar una instalación más básica
+      if (process.env.VERCEL) {
+        try {
+          console.log('Intentando instalación básica para Vercel...');
+          const { execSync } = require('child_process');
+          execSync('npx playwright install chromium --force', {
+            stdio: 'inherit',
+            timeout: 300000,
+            env: {
+              ...process.env,
+              PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: 'true',
+              PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION: 'true',
+              PLAYWRIGHT_BROWSERS_PATH: '/tmp/playwright'
+            }
+          });
+          console.log('Instalación básica exitosa');
+        } catch (basicError) {
+          console.warn('Instalación básica también falló:', basicError);
+        }
+      }
     }
   }
 
@@ -75,9 +102,15 @@ export class PlaywrightWrapper {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--single-process'
         ]
       };
+      
+      // Intentar instalar navegadores si es necesario
+      await this.ensureBrowsersInstalled();
       
       switch (this.config.browserType) {
         case 'firefox':
@@ -120,7 +153,49 @@ export class PlaywrightWrapper {
       
       // Verificar si es un error de instalación de Playwright
       if (error instanceof Error && error.message.includes('Executable doesn\'t exist')) {
-        throw new Error('Playwright browsers not installed. Please run: npx playwright install chromium');
+        console.log('Intentando instalar navegadores automáticamente...');
+        try {
+          await this.ensureBrowsersInstalled();
+          // Reintentar la inicialización
+          return this.init();
+        } catch (installError) {
+          console.error('No se pudieron instalar los navegadores:', installError);
+          throw new Error('Playwright browsers not installed. Please run: npx playwright install chromium');
+        }
+      }
+      
+      // En Vercel, intentar con configuración más permisiva
+      if (process.env.VERCEL && error instanceof Error) {
+        console.log('Intentando con configuración específica para Vercel...');
+        try {
+          const playwright = await this.loadPlaywright();
+          const { chromium } = playwright;
+          
+          const vercelLaunchOptions = {
+            headless: true,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-gpu',
+              '--single-process',
+              '--no-zygote',
+              '--disable-background-timer-throttling',
+              '--disable-backgrounding-occluded-windows',
+              '--disable-renderer-backgrounding'
+            ]
+          };
+          
+          this.browser = await chromium.launch(vercelLaunchOptions);
+          this.context = await this.browser.newContext({ acceptDownloads: true });
+          this.page = await this.context.newPage();
+          this.page.setDefaultTimeout(this.config.timeout!);
+          
+          console.log('Navegador inicializado con configuración de Vercel');
+          return;
+        } catch (vercelError) {
+          console.error('Error con configuración de Vercel:', vercelError);
+        }
       }
       
       throw error;

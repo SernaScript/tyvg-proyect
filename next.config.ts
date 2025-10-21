@@ -34,6 +34,26 @@ const nextConfig: NextConfig = {
         maxMemoryGenerations: 1,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
       };
+      
+      // Configuración específica para Vercel
+      if (process.env.VERCEL) {
+        // Optimizaciones adicionales para Vercel
+        config.optimization = {
+          ...config.optimization,
+          splitChunks: {
+            chunks: 'all',
+            cacheGroups: {
+              playwright: {
+                test: /[\\/]node_modules[\\/](playwright|playwright-core)[\\/]/,
+                name: 'playwright',
+                chunks: 'all',
+                priority: 10,
+                reuseExistingChunk: true,
+              },
+            },
+          },
+        };
+      }
     }
     return config;
   },
