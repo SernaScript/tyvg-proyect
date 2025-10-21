@@ -58,22 +58,22 @@ export default function FlypassDataPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+            {/* <Button 
               variant="outline" 
               onClick={() => setScrapingModalOpen(true)}
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
               Descargar excel
-            </Button>
-            <Button 
+            </Button> */}
+            {/* <Button 
               variant="outline" 
               onClick={() => setMigrationModalOpen(true)}
               className="flex items-center gap-2"
             >
               <ExcelIcon className="h-4 w-4" />
               Migrar Excel
-            </Button>
+            </Button> */}
             <Button 
               variant="outline" 
               onClick={() => setUploadModalOpen(true)}
