@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           pendingValue: pendingStats._sum.total || 0
         },
         dailyData: dailyStats.map(item => ({
-          date: item.passageDate,
+          date: item.passageDate.toISOString().split('T')[0], // YYYY-MM-DD
           transactions: item._count.id,
           total: item._sum.total || 0
         })),

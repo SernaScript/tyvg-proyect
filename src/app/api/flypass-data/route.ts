@@ -33,13 +33,18 @@ export async function GET(request: NextRequest) {
     
     console.log(`Total de registros: ${total}, Obtenidos: ${flypassData.length}`)
     
-    // Convertir Decimal a number para serialización JSON
+    // Convertir Decimal a number para serialización JSON y formatear fechas
     const serializedData = flypassData.map(record => ({
       ...record,
       subtotal: Number(record.subtotal),
       tax: record.tax ? Number(record.tax) : null,
       total: Number(record.total),
-      accounted: Boolean(record.accounted) // Asegurar que accounted sea boolean
+      accounted: Boolean(record.accounted), // Asegurar que accounted sea boolean
+      // Formatear fechas para evitar problemas de zona horaria
+      creationDate: record.creationDate.toISOString().split('T')[0], // YYYY-MM-DD
+      passageDate: record.passageDate.toISOString().split('T')[0], // YYYY-MM-DD
+      createdAt: record.createdAt.toISOString().split('T')[0], // YYYY-MM-DD
+      updatedAt: record.updatedAt.toISOString().split('T')[0] // YYYY-MM-DD
     }))
     
     return NextResponse.json({

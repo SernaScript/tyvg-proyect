@@ -573,8 +573,21 @@ export default function FlypassSiigoMigrationPage() {
   }, [])
 
   const formatDate = (dateInput: string | Date) => {
-    // Si ya es un objeto Date, usarlo directamente; si es string, convertirlo
-    const date = dateInput instanceof Date ? dateInput : new Date(dateInput)
+    let date: Date
+    
+    if (dateInput instanceof Date) {
+      date = dateInput
+    } else {
+      // Si es un string, crear la fecha de manera que evite problemas de zona horaria
+      if (dateInput.includes('T') || dateInput.includes('Z')) {
+        date = new Date(dateInput)
+      } else {
+        // Si es solo fecha (YYYY-MM-DD), crear la fecha en zona horaria local
+        const [year, month, day] = dateInput.split('T')[0].split('-')
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+      }
+    }
+    
     return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: '2-digit',

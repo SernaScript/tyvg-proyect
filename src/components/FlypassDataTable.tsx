@@ -13,6 +13,7 @@ import {
   TableRow 
 } from "./ui/table"
 import { RefreshCw, ChevronLeft, ChevronRight, Database, Send, CheckCircle, XCircle } from "lucide-react"
+import { formatDateShortES } from "@/utils/formatters"
 
 interface FlypassData {
   id: string
@@ -73,7 +74,6 @@ export function FlypassDataTable() {
       const result: FlypassDataResponse = await response.json()
       
       if (result.success) {
-        console.log('Datos recibidos:', result.data.slice(0, 2)) // Debug: mostrar primeros 2 registros
         setData(result.data)
         setPagination(result.pagination)
       } else {
@@ -92,13 +92,7 @@ export function FlypassDataTable() {
   }, [showOnlyPending]) // Recargar cuando cambie el filtro
 
   const formatDate = (dateInput: string | Date) => {
-    // Si ya es un objeto Date, usarlo directamente; si es string, convertirlo
-    const date = dateInput instanceof Date ? dateInput : new Date(dateInput)
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
+    return formatDateShortES(dateInput)
   }
 
   const formatCurrency = (amount: number) => {

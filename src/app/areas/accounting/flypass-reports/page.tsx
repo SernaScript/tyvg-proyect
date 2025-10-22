@@ -139,7 +139,10 @@ export default function FlypassReportsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    // Si es un string en formato YYYY-MM-DD, crear la fecha en zona horaria local
+    const [year, month, day] = dateString.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -172,7 +175,11 @@ export default function FlypassReportsPage() {
   // Función para crear datos completos del mes (incluyendo días sin datos)
   const createCompleteMonthData = (dailyData: Array<{ date: string; transactions: number; total: number }>, year: number, month: number) => {
     const allDays = generateAllDaysOfMonth(year, month)
-    const dataMap = new Map(dailyData.map(day => [new Date(day.date).getDate(), day]))
+    // Crear mapa usando el día extraído del string YYYY-MM-DD
+    const dataMap = new Map(dailyData.map(day => {
+      const dayNumber = parseInt(day.date.split('-')[2]) // Extraer día del string YYYY-MM-DD
+      return [dayNumber, day]
+    }))
     
     return allDays.map(dayNumber => {
       const existingData = dataMap.get(dayNumber)
@@ -186,12 +193,13 @@ export default function FlypassReportsPage() {
       } else {
         // Día sin datos
         const date = new Date(year, month - 1, dayNumber)
+        const dateString = date.toISOString().split('T')[0] // YYYY-MM-DD
         return {
           dayNumber,
-          date: date.toISOString().split('T')[0],
+          date: dateString,
           transactions: 0,
           total: 0,
-          formattedDate: formatDate(date.toISOString()),
+          formattedDate: formatDate(dateString),
           formattedTotal: formatCurrency(0)
         }
       }

@@ -14,9 +14,25 @@ export const formatCurrency = (amount: number, currency = 'COP'): string => {
 
 /**
  * Format date to Colombian locale format
+ * Handles timezone issues by creating dates in local timezone when possible
  */
 export const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions): string => {
-  const dateObject = typeof date === 'string' ? new Date(date) : date
+  let dateObject: Date
+  
+  if (typeof date === 'string') {
+    // Si es un string, crear la fecha de manera que evite problemas de zona horaria
+    if (date.includes('T') || date.includes('Z')) {
+      // Si incluye información de zona horaria, usarlo directamente
+      dateObject = new Date(date)
+    } else {
+      // Si es solo fecha (YYYY-MM-DD), crear la fecha en zona horaria local
+      // para evitar que se interprete como UTC
+      const [year, month, day] = date.split('T')[0].split('-')
+      dateObject = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    }
+  } else {
+    dateObject = date
+  }
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -29,11 +45,51 @@ export const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOpt
 
 /**
  * Format date to short format (DD/MM/YYYY)
+ * Handles timezone issues by creating dates in local timezone when possible
  */
 export const formatDateShort = (date: Date | string): string => {
-  const dateObject = typeof date === 'string' ? new Date(date) : date
+  let dateObject: Date
+  
+  if (typeof date === 'string') {
+    // Si es un string, crear la fecha de manera que evite problemas de zona horaria
+    if (date.includes('T') || date.includes('Z')) {
+      // Si incluye información de zona horaria, usarlo directamente
+      dateObject = new Date(date)
+    } else {
+      // Si es solo fecha (YYYY-MM-DD), crear la fecha en zona horaria local
+      // para evitar que se interprete como UTC
+      const [year, month, day] = date.split('T')[0].split('-')
+      dateObject = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    }
+  } else {
+    dateObject = date
+  }
   
   return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(dateObject)
+}
+
+/**
+ * Format date to short format with Spanish locale (DD/MM/YYYY)
+ * Specifically for cases where we need consistent Spanish formatting
+ * Now optimized for YYYY-MM-DD format from API
+ */
+export const formatDateShortES = (date: Date | string): string => {
+  let dateObject: Date
+  
+  if (typeof date === 'string') {
+    // Si es un string en formato YYYY-MM-DD, crear la fecha en zona horaria local
+    // para evitar que se interprete como UTC
+    const [year, month, day] = date.split('-')
+    dateObject = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  } else {
+    dateObject = date
+  }
+  
+  return new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
