@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener datos agregados
-    const [totalStats, dailyStats, tollStats] = await Promise.all([
-      // Estadísticas generales
+    const [fcStats, ncStats, dailyFCStats, dailyNCStats, tollFCStats, tollNCStats] = await Promise.all([
+      // Estadísticas de FC (valores positivos)
       prisma.flypassData.aggregate({
         where: {
           documentType: 'FC',
@@ -36,8 +36,27 @@ export async function GET(request: NextRequest) {
           total: true
         }
       }),
+      
+      // Estadísticas de NC (valores negativos)
+      prisma.flypassData.aggregate({
+        where: {
+          documentType: 'NC',
+          ...(Object.keys(dateFilter).length > 0 && {
+            passageDate: dateFilter
+          })
+        },
+        _count: {
+          id: true
+        },
+        _sum: {
+          total: true
+        },
+        _avg: {
+          total: true
+        }
+      }),
 
-      // Estadísticas por día
+      // Estadísticas por día - FC (valores positivos)
       prisma.flypassData.groupBy({
         by: ['passageDate'],
         where: {
@@ -56,8 +75,28 @@ export async function GET(request: NextRequest) {
           passageDate: 'asc'
         }
       }),
+      
+      // Estadísticas por día - NC (valores negativos)
+      prisma.flypassData.groupBy({
+        by: ['passageDate'],
+        where: {
+          documentType: 'NC',
+          ...(Object.keys(dateFilter).length > 0 && {
+            passageDate: dateFilter
+          })
+        },
+        _count: {
+          id: true
+        },
+        _sum: {
+          total: true
+        },
+        orderBy: {
+          passageDate: 'asc'
+        }
+      }),
 
-      // Estadísticas por peaje
+      // Estadísticas por peaje - FC (valores positivos)
       prisma.flypassData.groupBy({
         by: ['tollName'],
         where: {
@@ -78,11 +117,35 @@ export async function GET(request: NextRequest) {
           }
         },
         take: 10
+      }),
+      
+      // Estadísticas por peaje - NC (valores negativos)
+      prisma.flypassData.groupBy({
+        by: ['tollName'],
+        where: {
+          documentType: 'NC',
+          ...(Object.keys(dateFilter).length > 0 && {
+            passageDate: dateFilter
+          })
+        },
+        _count: {
+          id: true
+        },
+        _sum: {
+          total: true
+        },
+        orderBy: {
+          _count: {
+            id: 'desc'
+          }
+        },
+        take: 10
       })
     ]);
 
-    // Obtener datos de contabilización
-    const [accountedStats, pendingStats] = await Promise.all([
+    // Obtener datos de contabilización (FC y NC por separado)
+    const [accountedFCStats, accountedNCStats, pendingFCStats, pendingNCStats] = await Promise.all([
+      // FC contabilizados
       prisma.flypassData.aggregate({
         where: {
           documentType: 'FC',
@@ -98,9 +161,42 @@ export async function GET(request: NextRequest) {
           total: true
         }
       }),
+      // NC contabilizados
+      prisma.flypassData.aggregate({
+        where: {
+          documentType: 'NC',
+          accounted: true,
+          ...(Object.keys(dateFilter).length > 0 && {
+            passageDate: dateFilter
+          })
+        },
+        _count: {
+          id: true
+        },
+        _sum: {
+          total: true
+        }
+      }),
+      // FC pendientes
       prisma.flypassData.aggregate({
         where: {
           documentType: 'FC',
+          accounted: false,
+          ...(Object.keys(dateFilter).length > 0 && {
+            passageDate: dateFilter
+          })
+        },
+        _count: {
+          id: true
+        },
+        _sum: {
+          total: true
+        }
+      }),
+      // NC pendientes
+      prisma.flypassData.aggregate({
+        where: {
+          documentType: 'NC',
           accounted: false,
           ...(Object.keys(dateFilter).length > 0 && {
             passageDate: dateFilter
@@ -119,25 +215,114 @@ export async function GET(request: NextRequest) {
     const response = {
       success: true,
       data: {
-        summary: {
-          totalTransactions: totalStats._count.id || 0,
-          totalValue: totalStats._sum.total || 0,
-          averageValue: totalStats._avg.total || 0,
-          accountedTransactions: accountedStats._count.id || 0,
-          accountedValue: accountedStats._sum.total || 0,
-          pendingTransactions: pendingStats._count.id || 0,
-          pendingValue: pendingStats._sum.total || 0
-        },
-        dailyData: dailyStats.map(item => ({
-          date: item.passageDate.toISOString().split('T')[0], // YYYY-MM-DD
-          transactions: item._count.id,
-          total: item._sum.total || 0
-        })),
-        tollData: tollStats.map(item => ({
-          tollName: item.tollName,
-          transactions: item._count.id,
-          total: item._sum.total || 0
-        }))
+        summary: (() => {
+          const fcTotal = Number(fcStats._sum.total || 0);
+          const ncTotal = Number(ncStats._sum.total || 0);
+          const netValue = fcTotal - ncTotal;
+          
+          console.log('FC Stats:', { count: fcStats._count.id, total: fcTotal });
+          console.log('NC Stats:', { count: ncStats._count.id, total: ncTotal });
+          console.log('Net Value (FC - NC):', netValue);
+          
+          return {
+            totalTransactions: (fcStats._count.id || 0) + (ncStats._count.id || 0),
+            totalValue: netValue, // FC - NC
+            averageValue: (() => {
+              const totalTransactions = (fcStats._count.id || 0) + (ncStats._count.id || 0);
+              return totalTransactions > 0 ? netValue / totalTransactions : 0;
+            })(),
+            accountedTransactions: (accountedFCStats._count.id || 0) + (accountedNCStats._count.id || 0),
+            accountedValue: Number(accountedFCStats._sum.total || 0) - Number(accountedNCStats._sum.total || 0), // FC - NC
+            pendingTransactions: (pendingFCStats._count.id || 0) + (pendingNCStats._count.id || 0),
+            pendingValue: Number(pendingFCStats._sum.total || 0) - Number(pendingNCStats._sum.total || 0) // FC - NC
+          };
+        })(),
+        dailyData: (() => {
+          console.log('dailyFCStats:', dailyFCStats.slice(0, 2));
+          console.log('dailyNCStats:', dailyNCStats.slice(0, 2));
+          
+          // Crear mapas para FC y NC por fecha
+          const fcMap = new Map(dailyFCStats.map(item => [
+            item.passageDate.toISOString().split('T')[0],
+            { transactions: item._count.id, total: item._sum.total || 0 }
+          ]));
+          
+          const ncMap = new Map(dailyNCStats.map(item => [
+            item.passageDate.toISOString().split('T')[0],
+            { transactions: item._count.id, total: item._sum.total || 0 }
+          ]));
+          
+          // Obtener todas las fechas únicas
+          const allDates = new Set([
+            ...fcMap.keys(),
+            ...ncMap.keys()
+          ]);
+          
+          // Combinar datos por fecha
+          const result = Array.from(allDates).map(date => {
+            const fcData = fcMap.get(date) || { transactions: 0, total: 0 };
+            const ncData = ncMap.get(date) || { transactions: 0, total: 0 };
+            
+            const combined = {
+              date,
+              transactions: fcData.transactions + ncData.transactions,
+              total: Number(fcData.total) - Number(ncData.total), // FC positivo, NC negativo
+              fcTransactions: fcData.transactions,
+              fcTotal: Number(fcData.total),
+              ncTransactions: ncData.transactions,
+              ncTotal: Number(ncData.total)
+            };
+            
+            console.log(`Date ${date}:`, combined);
+            return combined;
+          }).sort((a, b) => a.date.localeCompare(b.date));
+          
+          console.log('Final dailyData result:', result.slice(0, 2));
+          return result;
+        })(),
+        tollData: (() => {
+          console.log('tollFCStats:', tollFCStats.slice(0, 2));
+          console.log('tollNCStats:', tollNCStats.slice(0, 2));
+          
+          // Crear mapas para FC y NC por peaje
+          const fcTollMap = new Map(tollFCStats.map(item => [
+            item.tollName,
+            { transactions: item._count.id, total: item._sum.total || 0 }
+          ]));
+          
+          const ncTollMap = new Map(tollNCStats.map(item => [
+            item.tollName,
+            { transactions: item._count.id, total: item._sum.total || 0 }
+          ]));
+          
+          // Obtener todos los peajes únicos
+          const allTolls = new Set([
+            ...fcTollMap.keys(),
+            ...ncTollMap.keys()
+          ]);
+          
+          // Combinar datos por peaje
+          const result = Array.from(allTolls).map(tollName => {
+            const fcData = fcTollMap.get(tollName) || { transactions: 0, total: 0 };
+            const ncData = ncTollMap.get(tollName) || { transactions: 0, total: 0 };
+            
+            const combined = {
+              tollName,
+              transactions: fcData.transactions + ncData.transactions,
+              total: Number(fcData.total) - Number(ncData.total), // FC positivo, NC negativo
+              fcTransactions: fcData.transactions,
+              fcTotal: Number(fcData.total),
+              ncTransactions: ncData.transactions,
+              ncTotal: Number(ncData.total)
+            };
+            
+            console.log(`Toll ${tollName}:`, combined);
+            return combined;
+          }).sort((a, b) => b.transactions - a.transactions); // Ordenar por número de transacciones
+          
+          console.log('Final tollData result:', result.slice(0, 2));
+          return result;
+        })()
       }
     };
 

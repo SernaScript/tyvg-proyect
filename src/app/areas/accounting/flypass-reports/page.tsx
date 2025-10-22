@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, PieChart, Pie, Label as RechartsLabel } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine, PieChart, Pie, Label as RechartsLabel } from 'recharts'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -15,7 +15,8 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react"
 import {
   ChartConfig,
@@ -38,6 +39,10 @@ interface ReportData {
     date: string
     transactions: number
     total: number
+    fcTransactions: number
+    fcTotal: number
+    ncTransactions: number
+    ncTotal: number
   }>
   tollData: Array<{
     tollName: string
@@ -79,8 +84,8 @@ export default function FlypassReportsPage() {
 
   // Configuración del gráfico de torta
   const chartConfig = {
-    transactions: {
-      label: "Transacciones",
+    total: {
+      label: "Valor Total",
     },
     tollName: {
       label: "Peaje",
@@ -118,6 +123,7 @@ export default function FlypassReportsPage() {
       setIsLoading(false)
     }
   }
+
 
   useEffect(() => {
     if (selectedYear && selectedMonth) {
@@ -173,7 +179,15 @@ export default function FlypassReportsPage() {
   }
 
   // Función para crear datos completos del mes (incluyendo días sin datos)
-  const createCompleteMonthData = (dailyData: Array<{ date: string; transactions: number; total: number }>, year: number, month: number) => {
+  const createCompleteMonthData = (dailyData: Array<{ 
+    date: string; 
+    transactions: number; 
+    total: number;
+    fcTransactions: number;
+    fcTotal: number;
+    ncTransactions: number;
+    ncTotal: number;
+  }>, year: number, month: number) => {
     const allDays = generateAllDaysOfMonth(year, month)
     // Crear mapa usando el día extraído del string YYYY-MM-DD
     const dataMap = new Map(dailyData.map(day => {
@@ -188,7 +202,9 @@ export default function FlypassReportsPage() {
           ...existingData,
           dayNumber,
           formattedDate: formatDate(existingData.date),
-          formattedTotal: formatCurrency(existingData.total)
+          formattedTotal: formatCurrency(existingData.total),
+          formattedFcTotal: formatCurrency(existingData.fcTotal),
+          formattedNcTotal: formatCurrency(existingData.ncTotal)
         }
       } else {
         // Día sin datos
@@ -199,8 +215,14 @@ export default function FlypassReportsPage() {
           date: dateString,
           transactions: 0,
           total: 0,
+          fcTransactions: 0,
+          fcTotal: 0,
+          ncTransactions: 0,
+          ncTotal: 0,
           formattedDate: formatDate(dateString),
-          formattedTotal: formatCurrency(0)
+          formattedTotal: formatCurrency(0),
+          formattedFcTotal: formatCurrency(0),
+          formattedNcTotal: formatCurrency(0)
         }
       }
     })
@@ -220,14 +242,16 @@ export default function FlypassReportsPage() {
               Análisis y estadísticas de los datos de peajes procesados
             </p>
           </div>
-          <Button 
-            onClick={loadReportData}
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={loadReportData}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+          </div>
         </div>
 
         {/* Filtros de año y mes */}
@@ -343,7 +367,7 @@ export default function FlypassReportsPage() {
         {/* Cards de estadísticas */}
         {reportData && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -395,55 +419,19 @@ export default function FlypassReportsPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Registros Contabilizados
-                  </CardTitle>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatNumber(reportData.summary.accountedTransactions)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(reportData.summary.accountedValue)}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Card de registros pendientes */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Registros Pendientes
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {formatNumber(reportData.summary.pendingTransactions)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(reportData.summary.pendingValue)}
-                  </p>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Gráfico de desembolso diario */}
             <Card>
               <CardHeader>
-                <CardTitle>Desembolso Diario</CardTitle>
+                <CardTitle>Desembolso Diario Neto (FC - NC)</CardTitle>
                 <CardDescription>
-                  Gráfico de líneas mostrando el valor total de desembolsos por día
+                  Gráfico de líneas mostrando el valor neto diario (Facturas de Compra - Notas de Crédito)
                 </CardDescription>
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-blue-600"></div>
-                    <span className="text-sm text-muted-foreground">Desembolso diario</span>
+                    <span className="text-sm text-muted-foreground">Total neto diario</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-2 bg-orange-500 bg-opacity-20 border border-orange-500"></div>
@@ -479,8 +467,15 @@ export default function FlypassReportsPage() {
                         />
                         <YAxis 
                           tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                          tickFormatter={(value) => {
+                            const absValue = Math.abs(value);
+                            const sign = value < 0 ? '-' : '';
+                            return `${sign}$${(absValue / 1000000).toFixed(1)}M`;
+                          }}
+                          domain={['dataMin - 1000000', 'dataMax + 1000000']}
                         />
+                        {/* Línea de referencia en cero */}
+                        <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
                         {/* Áreas resaltadas para fines de semana */}
                         {getWeekendRanges(parseInt(selectedYear), parseInt(selectedMonth)).map(dayNumber => (
                           <ReferenceArea
@@ -495,24 +490,46 @@ export default function FlypassReportsPage() {
                           />
                         ))}
                         <Tooltip
-                          formatter={(value: number, name, props) => [
-                            formatCurrency(value), 
-                            'Desembolso'
-                          ]}
-                          labelFormatter={(label, payload) => {
-                            if (payload && payload[0] && payload[0].payload) {
-                              const date = new Date(payload[0].payload.date)
-                              const dayOfWeek = date.getDay()
-                              const dayName = dayOfWeek === 0 ? 'Domingo' : dayOfWeek === 6 ? 'Sábado' : ''
-                              return `Día ${label} - ${payload[0].payload.formattedDate}${dayName ? ` (${dayName})` : ''}`;
+                          formatter={(value: number, name, props) => {
+                            if (props && props.payload) {
+                              const data = props.payload;
+                              return [
+                                <div key="tooltip-content" className="space-y-1">
+                                  <div className="font-semibold text-sm">
+                                    {data.formattedDate}
+                                  </div>
+                                  <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-green-600">FC (Facturas):</span>
+                                      <span className="font-medium">{data.formattedFcTotal}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-red-600">NC (Notas Crédito):</span>
+                                      <span className="font-medium">-{data.formattedNcTotal}</span>
+                                    </div>
+                                    <div className="border-t pt-1 flex justify-between font-semibold">
+                                      <span>Total Neto:</span>
+                                      <span className={data.total >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                        {data.formattedTotal}
+                                      </span>
+                                    </div>
+                                    <div className="text-gray-500 text-xs">
+                                      {data.fcTransactions} FC, {data.ncTransactions} NC
+                                    </div>
+                                  </div>
+                                </div>,
+                                ''
+                              ];
                             }
-                            return `Día ${label}`;
+                            return [formatCurrency(value), 'Total Neto'];
                           }}
+                          labelFormatter={() => ''}
                           contentStyle={{
                             backgroundColor: 'white',
                             border: '1px solid #e5e7eb',
                             borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            padding: '12px'
                           }}
                         />
                         <Line 
@@ -541,7 +558,7 @@ export default function FlypassReportsPage() {
             {/* Gráfico de torta - Top Peajes */}
             <Card className="flex flex-col">
               <CardHeader className="items-center pb-0">
-                <CardTitle>Distribución de Transacciones por Peaje</CardTitle>
+                <CardTitle>Distribución de Valores por Peaje</CardTitle>
                 <CardDescription>
                   {selectedYear && selectedMonth && 
                     `Reporte para: ${new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1).toLocaleDateString('es-ES', { 
@@ -560,7 +577,31 @@ export default function FlypassReportsPage() {
                     <PieChart>
                       <ChartTooltip
                         cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
+                        content={(props) => {
+                          if (props.active && props.payload && props.payload[0]) {
+                            const data = props.payload[0].payload;
+                            return (
+                              <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                                <div className="font-semibold text-sm mb-1">{data.tollName}</div>
+                                <div className="text-xs space-y-1">
+                                  <div className="flex justify-between">
+                                    <span>Valor Total:</span>
+                                    <span className="font-medium">{formatCurrency(data.total)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Transacciones:</span>
+                                    <span className="font-medium">{data.transactions}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Promedio:</span>
+                                    <span className="font-medium">{formatCurrency(data.average)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
                       />
                       <Pie
                         data={reportData.tollData.map((toll, index) => {
@@ -575,7 +616,7 @@ export default function FlypassReportsPage() {
                             fill: fillColor
                           }
                         })}
-                        dataKey="transactions"
+                        dataKey="total"
                         nameKey="tollName"
                         innerRadius={60}
                         strokeWidth={5}
@@ -629,7 +670,7 @@ export default function FlypassReportsPage() {
                   <>
                     <div className="flex items-center gap-2 leading-none font-medium">
                       <TrendingUp className="h-4 w-4" />
-                      Top peaje: {reportData.tollData[0]?.tollName} con {formatNumber(reportData.tollData[0]?.transactions)} transacciones
+                      Top peaje: {reportData.tollData[0]?.tollName} con {formatCurrency(reportData.tollData[0]?.total)} en valores
                     </div>
                     <div className="text-muted-foreground leading-none">
                       Mostrando distribución de {reportData.tollData.length} peajes
