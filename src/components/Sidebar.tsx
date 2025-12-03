@@ -14,7 +14,8 @@ import {
   Users,
   Database,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react"
 import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
@@ -50,7 +51,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const [expandedAreas, setExpandedAreas] = useState<string[]>([])
   const [expandedSubsections, setExpandedSubsections] = useState<string[]>([])
-  const { canAccessArea, canAccessModule, hasPermission, user } = useAuth()
+  const { canAccessArea, canAccessModule, hasPermission, user, logout } = useAuth()
 
   const toggleArea = (areaId: string) => {
     setExpandedAreas(prev => 
@@ -338,7 +339,15 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={logout}
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar Sesión
+          </Button>
           <Card className="p-3">
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
               Versión 1.0.0
