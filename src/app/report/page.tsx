@@ -2,20 +2,72 @@
 
 import { MainLayout } from "@/components/MainLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { 
   BarChart3, 
-  TrendingUp, 
-  PieChart, 
-  FileText, 
-  Download,
-  Calendar,
-  Users,
-  Clock,
-  Wrench
+  Truck,
+  Calculator,
+  PiggyBank,
+  Briefcase
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
+
+export type ReportType = 'logistics' | 'accounting' | 'management' | 'treasury'
+
+export const reportTypes = [
+  {
+    id: 'logistics' as const,
+    name: 'Logística',
+    description: 'Reportes de inventarios, viajes, combustible y movimientos logísticos',
+    icon: Truck,
+    color: 'orange',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    hoverColor: 'hover:bg-orange-100 dark:hover:bg-orange-900/30'
+  },
+  {
+    id: 'accounting' as const,
+    name: 'Contabilidad',
+    description: 'Reportes financieros, contables y de conciliación',
+    icon: Calculator,
+    color: 'blue',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    hoverColor: 'hover:bg-blue-100 dark:hover:bg-blue-900/30'
+  },
+  {
+    id: 'management' as const,
+    name: 'Gerencia',
+    description: 'Reportes ejecutivos y de gestión empresarial',
+    icon: Briefcase,
+    color: 'purple',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    textColor: 'text-purple-600 dark:text-purple-400',
+    hoverColor: 'hover:bg-purple-100 dark:hover:bg-purple-900/30'
+  },
+  {
+    id: 'treasury' as const,
+    name: 'Tesoreria',
+    description: 'Reportes de flujo de efectivo, pagos y cartera',
+    icon: PiggyBank,
+    color: 'green',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    borderColor: 'border-green-200 dark:border-green-800',
+    textColor: 'text-green-600 dark:text-green-400',
+    hoverColor: 'hover:bg-green-100 dark:hover:bg-green-900/30'
+  }
+]
 
 export default function Reportes() {
+  const router = useRouter()
+
+  const handleReportTypeClick = (type: ReportType) => {
+    router.push(`/report/${type}`)
+  }
+
   return (
     <MainLayout>
       <div className="space-y-8">
@@ -32,90 +84,59 @@ export default function Reportes() {
           </div>
         </div>
 
-        {/* Página de "Estamos trabajando" */}
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center max-w-2xl mx-auto">
-            {/* Icono animado */}
-            <div className="relative mb-8">
-              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
-                <div className="relative">
-                  <Wrench className="h-16 w-16 text-blue-600 animate-spin" style={{ animationDuration: '20s' }} />
-                  
-                </div>
-              </div>
-              {/* Puntos decorativos */}
-              
+        {/* Selección de Tipo de Reporte */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Seleccionar Tipo de Reporte</CardTitle>
+            <CardDescription>
+              Elige el área de negocio para generar los reportes correspondientes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {reportTypes.map((reportType) => {
+                const Icon = reportType.icon
+                
+                return (
+                  <button
+                    key={reportType.id}
+                    onClick={() => handleReportTypeClick(reportType.id)}
+                    className={cn(
+                      "p-6 rounded-lg border-2 transition-all duration-200 text-left",
+                      reportType.bgColor,
+                      reportType.borderColor,
+                      reportType.hoverColor,
+                      "hover:scale-105 cursor-pointer"
+                    )}
+                  >
+                    <div className="flex flex-col items-start gap-4">
+                      <div className={cn(
+                        "p-3 rounded-lg",
+                        reportType.bgColor,
+                        "border",
+                        reportType.borderColor
+                      )}>
+                        <Icon className={cn("h-6 w-6", reportType.textColor)} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1">
+                          {reportType.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {reportType.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        <span>Ver reportes</span>
+                        <BarChart3 className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
-
-            {/* Título principal */}
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              ¡Estamos Trabajando!
-            </h2>
-            
-            {/* Subtítulo */}
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
-              El módulo de reportes está en desarrollo
-            </p>
-
-            {/* Badge de estado */}
-            <Badge className="bg-orange-100 text-orange-800 text-sm px-4 py-2 mb-8">
-              <Clock className="h-4 w-4 mr-2" />
-              En Desarrollo
-            </Badge>
-
-            {/* Descripción */}
-            <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-              Estamos creando un sistema de reportes completo que incluirá análisis avanzados, 
-              gráficos interactivos y exportación de datos para ayudarte a tomar mejores decisiones empresariales.
-            </p>
-
-            {/* Características futuras */}
-            <Card className="text-left">
-              <CardHeader>
-                <CardTitle className="text-lg">¿Qué incluirá este módulo?</CardTitle>
-                <CardDescription>
-                  Funcionalidades que estarán disponibles próximamente
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium">Análisis de Tendencias</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <PieChart className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm font-medium">Gráficos Interactivos</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <FileText className="h-5 w-5 text-purple-600" />
-                    <span className="text-sm font-medium">Reportes Personalizados</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Download className="h-5 w-5 text-orange-600" />
-                    <span className="text-sm font-medium">Exportación de Datos</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Calendar className="h-5 w-5 text-red-600" />
-                    <span className="text-sm font-medium">Reportes Programados</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Users className="h-5 w-5 text-indigo-600" />
-                    <span className="text-sm font-medium">Análisis de Usuarios</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mensaje de contacto */}
-            <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>¿Necesitas reportes específicos?</strong> Contacta al equipo de desarrollo 
-                para solicitar funcionalidades prioritarias.
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   )

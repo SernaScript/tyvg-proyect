@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AREAS_CONFIG, getAreaColorClasses, getModuleStatusBadgeClasses, getModuleStatusDisplayName, ModuleStatus } from "@/config/areas"
-import { 
-  Home, 
-  Settings, 
+import {
+  Home,
+  Settings,
   BarChart3,
   Users,
   Database,
@@ -54,16 +54,16 @@ export function Sidebar() {
   const { canAccessArea, canAccessModule, hasPermission, user, logout } = useAuth()
 
   const toggleArea = (areaId: string) => {
-    setExpandedAreas(prev => 
-      prev.includes(areaId) 
+    setExpandedAreas(prev =>
+      prev.includes(areaId)
         ? prev.filter(id => id !== areaId)
         : [...prev, areaId]
     )
   }
 
   const toggleSubsection = (subsectionId: string) => {
-    setExpandedSubsections(prev => 
-      prev.includes(subsectionId) 
+    setExpandedSubsections(prev =>
+      prev.includes(subsectionId)
         ? prev.filter(id => id !== subsectionId)
         : [...prev, subsectionId]
     )
@@ -153,152 +153,152 @@ export function Sidebar() {
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
                 Áreas de Negocio
               </p>
-              
+
               {accessibleAreas.map((area) => {
-              const AreaIcon = area.icon
-              const isExpanded = expandedAreas.includes(area.id)
-              const isActive = isAreaActive(area.id)
+                const AreaIcon = area.icon
+                const isExpanded = expandedAreas.includes(area.id)
+                const isActive = isAreaActive(area.id)
 
-              return (
-                <div key={area.id}>
-                  {/* Area Header */}
-                  <div className="flex items-center">
-                    <Link href={`/areas/${area.id}`} className="flex-1">
+                return (
+                  <div key={area.id}>
+                    {/* Area Header */}
+                    <div className="flex items-center">
+                      <Link href={`/areas/${area.id}`} className="flex-1">
+                        <Button
+                          variant={isActive ? "default" : "ghost"}
+                          className={cn(
+                            "w-full justify-start gap-2 text-left pr-1",
+                            isActive && "bg-primary text-primary-foreground"
+                          )}
+                        >
+                          <AreaIcon className={cn("h-4 w-4", !isActive && getAreaColorClasses(area.color).text)} />
+                          <span className="flex-1 truncate">{area.name}</span>
+                        </Button>
+                      </Link>
+
                       <Button
-                        variant={isActive ? "default" : "ghost"}
-                        className={cn(
-                          "w-full justify-start gap-2 text-left pr-1",
-                          isActive && "bg-primary text-primary-foreground"
-                        )}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-transparent"
+                        onClick={() => toggleArea(area.id)}
                       >
-                        <AreaIcon className={cn("h-4 w-4", !isActive && getAreaColorClasses(area.color).text)} />
-                        <span className="flex-1 truncate">{area.name}</span>
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
                       </Button>
-                    </Link>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 hover:bg-transparent"
-                      onClick={() => toggleArea(area.id)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-3 w-3" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Area Modules */}
-                  {isExpanded && (
-                    <div className="ml-6 mt-1 space-y-1">
-                      {/* Regular modules */}
-                      {area.modules
-                        .filter(module => canAccessModule(area.id, module.id))
-                        .map((module) => {
-                        const ModuleIcon = module.icon
-                        const isModActive = isModuleActive(module.href)
-
-                        return (
-                          <Link key={module.id} href={module.href}>
-                            <Button
-                              variant={isModActive ? "default" : "ghost"}
-                              size="sm"
-                              disabled={module.status === ModuleStatus.PLANNED}
-                              className={cn(
-                                "w-full justify-start gap-2 text-left text-sm h-8",
-                                isModActive && "bg-primary text-primary-foreground",
-                                module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
-                              )}
-                            >
-                              <ModuleIcon className="h-3 w-3" />
-                              <span className="flex-1 truncate">{module.name}</span>
-                              {module.status && module.status !== ModuleStatus.ACTIVE && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
-                                >
-                                  {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
-                                </Badge>
-                              )}
-                            </Button>
-                          </Link>
-                        )
-                      })}
-
-                      {/* Subsections */}
-                      {area.subsections?.map((subsection) => {
-                        const isSubsectionExpanded = expandedSubsections.includes(subsection.id)
-                        const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
-                        
-                        if (!hasAccessibleModules) return null
-
-                        return (
-                          <div key={subsection.id} className="mt-2">
-                            {/* Subsection Header */}
-                            <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 text-left text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                                onClick={() => toggleSubsection(subsection.id)}
-                              >
-                                <Settings className="h-3 w-3" />
-                                <span className="flex-1 truncate">{subsection.name}</span>
-                                {isSubsectionExpanded ? (
-                                  <ChevronDown className="h-3 w-3" />
-                                ) : (
-                                  <ChevronRight className="h-3 w-3" />
-                                )}
-                              </Button>
-                            </div>
-
-                            {/* Subsection Modules */}
-                            {isSubsectionExpanded && (
-                              <div className="ml-4 mt-1 space-y-1">
-                                {subsection.modules
-                                  .filter(module => canAccessModule(area.id, module.id))
-                                  .map((module) => {
-                                  const ModuleIcon = module.icon
-                                  const isModActive = isModuleActive(module.href)
-
-                                  return (
-                                    <Link key={module.id} href={module.href}>
-                                      <Button
-                                        variant={isModActive ? "default" : "ghost"}
-                                        size="sm"
-                                        disabled={module.status === ModuleStatus.PLANNED}
-                                        className={cn(
-                                          "w-full justify-start gap-2 text-left text-sm h-8",
-                                          isModActive && "bg-primary text-primary-foreground",
-                                          module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
-                                        )}
-                                      >
-                                        <ModuleIcon className="h-3 w-3" />
-                                        <span className="flex-1 truncate">{module.name}</span>
-                                        {module.status && module.status !== ModuleStatus.ACTIVE && (
-                                          <Badge 
-                                            variant="secondary" 
-                                            className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
-                                          >
-                                            {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
-                                          </Badge>
-                                        )}
-                                      </Button>
-                                    </Link>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {/* Area Modules */}
+                    {isExpanded && (
+                      <div className="ml-6 mt-1 space-y-1">
+                        {/* Regular modules */}
+                        {area.modules
+                          .filter(module => canAccessModule(area.id, module.id))
+                          .map((module) => {
+                            const ModuleIcon = module.icon
+                            const isModActive = isModuleActive(module.href)
+
+                            return (
+                              <Link key={module.id} href={module.href}>
+                                <Button
+                                  variant={isModActive ? "default" : "ghost"}
+                                  size="sm"
+                                  disabled={module.status === ModuleStatus.PLANNED}
+                                  className={cn(
+                                    "w-full justify-start gap-2 text-left text-sm h-8",
+                                    isModActive && "bg-primary text-primary-foreground",
+                                    module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
+                                  )}
+                                >
+                                  <ModuleIcon className="h-3 w-3" />
+                                  <span className="flex-1 truncate">{module.name}</span>
+                                  {module.status && module.status !== ModuleStatus.ACTIVE && (
+                                    <Badge
+                                      variant="secondary"
+                                      className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
+                                    >
+                                      {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
+                                    </Badge>
+                                  )}
+                                </Button>
+                              </Link>
+                            )
+                          })}
+
+                        {/* Subsections */}
+                        {area.subsections?.map((subsection) => {
+                          const isSubsectionExpanded = expandedSubsections.includes(subsection.id)
+                          const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
+
+                          if (!hasAccessibleModules) return null
+
+                          return (
+                            <div key={subsection.id} className="mt-2">
+                              {/* Subsection Header */}
+                              <div className="flex items-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start gap-2 text-left text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                  onClick={() => toggleSubsection(subsection.id)}
+                                >
+                                  <Settings className="h-3 w-3" />
+                                  <span className="flex-1 truncate">{subsection.name}</span>
+                                  {isSubsectionExpanded ? (
+                                    <ChevronDown className="h-3 w-3" />
+                                  ) : (
+                                    <ChevronRight className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+
+                              {/* Subsection Modules */}
+                              {isSubsectionExpanded && (
+                                <div className="ml-4 mt-1 space-y-1">
+                                  {subsection.modules
+                                    .filter(module => canAccessModule(area.id, module.id))
+                                    .map((module) => {
+                                      const ModuleIcon = module.icon
+                                      const isModActive = isModuleActive(module.href)
+
+                                      return (
+                                        <Link key={module.id} href={module.href}>
+                                          <Button
+                                            variant={isModActive ? "default" : "ghost"}
+                                            size="sm"
+                                            disabled={module.status === ModuleStatus.PLANNED}
+                                            className={cn(
+                                              "w-full justify-start gap-2 text-left text-sm h-8",
+                                              isModActive && "bg-primary text-primary-foreground",
+                                              module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
+                                            )}
+                                          >
+                                            <ModuleIcon className="h-3 w-3" />
+                                            <span className="flex-1 truncate">{module.name}</span>
+                                            {module.status && module.status !== ModuleStatus.ACTIVE && (
+                                              <Badge
+                                                variant="secondary"
+                                                className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
+                                              >
+                                                {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
+                                              </Badge>
+                                            )}
+                                          </Button>
+                                        </Link>
+                                      )
+                                    })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
@@ -316,24 +316,24 @@ export function Sidebar() {
                 Administración
               </p>
               {accessibleAdminNav.map((item) => {
-            const isActive = pathname === item.href
-            const Icon = item.icon
+                const isActive = pathname === item.href
+                const Icon = item.icon
 
-            return (
-              <Link key={item.name} href={item.href}>
-                <Button
-                  variant={isActive ? "default" : "ghost"}
-                  className={cn(
-                    "w-full justify-start gap-2 text-left",
-                    isActive && "bg-primary text-primary-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
-                </Button>
-              </Link>
-            )
-          })}
+                return (
+                  <Link key={item.name} href={item.href}>
+                    <Button
+                      variant={isActive ? "default" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-2 text-left",
+                        isActive && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.name}
+                    </Button>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </nav>
