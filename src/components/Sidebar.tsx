@@ -15,10 +15,13 @@ import {
   Database,
   ChevronDown,
   ChevronRight,
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon
 } from "lucide-react"
 import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { useSidebar } from "@/contexts/SidebarContext"
 import { PermissionAction } from "@/types/auth"
 
 const staticNavigation = [
@@ -52,6 +55,7 @@ export function Sidebar() {
   const [expandedAreas, setExpandedAreas] = useState<string[]>([])
   const [expandedSubsections, setExpandedSubsections] = useState<string[]>([])
   const { canAccessArea, canAccessModule, hasPermission, user, logout } = useAuth()
+  const { isExpanded, toggleSidebar } = useSidebar()
 
   const toggleArea = (areaId: string) => {
     setExpandedAreas(prev =>
@@ -97,19 +101,57 @@ export function Sidebar() {
 
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-40">
+    <div className={cn(
+      "bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ease-in-out",
+      isExpanded ? "w-64" : "w-16"
+    )}>
       <div className="flex flex-col h-full">
         {/* Logo/Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            Sistema TYVG
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Panel de Control
-          </p>
-          {user && (
+        <div className={cn(
+          "border-b border-gray-200 dark:border-gray-700 transition-all duration-300",
+          isExpanded ? "p-6" : "p-4"
+        )}>
+          <div className="flex items-center justify-between">
+            {isExpanded ? (
+              <>
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Sistema TYVG
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Panel de Control
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={toggleSidebar}
+                  title="Colapsar sidebar"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center w-full">
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                  TYVG
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={toggleSidebar}
+                  title="Expandir sidebar"
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          {user && isExpanded && (
             <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
                 {user.name || user.email}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -127,16 +169,17 @@ export function Sidebar() {
             const Icon = item.icon
 
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} title={!isExpanded ? item.name : undefined}>
                 <Button
                   variant={isActive ? "default" : "ghost"}
                   className={cn(
-                    "w-full justify-start gap-2 text-left",
+                    "w-full gap-2 transition-all duration-200",
+                    isExpanded ? "justify-start text-left" : "justify-center",
                     isActive && "bg-primary text-primary-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  {isExpanded && <span>{item.name}</span>}
                 </Button>
               </Link>
             )
@@ -150,48 +193,57 @@ export function Sidebar() {
           {/* Areas Navigation */}
           {accessibleAreas.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
-                Áreas de Negocio
-              </p>
+              {isExpanded && (
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
+                  Áreas de Negocio
+                </p>
+              )}
 
               {accessibleAreas.map((area) => {
                 const AreaIcon = area.icon
-                const isExpanded = expandedAreas.includes(area.id)
+                const isAreaExpanded = expandedAreas.includes(area.id)
                 const isActive = isAreaActive(area.id)
 
                 return (
                   <div key={area.id}>
                     {/* Area Header */}
                     <div className="flex items-center">
-                      <Link href={`/areas/${area.id}`} className="flex-1">
+                      <Link
+                        href={`/areas/${area.id}`}
+                        className="flex-1"
+                        title={!isExpanded ? area.name : undefined}
+                      >
                         <Button
                           variant={isActive ? "default" : "ghost"}
                           className={cn(
-                            "w-full justify-start gap-2 text-left pr-1",
+                            "w-full gap-2 transition-all duration-200 pr-1",
+                            isExpanded ? "justify-start text-left" : "justify-center",
                             isActive && "bg-primary text-primary-foreground"
                           )}
                         >
-                          <AreaIcon className={cn("h-4 w-4", !isActive && getAreaColorClasses(area.color).text)} />
-                          <span className="flex-1 truncate">{area.name}</span>
+                          <AreaIcon className={cn("h-4 w-4 flex-shrink-0", !isActive && getAreaColorClasses(area.color).text)} />
+                          {isExpanded && <span className="flex-1 truncate">{area.name}</span>}
                         </Button>
                       </Link>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 hover:bg-transparent"
-                        onClick={() => toggleArea(area.id)}
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
-                        )}
-                      </Button>
+                      {isExpanded && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-transparent"
+                          onClick={() => toggleArea(area.id)}
+                        >
+                          {isAreaExpanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
                     </div>
 
                     {/* Area Modules */}
-                    {isExpanded && (
+                    {isExpanded && isAreaExpanded && (
                       <div className="ml-6 mt-1 space-y-1">
                         {/* Regular modules */}
                         {area.modules
@@ -201,26 +253,31 @@ export function Sidebar() {
                             const isModActive = isModuleActive(module.href)
 
                             return (
-                              <Link key={module.id} href={module.href}>
+                              <Link key={module.id} href={module.href} title={module.name}>
                                 <Button
                                   variant={isModActive ? "default" : "ghost"}
                                   size="sm"
                                   disabled={module.status === ModuleStatus.PLANNED}
                                   className={cn(
-                                    "w-full justify-start gap-2 text-left text-sm h-8",
+                                    "w-full gap-2 text-sm h-8 transition-all duration-200",
+                                    isExpanded ? "justify-start text-left" : "justify-center",
                                     isModActive && "bg-primary text-primary-foreground",
                                     module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
                                   )}
                                 >
-                                  <ModuleIcon className="h-3 w-3" />
-                                  <span className="flex-1 truncate">{module.name}</span>
-                                  {module.status && module.status !== ModuleStatus.ACTIVE && (
-                                    <Badge
-                                      variant="secondary"
-                                      className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
-                                    >
-                                      {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
-                                    </Badge>
+                                  <ModuleIcon className="h-3 w-3 flex-shrink-0" />
+                                  {isExpanded && (
+                                    <>
+                                      <span className="flex-1 truncate">{module.name}</span>
+                                      {module.status && module.status !== ModuleStatus.ACTIVE && (
+                                        <Badge
+                                          variant="secondary"
+                                          className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
+                                        >
+                                          {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
+                                        </Badge>
+                                      )}
+                                    </>
                                   )}
                                 </Button>
                               </Link>
@@ -241,15 +298,23 @@ export function Sidebar() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="w-full justify-start gap-2 text-left text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                  className={cn(
+                                    "w-full gap-2 text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-all duration-200",
+                                    isExpanded ? "justify-start text-left" : "justify-center"
+                                  )}
                                   onClick={() => toggleSubsection(subsection.id)}
+                                  title={!isExpanded ? subsection.name : undefined}
                                 >
-                                  <Settings className="h-3 w-3" />
-                                  <span className="flex-1 truncate">{subsection.name}</span>
-                                  {isSubsectionExpanded ? (
-                                    <ChevronDown className="h-3 w-3" />
-                                  ) : (
-                                    <ChevronRight className="h-3 w-3" />
+                                  <Settings className="h-3 w-3 flex-shrink-0" />
+                                  {isExpanded && (
+                                    <>
+                                      <span className="flex-1 truncate">{subsection.name}</span>
+                                      {isSubsectionExpanded ? (
+                                        <ChevronDown className="h-3 w-3" />
+                                      ) : (
+                                        <ChevronRight className="h-3 w-3" />
+                                      )}
+                                    </>
                                   )}
                                 </Button>
                               </div>
@@ -264,26 +329,31 @@ export function Sidebar() {
                                       const isModActive = isModuleActive(module.href)
 
                                       return (
-                                        <Link key={module.id} href={module.href}>
+                                        <Link key={module.id} href={module.href} title={module.name}>
                                           <Button
                                             variant={isModActive ? "default" : "ghost"}
                                             size="sm"
                                             disabled={module.status === ModuleStatus.PLANNED}
                                             className={cn(
-                                              "w-full justify-start gap-2 text-left text-sm h-8",
+                                              "w-full gap-2 text-sm h-8 transition-all duration-200",
+                                              isExpanded ? "justify-start text-left" : "justify-center",
                                               isModActive && "bg-primary text-primary-foreground",
                                               module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
                                             )}
                                           >
-                                            <ModuleIcon className="h-3 w-3" />
-                                            <span className="flex-1 truncate">{module.name}</span>
-                                            {module.status && module.status !== ModuleStatus.ACTIVE && (
-                                              <Badge
-                                                variant="secondary"
-                                                className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
-                                              >
-                                                {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
-                                              </Badge>
+                                            <ModuleIcon className="h-3 w-3 flex-shrink-0" />
+                                            {isExpanded && (
+                                              <>
+                                                <span className="flex-1 truncate">{module.name}</span>
+                                                {module.status && module.status !== ModuleStatus.ACTIVE && (
+                                                  <Badge
+                                                    variant="secondary"
+                                                    className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
+                                                  >
+                                                    {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
+                                                  </Badge>
+                                                )}
+                                              </>
                                             )}
                                           </Button>
                                         </Link>
@@ -312,24 +382,27 @@ export function Sidebar() {
           {/* Admin Navigation */}
           {accessibleAdminNav.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
-                Administración
-              </p>
+              {isExpanded && (
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-1">
+                  Administración
+                </p>
+              )}
               {accessibleAdminNav.map((item) => {
                 const isActive = pathname === item.href
                 const Icon = item.icon
 
                 return (
-                  <Link key={item.name} href={item.href}>
+                  <Link key={item.name} href={item.href} title={!isExpanded ? item.name : undefined}>
                     <Button
                       variant={isActive ? "default" : "ghost"}
                       className={cn(
-                        "w-full justify-start gap-2 text-left",
+                        "w-full gap-2 transition-all duration-200",
+                        isExpanded ? "justify-start text-left" : "justify-center",
                         isActive && "bg-primary text-primary-foreground"
                       )}
                     >
-                      <Icon className="h-4 w-4" />
-                      {item.name}
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      {isExpanded && <span>{item.name}</span>}
                     </Button>
                   </Link>
                 )
@@ -339,20 +412,29 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+        <div className={cn(
+          "border-t border-gray-200 dark:border-gray-700 space-y-2 transition-all duration-300",
+          isExpanded ? "p-4" : "p-2"
+        )}>
           <Button
             variant="ghost"
-            className="w-full justify-start gap-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className={cn(
+              "w-full gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200",
+              isExpanded ? "justify-start text-left" : "justify-center"
+            )}
             onClick={logout}
+            title={!isExpanded ? "Cerrar Sesión" : undefined}
           >
-            <LogOut className="h-4 w-4" />
-            Cerrar Sesión
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {isExpanded && <span>Cerrar Sesión</span>}
           </Button>
-          <Card className="p-3">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Versión 1.0.0
-            </p>
-          </Card>
+          {isExpanded && (
+            <Card className="p-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Versión 1.0.0
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
