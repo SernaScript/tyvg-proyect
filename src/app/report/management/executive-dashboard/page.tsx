@@ -58,7 +58,7 @@ export default function ExecutiveDashboardPage() {
                                 width="100%"
                                 height="800"
 
-                                src="https://app.powerbi.com/reportEmbed?reportId=d259c2c1-f837-44ab-b7c7-58ca6439f848&autoAuth=true&ctid=5ce83ca2-c085-44ec-93e7-b9e8d1107995"
+                                src="https://app.powerbi.com/reportEmbed?reportId=ec4f7318-277d-4392-bc75-0f3bc11d4ae9&autoAuth=true&ctid=5ce83ca2-c085-44ec-93e7-b9e8d1107995"
                                 frameBorder="0"
                                 allowFullScreen={true}
                                 className="w-full"
