@@ -694,7 +694,7 @@ export default function PaymentSchedulingPage() {
 
   // Function to get display text for state based on status and state
   const getStateDisplayText = (status: string, state: string) => {
-    
+
     if (state === 'pending') {
       return 'Cartera por aprobar'
     }
@@ -1261,7 +1261,7 @@ export default function PaymentSchedulingPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
-                           
+
                             <span className={`px-2 py-1 rounded-full text-xs border ${getStateDisplayColor(request.status, request.state)}`}>
                               {getStateDisplayText(request.status, request.state)}
                             </span>
@@ -1618,17 +1618,6 @@ export default function PaymentSchedulingPage() {
                 </h3>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Debug Summary:', paymentSummary)
-                      alert(`Total Payment Value: ${paymentSummary.totalPaymentValue}\nProviders with payments: ${paymentSummary.providersWithPayments.length}`)
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    Debug
-                  </Button>
-                  <Button
                     onClick={approvePayments}
                     disabled={approvingPayments || (selectedRequest ? (selectedRequest.state === 'approved' || selectedRequest.state === 'cancelled') : false)}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
@@ -1661,25 +1650,25 @@ export default function PaymentSchedulingPage() {
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                          <p className="text-3xl font-bold text-green-600">
+                          <p className="text-xl font-bold text-green-600">
                             ${Math.round(summary.totalBalance).toLocaleString()}
                           </p>
                           <p className="text-sm text-green-700 font-medium">Total Balance</p>
                         </div>
                         <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-3xl font-bold text-blue-600">
+                          <p className="text-xl font-bold text-blue-600">
                             ${Math.round(summary.totalPaymentValue).toLocaleString()}
                           </p>
                           <p className="text-sm text-blue-700 font-medium">Total a Pagar</p>
                         </div>
                         <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                          <p className="text-3xl font-bold text-purple-600">
+                          <p className="text-xl font-bold text-purple-600">
                             {summary.totalProviders}
                           </p>
                           <p className="text-sm text-purple-700 font-medium">Proveedores</p>
                         </div>
                         <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                          <p className="text-3xl font-bold text-orange-600">
+                          <p className="text-xl font-bold text-orange-600">
                             {summary.totalDocuments}
                           </p>
                           <p className="text-sm text-orange-700 font-medium">Documentos</p>
@@ -1699,7 +1688,7 @@ export default function PaymentSchedulingPage() {
                                     <p className="text-sm text-gray-600">ID: {provider.providerIdentification}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-xl font-bold text-green-600">
+                                    <p className="text-base font-bold text-green-600">
                                       ${Math.round(provider.totalPayment).toLocaleString()}
                                     </p>
                                     <p className="text-sm text-gray-600">
