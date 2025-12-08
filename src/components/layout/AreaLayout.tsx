@@ -65,6 +65,16 @@ export function AreaLayout({
     )
   }
 
+  // Check if the current module is in a configuration subsection
+  const isConfigurationModule = area.subsections?.some(subsection => 
+    subsection.id === 'configuration' && 
+    subsection.modules.some(mod => 
+      mod.id === moduleId || 
+      mod.href === pathname ||
+      pathname.startsWith(mod.href + '/')
+    )
+  )
+
   const AreaIcon = area.icon
   const ModuleIcon = module?.icon
   const colorClasses = getAreaColorClasses(area.color)
@@ -117,10 +127,20 @@ export function AreaLayout({
             {/* Actions */}
             <div className="flex items-center gap-2">
               {actions}
-              <Link href={module ? `/areas/${area.id}` : "/dashboard"}>
+              <Link href={
+                isConfigurationModule 
+                  ? `/areas/${area.id}/configuration`
+                  : module 
+                    ? `/areas/${area.id}` 
+                    : "/dashboard"
+              }>
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  {module ? `Volver a ${area.name}` : "Volver al Dashboard"}
+                  {isConfigurationModule 
+                    ? "Volver a Configuraciones"
+                    : module 
+                      ? `Volver a ${area.name}` 
+                      : "Volver al Dashboard"}
                 </Button>
               </Link>
             </div>

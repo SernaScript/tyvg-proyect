@@ -284,83 +284,33 @@ export function Sidebar() {
                             )
                           })}
 
-                        {/* Subsections */}
+                        {/* Subsections - Show as single configuration link */}
                         {area.subsections?.map((subsection) => {
-                          const isSubsectionExpanded = expandedSubsections.includes(subsection.id)
                           const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
 
                           if (!hasAccessibleModules) return null
 
+                          const configurationPath = `/areas/${area.id}/configuration`
+                          const isConfigActive = pathname === configurationPath || pathname.startsWith(configurationPath + '/')
+
                           return (
                             <div key={subsection.id} className="mt-2">
-                              {/* Subsection Header */}
-                              <div className="flex items-center">
+                              <Link href={configurationPath} title={subsection.name}>
                                 <Button
-                                  variant="ghost"
+                                  variant={isConfigActive ? "default" : "ghost"}
                                   size="sm"
                                   className={cn(
-                                    "w-full gap-2 text-sm h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-all duration-200",
-                                    isExpanded ? "justify-start text-left" : "justify-center"
+                                    "w-full gap-2 text-sm h-8 transition-all duration-200",
+                                    isExpanded ? "justify-start text-left" : "justify-center",
+                                    isConfigActive && "bg-primary text-primary-foreground"
                                   )}
-                                  onClick={() => toggleSubsection(subsection.id)}
-                                  title={!isExpanded ? subsection.name : undefined}
                                 >
                                   <Settings className="h-3 w-3 flex-shrink-0" />
                                   {isExpanded && (
-                                    <>
-                                      <span className="flex-1 truncate">{subsection.name}</span>
-                                      {isSubsectionExpanded ? (
-                                        <ChevronDown className="h-3 w-3" />
-                                      ) : (
-                                        <ChevronRight className="h-3 w-3" />
-                                      )}
-                                    </>
+                                    <span className="flex-1 truncate">{subsection.name}</span>
                                   )}
                                 </Button>
-                              </div>
-
-                              {/* Subsection Modules */}
-                              {isSubsectionExpanded && (
-                                <div className="ml-4 mt-1 space-y-1">
-                                  {subsection.modules
-                                    .filter(module => canAccessModule(area.id, module.id))
-                                    .map((module) => {
-                                      const ModuleIcon = module.icon
-                                      const isModActive = isModuleActive(module.href)
-
-                                      return (
-                                        <Link key={module.id} href={module.href} title={module.name}>
-                                          <Button
-                                            variant={isModActive ? "default" : "ghost"}
-                                            size="sm"
-                                            disabled={module.status === ModuleStatus.PLANNED}
-                                            className={cn(
-                                              "w-full gap-2 text-sm h-8 transition-all duration-200",
-                                              isExpanded ? "justify-start text-left" : "justify-center",
-                                              isModActive && "bg-primary text-primary-foreground",
-                                              module.status === ModuleStatus.PLANNED && "opacity-50 cursor-not-allowed"
-                                            )}
-                                          >
-                                            <ModuleIcon className="h-3 w-3 flex-shrink-0" />
-                                            {isExpanded && (
-                                              <>
-                                                <span className="flex-1 truncate">{module.name}</span>
-                                                {module.status && module.status !== ModuleStatus.ACTIVE && (
-                                                  <Badge
-                                                    variant="secondary"
-                                                    className={cn("ml-auto text-xs px-1.5 py-0.5", getModuleStatusBadgeClasses(module.status))}
-                                                  >
-                                                    {module.status === ModuleStatus.DEVELOPMENT ? 'Dev' : 'Plan'}
-                                                  </Badge>
-                                                )}
-                                              </>
-                                            )}
-                                          </Button>
-                                        </Link>
-                                      )
-                                    })}
-                                </div>
-                              )}
+                              </Link>
                             </div>
                           )
                         })}

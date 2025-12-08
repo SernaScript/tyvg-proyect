@@ -201,42 +201,44 @@ export function AreaModules({ areaId, className }: AreaModulesProps) {
         </div>
       )}
 
-      {/* Subsections */}
+      {/* Subsections - Show as single configuration card */}
       {area.subsections?.map((subsection) => {
         const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
         
         if (!hasAccessibleModules) return null
 
-        return (
-          <div key={subsection.id} className="space-y-4">
-            {/* Subsection Header */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                <Settings className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {subsection.name}
-                </h3>
-                <p className="text-muted-foreground">
-                  Configuración y administración del sistema
-                </p>
-              </div>
-            </div>
+        const configurationPath = `/areas/${area.id}/configuration`
+        const isConfigActive = pathname === configurationPath || pathname.startsWith(configurationPath + '/')
 
-            {/* Subsection Modules */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {subsection.modules.map((module) => (
-                <ModuleCard
-                  key={module.id}
-                  module={module}
-                  areaColor={area.color}
-                  isActive={pathname === module.href}
-                  areaId={area.id}
-                />
-              ))}
-            </div>
-          </div>
+        return (
+          <Link key={subsection.id} href={configurationPath}>
+            <Card className={cn(
+              "hover:shadow-lg transition-all cursor-pointer h-full",
+              isConfigActive && "ring-2 ring-blue-500 ring-offset-2",
+              getAreaColorClasses(area.color).border
+            )}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-base">{subsection.name}</CardTitle>
+                  </div>
+                </div>
+                <CardDescription className="text-sm">
+                  Configuración y administración del sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button 
+                  variant={isConfigActive ? "default" : "outline"} 
+                  size="sm" 
+                  className="w-full"
+                >
+                  Acceder
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
         )
       })}
     </div>
