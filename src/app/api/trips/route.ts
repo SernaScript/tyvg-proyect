@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { authenticateRequest } from '@/lib/auth'
+import { RoleName } from '@/types/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +13,34 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const skip = (page - 1) * limit
 
+    // Get current user to filter by driver if needed
+    const currentUser = await authenticateRequest(request)
+    let driverId: string | null = null
+
+    // If user is a driver, get their driverId
+    if (currentUser && currentUser.role.name === RoleName.DRIVER) {
+      const driver = await prisma.driver.findUnique({
+        where: { userId: currentUser.id },
+        select: { id: true }
+      })
+      if (driver) {
+        driverId = driver.id
+      }
+    }
+
+    // If driverId is passed as parameter and user is not a driver, use the parameter
+    // If user is a driver, always use their own driverId
+    const requestedDriverId = searchParams.get('driverId')
+    if (requestedDriverId && !driverId) {
+      driverId = requestedDriverId
+    }
+
     const where: any = {}
+
+    // If there is a driverId (from current driver or parameter), filter by it
+    if (driverId) {
+      where.driverId = driverId
+    }
 
     if (search) {
       where.OR = [
@@ -127,7 +156,7 @@ export async function POST(request: NextRequest) {
       observations
     } = body
 
-    // Validaciones
+    // Validations
     if (!tripRequestId) {
       return NextResponse.json(
         { message: 'La solicitud de viaje es requerida' },
@@ -156,7 +185,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que la solicitud de viaje existe y está pendiente
+    // Verify that the trip request exists and is pending
     const tripRequest = await prisma.tripRequest.findUnique({
       where: { id: tripRequestId },
       include: {
@@ -178,7 +207,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que el conductor existe y está activo
+    // Verify that the driver exists and is active
     const driver = await prisma.driver.findUnique({
       where: { id: driverId },
       include: { user: true }
@@ -191,7 +220,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que el vehículo existe y está activo
+    // Verify that the vehicle exists and is active
     const vehicle = await prisma.vehicle.findUnique({
       where: { id: vehicleId }
     })
@@ -203,7 +232,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que la fecha programada no sea en el pasado
+    // Verify that the scheduled date is not in the past
     const scheduledDateTime = new Date(scheduledDate)
     if (scheduledDateTime < new Date()) {
       return NextResponse.json(
@@ -212,7 +241,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que el peso certificado sea válido si se proporciona
+    // Verify that the certified weight is valid if provided
     if (certifiedWeight && (isNaN(certifiedWeight) || certifiedWeight <= 0)) {
       return NextResponse.json(
         { message: 'El peso certificado debe ser mayor a 0' },
@@ -220,7 +249,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Crear el viaje
+    // Create the trip
     const trip = await prisma.trip.create({
       data: {
         tripRequestId,
@@ -281,7 +310,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Actualizar el estado de la solicitud de viaje a SCHEDULED
+    // Update the trip request status to SCHEDULED
     await prisma.tripRequest.update({
       where: { id: tripRequestId },
       data: { status: 'SCHEDULED' }

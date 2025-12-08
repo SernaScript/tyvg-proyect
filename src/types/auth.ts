@@ -36,7 +36,8 @@ export enum RoleName {
   TREASURY = 'TREASURY',
   LOGISTICS = 'LOGISTICS',
   BILLING = 'BILLING',
-  VIEWER = 'VIEWER'
+  VIEWER = 'VIEWER',
+  DRIVER = 'DRIVER'
 }
 
 export enum PermissionAction {
@@ -161,6 +162,11 @@ export const ROLE_PERMISSIONS_CONFIG: Record<RoleName, string[]> = {
     'billing:VIEW',
     'siigo:VIEW',
     'reports:VIEW'
+  ],
+  [RoleName.DRIVER]: [
+    'trips:VIEW',
+    'trips:EDIT',
+    'trips:CREATE'
   ]
 }
 
