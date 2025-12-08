@@ -5,6 +5,15 @@ import { RoleName } from '@/types/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate user
+    const currentUser = await authenticateRequest(request)
+    if (!currentUser) {
+      return NextResponse.json(
+        { message: 'No autenticado' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status')
@@ -14,7 +23,6 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Get current user to filter by driver if needed
-    const currentUser = await authenticateRequest(request)
     let driverId: string | null = null
 
     // If user is a driver, get their driverId
@@ -145,6 +153,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const currentUser = await authenticateRequest(request)
+    if (!currentUser) {
+      return NextResponse.json(
+        { message: 'No autenticado' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const {
       tripRequestId,
