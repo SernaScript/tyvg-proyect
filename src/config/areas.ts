@@ -84,14 +84,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
-        id: "flypass-reports",
-        name: "Reportes Flypass",
-        description: "Análisis y estadísticas de datos de peajes",
-        icon: BarChart3,
-        href: "/areas/accounting/flypass-reports",
-        status: ModuleStatus.ACTIVE
-      },
-      {
         id: "reconciliation",
         name: "Conciliación Bancaria",
         description: "Conciliación automática de cuentas bancarias",

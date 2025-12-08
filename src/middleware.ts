@@ -2,9 +2,9 @@
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { 
-  getTokenFromRequest, 
-  verifyToken 
+import {
+  getTokenFromRequest,
+  verifyToken
 } from '@/lib/auth'
 import { PermissionAction, RoleName } from '@/types/auth'
 
@@ -36,7 +36,6 @@ const AREA_ROUTE_PATTERNS = [
 // Module-specific route patterns
 const MODULE_ROUTE_PATTERNS = [
   { pattern: /^\/areas\/accounting\/flypass-data$/, areaId: 'accounting', moduleId: 'flypass-data' },
-  { pattern: /^\/areas\/accounting\/flypass-reports$/, areaId: 'accounting', moduleId: 'flypass-reports' },
   { pattern: /^\/areas\/accounting\/reconciliation$/, areaId: 'accounting', moduleId: 'reconciliation' },
   { pattern: /^\/areas\/treasury\/portfolio$/, areaId: 'treasury', moduleId: 'portfolio' }
 ]
@@ -55,7 +54,7 @@ const SUPER_ADMIN_ROUTES = [
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
+
   console.log(`🔒 Middleware processing: ${pathname}`)
 
   // Skip middleware for static files and API routes (except auth)
@@ -75,7 +74,7 @@ export async function middleware(request: NextRequest) {
 
   // Check for auth token
   const token = getTokenFromRequest(request)
-  
+
   if (!token) {
     console.log(`❌ No auth token found for: ${pathname}`)
     const loginUrl = new URL('/login', request.url)

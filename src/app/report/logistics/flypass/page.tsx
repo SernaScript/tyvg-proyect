@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AreaLayout } from "@/components/layout/AreaLayout"
+import { MainLayout } from "@/components/MainLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,8 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Download
+  Download,
+  ArrowLeft
 } from "lucide-react"
 import {
   ChartConfig,
@@ -24,6 +25,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { useRouter } from "next/navigation"
 
 interface ReportData {
   summary: {
@@ -52,6 +54,7 @@ interface ReportData {
 }
 
 export default function FlypassReportsPage() {
+  const router = useRouter()
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -229,18 +232,25 @@ export default function FlypassReportsPage() {
   }
 
   return (
-    <AreaLayout 
-      areaId="accounting" 
-      moduleId="flypass-reports"
-    >
+    <MainLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reportes de Flypass</h1>
-            <p className="text-muted-foreground">
-              Análisis y estadísticas de los datos de peajes procesados
-            </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/report/logistics')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Reportes de Flypass</h1>
+              <p className="text-muted-foreground">
+                Análisis y estadísticas de los datos de peajes procesados
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -720,6 +730,7 @@ export default function FlypassReportsPage() {
           </div>
         )}
       </div>
-    </AreaLayout>
+    </MainLayout>
   )
 }
+

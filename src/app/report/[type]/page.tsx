@@ -58,6 +58,14 @@ const reportsByType: Record<ReportType, Report[]> = {
       description: 'Análisis de rotación y movimientos de materiales',
       status: 'pending',
       frequency: 'monthly'
+    },
+    {
+      id: 'log-5',
+      name: 'Reportes Flypass',
+      description: 'Análisis y estadísticas de datos de peajes',
+      status: 'available',
+      frequency: 'on-demand',
+      route: '/report/logistics/flypass'
     }
   ],
   accounting: [
