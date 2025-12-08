@@ -121,21 +121,21 @@ export default function PaymentSchedulingPage() {
   const [pagination, setPagination] = useState<SiigoPagination | null>(null)
   const [loadingProgress, setLoadingProgress] = useState<string>('')
   const [savedToDatabase, setSavedToDatabase] = useState<boolean>(false)
-  
+
   const [viewMode, setViewMode] = useState<'load' | 'generated'>('generated')
   const [generatedRequests, setGeneratedRequests] = useState<GeneratedRequest[]>([])
   const [selectedRequest, setSelectedRequest] = useState<GeneratedRequest | null>(null)
   const [selectedAccounts, setSelectedAccounts] = useState<AccountPayableRecord[]>([])
   const [loadingGenerated, setLoadingGenerated] = useState<boolean>(false)
-  
+
   const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
   const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set())
-  
+
   const [editingPayment, setEditingPayment] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState<string>('')
   const [updatingPayment, setUpdatingPayment] = useState<boolean>(false)
   const [paymentMode, setPaymentMode] = useState<'total' | 'partial' | null>(null)
-  
+
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [showFilters, setShowFilters] = useState<boolean>(false)
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false)
@@ -158,11 +158,11 @@ export default function PaymentSchedulingPage() {
       setError(null)
       setSavedToDatabase(false)
       setLoadingProgress('Cargando datos...')
-      
+
       const url = saveToDatabase ? '/api/accounts-payable?save=true' : '/api/accounts-payable'
       const response = await fetch(url)
       const result = await response.json()
-      
+
       if (result.success) {
         const data: SiigoAccountsPayableResponse = result.data
         setAccountsPayable(data.results || [])
@@ -170,14 +170,14 @@ export default function PaymentSchedulingPage() {
         setLastUpdated(new Date())
         setDataLoaded(true)
         setSavedToDatabase(result.savedToDatabase || false)
-        
-         const groupedData = groupDataByProvider(data.results || [])
-         setProviderGroups(groupedData.map(group => ({
-           ...group,
-           totalPaymentValue: 0,
-           documents: []
-         })))
-        
+
+        const groupedData = groupDataByProvider(data.results || [])
+        setProviderGroups(groupedData.map(group => ({
+          ...group,
+          totalPaymentValue: 0,
+          documents: []
+        })))
+
         if (saveToDatabase) {
           setLoadingProgress(`Cargado y guardado: ${data.results?.length || 0} registros en la base de datos`)
         } else {
@@ -201,49 +201,49 @@ export default function PaymentSchedulingPage() {
       setError(null)
       setSavedToDatabase(false)
       setLoadingProgress('Iniciando carga completa de todos los datos...')
-      
+
       const response = await fetch('/api/accounts-payable/load-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
       })
-      
+
       const result = await response.json()
-      
+
       if (result.success) {
         const data = result.data
         setLastUpdated(new Date())
         setDataLoaded(true)
         setSavedToDatabase(true)
-        
+
         setLoadingProgress(`✅ Completado: ${data.totalProcessed} registros guardados de ${data.totalRecords} totales en ${Math.round(data.duration / 1000)}s`)
-        
+
         setPagination({
           page: 1,
           page_size: data.totalRecords,
           total_results: data.totalRecords
         })
-        
+
         const allRecordsResponse = await fetch('/api/accounts-payable/all-records')
         if (allRecordsResponse.ok) {
           const allRecordsResult = await allRecordsResponse.json()
           if (allRecordsResult.success) {
             setAccountsPayable(allRecordsResult.data || [])
-            
+
             const groupedData = groupDatabaseDataByProvider(allRecordsResult.data || [])
             setProviderGroups(groupedData)
           }
         } else {
           const firstPageResponse = await fetch('/api/accounts-payable')
           const firstPageResult = await firstPageResponse.json()
-          
+
           if (firstPageResult.success) {
             setAccountsPayable(firstPageResult.data.results || [])
             setPagination(firstPageResult.data.pagination)
           }
         }
-        
+
       } else {
         setError(result.error || 'Error al cargar todos los datos')
       }
@@ -260,10 +260,10 @@ export default function PaymentSchedulingPage() {
     try {
       setLoadingGenerated(true)
       setError(null)
-      
+
       const response = await fetch('/api/accounts-payable/generated')
       const result = await response.json()
-      
+
       if (result.success) {
         setGeneratedRequests(result.data)
         setViewMode('generated')
@@ -282,17 +282,17 @@ export default function PaymentSchedulingPage() {
     try {
       setLoadingGenerated(true)
       setError(null)
-      
+
       const response = await fetch(`/api/accounts-payable/generated/${requestId}`)
       const result = await response.json()
-      
+
       if (result.success) {
         setSelectedRequest(result.data.generatedRequest)
         setSelectedAccounts(result.data.accountsPayable)
-        
+
         const groupedData = groupDatabaseDataByProvider(result.data.accountsPayable)
         setProviderGroups(groupedData)
-        
+
         console.log('Selected request state:', result.data.generatedRequest.state)
       } else {
         setError(result.error || 'Error al cargar los registros de la cartera')
@@ -334,7 +334,7 @@ export default function PaymentSchedulingPage() {
 
       if (result.success) {
         setLoadingProgress('Cargando registros desde la base de datos...')
-        
+
         const allRecordsResponse = await fetch('/api/accounts-payable/all-records')
         const allRecordsResult = await allRecordsResponse.json()
 
@@ -366,12 +366,12 @@ export default function PaymentSchedulingPage() {
 
   const groupDataByProvider = (data: SiigoAccountPayable[]): ProviderGroupFromAPI[] => {
     const groups = new Map<string, ProviderGroupFromAPI>()
-    
+
     data.forEach(account => {
       const providerKey = account.provider?.identification || 'unknown'
       const providerName = account.provider?.name || 'Proveedor Desconocido'
       const balance = Math.round(Number(account.due?.balance || 0))
-      
+
       if (groups.has(providerKey)) {
         const group = groups.get(providerKey)!
         group.totalBalance = Math.round(Number(group.totalBalance) + balance)
@@ -388,19 +388,19 @@ export default function PaymentSchedulingPage() {
         })
       }
     })
-    
+
     return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
   }
 
   const groupDatabaseDataByProvider = useCallback((data: AccountPayableRecord[]): ProviderGroup[] => {
     const groups = new Map<string, ProviderGroup>()
-    
+
     data.forEach(account => {
       const providerKey = account.providerIdentification
       const providerName = account.providerName
       const balance = Math.round(Number(account.balance))
       const paymentValue = account.paymentValue ? Math.round(Number(account.paymentValue)) : 0
-      
+
       if (groups.has(providerKey)) {
         const group = groups.get(providerKey)!
         group.totalBalance = Math.round(Number(group.totalBalance) + balance)
@@ -418,7 +418,7 @@ export default function PaymentSchedulingPage() {
         })
       }
     })
-    
+
     return Array.from(groups.values()).sort((a, b) => Number(b.totalBalance) - Number(a.totalBalance))
   }, [])
 
@@ -447,10 +447,10 @@ export default function PaymentSchedulingPage() {
       const currentRecord = providerGroups
         .flatMap(group => group.documents)
         .find(doc => doc.id === recordId)
-      
+
       if (currentRecord) {
         const balance = Number(currentRecord.balance || (currentRecord as any).due?.balance || 0)
-        
+
         const response = await fetch(`/api/accounts-payable/${recordId}`, {
           method: 'PATCH',
           headers: {
@@ -461,31 +461,31 @@ export default function PaymentSchedulingPage() {
 
         const result = await response.json()
 
-         if (result.success) {
-           const updatedRecord = result.data
-           
-           setProviderGroups(prevGroups => 
-             prevGroups.map(group => {
-               const updatedDocuments = group.documents.map(doc => 
-                 doc.id === recordId 
-                   ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                   : doc
-               )
-               
-               const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
-                 return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
-               }, 0)
-               
-               return {
-                 ...group,
-                 documents: updatedDocuments,
-                 totalPaymentValue: Math.round(newTotalPaymentValue)
-               }
-             })
-           )
-         } else {
-           setError(result.error || 'Error al actualizar el valor de pago')
-         }
+        if (result.success) {
+          const updatedRecord = result.data
+
+          setProviderGroups(prevGroups =>
+            prevGroups.map(group => {
+              const updatedDocuments = group.documents.map(doc =>
+                doc.id === recordId
+                  ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                  : doc
+              )
+
+              const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+                return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+              }, 0)
+
+              return {
+                ...group,
+                documents: updatedDocuments,
+                totalPaymentValue: Math.round(newTotalPaymentValue)
+              }
+            })
+          )
+        } else {
+          setError(result.error || 'Error al actualizar el valor de pago')
+        }
       }
     } catch (err) {
       setError('Error de conexión con la API')
@@ -500,7 +500,7 @@ export default function PaymentSchedulingPage() {
       setError('No se puede editar una cartera aprobada o cancelada')
       return
     }
-    
+
     setEditingPayment(recordId)
     setPaymentMode('partial')
     setEditingValue(currentValue ? currentValue.toString() : '')
@@ -532,31 +532,31 @@ export default function PaymentSchedulingPage() {
 
       const result = await response.json()
 
-       if (result.success) {
-         const updatedRecord = result.data
-         
-         setProviderGroups(prevGroups => 
-           prevGroups.map(group => {
-             const updatedDocuments = group.documents.map(doc => 
-               doc.id === recordId 
-                 ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                 : doc
-             )
-             
-             const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
-               return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
-             }, 0)
-             
-             return {
-               ...group,
-               documents: updatedDocuments,
-               totalPaymentValue: Math.round(newTotalPaymentValue)
-             }
-           })
-         )
-       } else {
-         setError(result.error || 'Error al borrar el valor de pago')
-       }
+      if (result.success) {
+        const updatedRecord = result.data
+
+        setProviderGroups(prevGroups =>
+          prevGroups.map(group => {
+            const updatedDocuments = group.documents.map(doc =>
+              doc.id === recordId
+                ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                : doc
+            )
+
+            const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+              return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+            }, 0)
+
+            return {
+              ...group,
+              documents: updatedDocuments,
+              totalPaymentValue: Math.round(newTotalPaymentValue)
+            }
+          })
+        )
+      } else {
+        setError(result.error || 'Error al borrar el valor de pago')
+      }
     } catch (err) {
       setError('Error de conexión con la API')
       console.error('Error clearing payment value:', err)
@@ -576,11 +576,11 @@ export default function PaymentSchedulingPage() {
       setError(null)
 
       const paymentValue = editingValue.trim() === '' ? null : parseFloat(editingValue)
-      
+
       const currentRecord = providerGroups
         .flatMap(group => group.documents)
         .find(doc => doc.id === recordId)
-      
+
       if (currentRecord && paymentValue !== null) {
         const balance = Number(currentRecord.balance || (currentRecord as any).due?.balance || 0)
         if (paymentValue > balance) {
@@ -600,34 +600,34 @@ export default function PaymentSchedulingPage() {
 
       const result = await response.json()
 
-       if (result.success) {
-         setEditingPayment(null)
-         setEditingValue('')
-         
-         const updatedRecord = result.data
-         
-         setProviderGroups(prevGroups => 
-           prevGroups.map(group => {
-             const updatedDocuments = group.documents.map(doc => 
-               doc.id === recordId 
-                 ? { ...doc, paymentValue: updatedRecord.paymentValue }
-                 : doc
-             )
-             
-             const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
-               return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
-             }, 0)
-             
-             return {
-               ...group,
-               documents: updatedDocuments,
-               totalPaymentValue: Math.round(newTotalPaymentValue)
-             }
-           })
-         )
-       } else {
-         setError(result.error || 'Error al actualizar el valor de pago')
-       }
+      if (result.success) {
+        setEditingPayment(null)
+        setEditingValue('')
+
+        const updatedRecord = result.data
+
+        setProviderGroups(prevGroups =>
+          prevGroups.map(group => {
+            const updatedDocuments = group.documents.map(doc =>
+              doc.id === recordId
+                ? { ...doc, paymentValue: updatedRecord.paymentValue }
+                : doc
+            )
+
+            const newTotalPaymentValue = updatedDocuments.reduce((sum, doc) => {
+              return sum + (doc.paymentValue ? Number(doc.paymentValue) : 0)
+            }, 0)
+
+            return {
+              ...group,
+              documents: updatedDocuments,
+              totalPaymentValue: Math.round(newTotalPaymentValue)
+            }
+          })
+        )
+      } else {
+        setError(result.error || 'Error al actualizar el valor de pago')
+      }
     } catch (err) {
       setError('Error de conexión con la API')
       console.error('Error updating payment value:', err)
@@ -692,12 +692,35 @@ export default function PaymentSchedulingPage() {
     }
   }
 
+  // Function to get display text for state based on status and state
+  const getStateDisplayText = (status: string, state: string) => {
+    
+    if (state === 'pending') {
+      return 'Cartera por aprobar'
+    }
+    if (state === 'approved') {
+      return 'Cartera aprobada'
+    }
+    return 'Aprobada'
+  }
+
+  // Function to get color for state display text
+  const getStateDisplayColor = (status: string, state: string) => {
+    if (state === 'pending') {
+      return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+    }
+    if (state === 'approved') {
+      return 'bg-green-100 text-green-800 border-green-300'
+    }
+    return 'bg-gray-100 text-gray-800 border-gray-300'
+  }
+
   const filteredProviders = useMemo(() => {
     return providerGroups.filter(group => {
       // Filtro por término de búsqueda
       const matchesSearch = group.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           group.providerIdentification.includes(searchTerm)
-      
+        group.providerIdentification.includes(searchTerm)
+
       // Filtro por cost center
       let matchesCostCenter = true
       if (costCenterFilter === 'deposito') {
@@ -706,7 +729,7 @@ export default function PaymentSchedulingPage() {
         matchesCostCenter = group.documents.some(doc => doc.costCenterName !== 'DEPOSITO')
       }
       // Si costCenterFilter === 'all', matchesCostCenter ya es true
-      
+
       return matchesSearch && matchesCostCenter
     })
   }, [providerGroups, searchTerm, costCenterFilter])
@@ -843,8 +866,8 @@ export default function PaymentSchedulingPage() {
   }, [paymentSummary, filteredProviders])
 
   return (
-    <AreaLayout 
-      areaId="treasury" 
+    <AreaLayout
+      areaId="treasury"
       moduleId="payment-scheduling"
     >
       <div className="space-y-6">
@@ -864,7 +887,7 @@ export default function PaymentSchedulingPage() {
               Generar Nueva Cartera
             </Button>
           </div>
-          
+
           {selectedRequest && (
             <Button
               onClick={backToGeneratedList}
@@ -904,7 +927,7 @@ export default function PaymentSchedulingPage() {
                     <p className="text-red-800 text-sm">{error}</p>
                   </div>
                 )}
-                
+
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-yellow-700">
                     Progreso: 45% completado
@@ -912,7 +935,7 @@ export default function PaymentSchedulingPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2 flex-wrap">
-                    <Button 
+                    <Button
                       onClick={() => fetchAccountsPayable(false)}
                       disabled={loading}
                       className="bg-yellow-600 hover:bg-yellow-700"
@@ -929,7 +952,7 @@ export default function PaymentSchedulingPage() {
                         </>
                       )}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => fetchAccountsPayable(true)}
                       disabled={loading}
                       className="bg-green-600 hover:bg-green-700"
@@ -946,7 +969,7 @@ export default function PaymentSchedulingPage() {
                         </>
                       )}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={fetchAllAccountsPayable}
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -1004,10 +1027,10 @@ export default function PaymentSchedulingPage() {
                       {providerGroups.map((group, index) => {
                         const isExpanded = expandedProviders.has(group.providerIdentification)
                         const providerKey = group.providerIdentification
-                        
+
                         return (
                           <div key={providerKey} className="border border-gray-200 rounded-lg overflow-hidden">
-                            <div 
+                            <div
                               className="bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
                               onClick={() => toggleProviderExpansion(providerKey)}
                             >
@@ -1023,25 +1046,25 @@ export default function PaymentSchedulingPage() {
                                     <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
                                   </div>
                                 </div>
-                                 <div className="flex items-center gap-6">
-                                   <div className="text-right">
-                                     <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
-                                     <div className="flex flex-col gap-1">
-                                       <p className="text-lg font-bold text-green-600 flex items-center gap-1">
-                                         <DollarSign className="h-4 w-4" />
-                                         ${Math.round(Number(group.totalBalance)).toLocaleString()}
-                                       </p>
-                                       {group.totalPaymentValue > 0 && (
-                                         <p className="text-sm font-medium text-blue-600">
-                                           Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
-                                         </p>
-                                       )}
-                                     </div>
-                                   </div>
-                                 </div>
+                                <div className="flex items-center gap-6">
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                    <div className="flex flex-col gap-1">
+                                      <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                        <DollarSign className="h-4 w-4" />
+                                        ${Math.round(Number(group.totalBalance)).toLocaleString()}
+                                      </p>
+                                      {group.totalPaymentValue > 0 && (
+                                        <p className="text-sm font-medium text-blue-600">
+                                          Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            
+
                             {isExpanded && (
                               <div className="border-t border-gray-200 bg-white">
                                 <div className="p-4">
@@ -1068,8 +1091,8 @@ export default function PaymentSchedulingPage() {
                                               {doc.consecutive || (doc as any).due?.consecutive || 0}
                                             </td>
                                             <td className="px-3 py-2 text-gray-900">
-                                              {doc.dueDate ? 
-                                                new Date(doc.dueDate).toLocaleDateString() : 
+                                              {doc.dueDate ?
+                                                new Date(doc.dueDate).toLocaleDateString() :
                                                 ((doc as any).due?.date || '')
                                               }
                                             </td>
@@ -1178,7 +1201,7 @@ export default function PaymentSchedulingPage() {
                           </div>
                         )
                       })}
-                      
+
                       {providerGroups.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -1236,27 +1259,25 @@ export default function PaymentSchedulingPage() {
                             </p>
                           </div>
                         </div>
-                         <div className="flex items-center gap-4">
-                           <div className="flex items-center gap-2">
-                             <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(request.status)}`}>
-                               {request.status}
-                             </span>
-                             <span className={`px-2 py-1 rounded-full text-xs border ${getStateColor(request.state)}`}>
-                               {request.state}
-                             </span>
-                           </div>
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={(e) => {
-                               e.stopPropagation()
-                               fetchRequestAccounts(request.id)
-                             }}
-                           >
-                             <Eye className="h-4 w-4 mr-1" />
-                             Ver
-                           </Button>
-                         </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                           
+                            <span className={`px-2 py-1 rounded-full text-xs border ${getStateDisplayColor(request.status, request.state)}`}>
+                              {getStateDisplayText(request.status, request.state)}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              fetchRequestAccounts(request.id)
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
                         <p>Duración: {Math.round(request.duration / 1000)}s | Total: {request.totalResults} registros</p>
@@ -1276,11 +1297,10 @@ export default function PaymentSchedulingPage() {
                 <Database className="h-5 w-5" />
                 Registros de Cartera
                 {isPortfolioLocked() && (
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    selectedRequest.state === 'approved' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${selectedRequest.state === 'approved'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                    }`}>
                     {selectedRequest.state === 'approved' ? 'APROBADA' : 'CANCELADA'}
                   </span>
                 )}
@@ -1295,113 +1315,113 @@ export default function PaymentSchedulingPage() {
                 )}
               </CardDescription>
             </CardHeader>
-             <CardContent>
-               {loadingGenerated ? (
-                 <div className="flex items-center justify-center py-8">
-                   <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                   <span>Cargando registros...</span>
-                 </div>
-               ) : (
-                 <div className="space-y-4">
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-4">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setShowFilters(!showFilters)}
-                         className="flex items-center gap-2"
-                       >
-                         <Filter className="h-4 w-4" />
-                         Filtros
-                       </Button>
-                       <div className="text-sm text-gray-600">
-                         Mostrando {filteredProviders.length} de {providerGroups.length} proveedores
-                         {costCenterFilter !== 'all' && (
-                           <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                             {costCenterFilter === 'deposito' ? 'DEPOSITO' : 'TYVG'}
-                           </span>
-                         )}
-                       </div>
-                     </div>
-                     
-                     {/* Totales */}
-                     <div className="flex items-center gap-6">
-                       {/* Total Balance */}
-                       <div className="text-right">
-                         <div className="text-sm text-gray-600">Total Balance</div>
-                         <div className="text-xl font-bold text-green-600 flex items-center gap-1">
-                           <DollarSign className="h-4 w-4" />
-                           ${Math.round(paymentSummary.totalBalance).toLocaleString()}
-                         </div>
-                         <div className="text-xs text-gray-500">
-                           {paymentSummary.totalFilteredDocuments} documentos
-                         </div>
-                       </div>
-                       
-                       {/* Total Valores de Pago */}
-                       <div className="text-right">
-                         <div className="text-sm text-gray-600">Total Valores de Pago</div>
-                         <div className="text-2xl font-bold text-blue-600 flex items-center gap-1">
-                           <DollarSign className="h-5 w-5" />
-                           ${Math.round(paymentSummary.totalPaymentValue).toLocaleString()}
-                         </div>
-                         {paymentSummary.totalPaymentValue > 0 && (
-                           <div className="text-xs text-gray-500">
-                             {paymentSummary.totalProviders} proveedores • {paymentSummary.totalDocuments} documentos
-                           </div>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                   
-                   {showFilters && (
-                     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                       <div className="flex items-center gap-2 flex-1">
-                         <Search className="h-4 w-4 text-gray-500" />
-                         <Input
-                           type="text"
-                           placeholder="Buscar por nombre o ID del proveedor..."
-                           value={searchTerm}
-                           onChange={(e) => setSearchTerm(e.target.value)}
-                           className="flex-1"
-                         />
-                       </div>
-                       <div className="flex items-center gap-2">
-                         <span className="text-sm text-gray-600 whitespace-nowrap">Centro de Costo:</span>
-                         <Select value={costCenterFilter} onValueChange={(value: 'all' | 'deposito' | 'tyvg') => setCostCenterFilter(value)}>
-                           <SelectTrigger className="w-40">
-                             <SelectValue />
-                           </SelectTrigger>
-                           <SelectContent>
-                             <SelectItem value="all">Todos</SelectItem>
-                             <SelectItem value="deposito">DEPOSITO</SelectItem>
-                             <SelectItem value="tyvg">TYVG</SelectItem>
-                           </SelectContent>
-                         </Select>
-                       </div>
-                       {(searchTerm || costCenterFilter !== 'all') && (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={clearFilters}
-                           className="flex items-center gap-2"
-                         >
-                           <X className="h-4 w-4" />
-                           Limpiar
-                         </Button>
-                       )}
-                     </div>
-                   )}
+            <CardContent>
+              {loadingGenerated ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                  <span>Cargando registros...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="flex items-center gap-2"
+                      >
+                        <Filter className="h-4 w-4" />
+                        Filtros
+                      </Button>
+                      <div className="text-sm text-gray-600">
+                        Mostrando {filteredProviders.length} de {providerGroups.length} proveedores
+                        {costCenterFilter !== 'all' && (
+                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            {costCenterFilter === 'deposito' ? 'DEPOSITO' : 'TYVG'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Totales */}
+                    <div className="flex items-center gap-6">
+                      {/* Total Balance */}
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">Total Balance</div>
+                        <div className="text-xl font-bold text-green-600 flex items-center gap-1">
+                          <DollarSign className="h-4 w-4" />
+                          ${Math.round(paymentSummary.totalBalance).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {paymentSummary.totalFilteredDocuments} documentos
+                        </div>
+                      </div>
+
+                      {/* Total Valores de Pago */}
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">Total Valores de Pago</div>
+                        <div className="text-2xl font-bold text-blue-600 flex items-center gap-1">
+                          <DollarSign className="h-5 w-5" />
+                          ${Math.round(paymentSummary.totalPaymentValue).toLocaleString()}
+                        </div>
+                        {paymentSummary.totalPaymentValue > 0 && (
+                          <div className="text-xs text-gray-500">
+                            {paymentSummary.totalProviders} proveedores • {paymentSummary.totalDocuments} documentos
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {showFilters && (
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Search className="h-4 w-4 text-gray-500" />
+                        <Input
+                          type="text"
+                          placeholder="Buscar por nombre o ID del proveedor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="flex-1"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 whitespace-nowrap">Centro de Costo:</span>
+                        <Select value={costCenterFilter} onValueChange={(value: 'all' | 'deposito' | 'tyvg') => setCostCenterFilter(value)}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            <SelectItem value="deposito">DEPOSITO</SelectItem>
+                            <SelectItem value="tyvg">TYVG</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {(searchTerm || costCenterFilter !== 'all') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Limpiar
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
 
                   <div className="space-y-3">
                     {filteredProviders.map((group, index) => {
                       const isExpanded = expandedProviders.has(group.providerIdentification)
                       const providerKey = group.providerIdentification
-                      
+
                       return (
                         <div key={providerKey} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <div 
+                          <div
                             className="bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
                             onClick={() => toggleProviderExpansion(providerKey)}
                           >
@@ -1417,25 +1437,25 @@ export default function PaymentSchedulingPage() {
                                   <p className="text-sm text-gray-600">ID: {group.providerIdentification}</p>
                                 </div>
                               </div>
-                               <div className="flex items-center gap-6">
-                                 <div className="text-right">
-                                   <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
-                                   <div className="flex flex-col gap-1">
-                                     <p className="text-lg font-bold text-green-600 flex items-center gap-1">
-                                       <DollarSign className="h-4 w-4" />
-                                       ${Number(group.totalBalance).toLocaleString()}
-                                     </p>
-                                     {group.totalPaymentValue > 0 && (
-                                       <p className="text-sm font-medium text-blue-600">
-                                         Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
-                                       </p>
-                                     )}
-                                   </div>
-                                 </div>
-                               </div>
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-600">{group.documentCount} documentos</p>
+                                  <div className="flex flex-col gap-1">
+                                    <p className="text-lg font-bold text-green-600 flex items-center gap-1">
+                                      <DollarSign className="h-4 w-4" />
+                                      ${Number(group.totalBalance).toLocaleString()}
+                                    </p>
+                                    {group.totalPaymentValue > 0 && (
+                                      <p className="text-sm font-medium text-blue-600">
+                                        Pago: ${Math.round(Number(group.totalPaymentValue)).toLocaleString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          
+
                           {isExpanded && (
                             <div className="border-t border-gray-200 bg-white">
                               <div className="p-4">
@@ -1568,7 +1588,7 @@ export default function PaymentSchedulingPage() {
                         </div>
                       )
                     })}
-                    
+
                     {filteredProviders.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -1618,9 +1638,9 @@ export default function PaymentSchedulingPage() {
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    {selectedRequest && selectedRequest.state === 'approved' ? 'Ya Aprobada' : 
-                     selectedRequest && selectedRequest.state === 'cancelled' ? 'Cartera Cancelada' : 
-                     'Aprobar Pagos'}
+                    {selectedRequest && selectedRequest.state === 'approved' ? 'Ya Aprobada' :
+                      selectedRequest && selectedRequest.state === 'cancelled' ? 'Cartera Cancelada' :
+                        'Aprobar Pagos'}
                   </Button>
                   <Button
                     variant="outline"
@@ -1633,7 +1653,7 @@ export default function PaymentSchedulingPage() {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {(() => {
                   const summary = paymentSummary
@@ -1673,21 +1693,21 @@ export default function PaymentSchedulingPage() {
                             {summary.providersWithPayments
                               .sort((a, b) => b.totalPayment - a.totalPayment)
                               .map((provider, index) => (
-                              <div key={provider.providerIdentification} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-900">{provider.providerName}</p>
-                                  <p className="text-sm text-gray-600">ID: {provider.providerIdentification}</p>
+                                <div key={provider.providerIdentification} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-gray-900">{provider.providerName}</p>
+                                    <p className="text-sm text-gray-600">ID: {provider.providerIdentification}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xl font-bold text-green-600">
+                                      ${Math.round(provider.totalPayment).toLocaleString()}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {provider.documentCount} documento{provider.documentCount !== 1 ? 's' : ''}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <p className="text-xl font-bold text-green-600">
-                                    ${Math.round(provider.totalPayment).toLocaleString()}
-                                  </p>
-                                  <p className="text-sm text-gray-600">
-                                    {provider.documentCount} documento{provider.documentCount !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </div>
                       ) : (
