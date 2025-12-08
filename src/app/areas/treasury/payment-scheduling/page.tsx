@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertTriangle, Calendar, RefreshCw, Database, Eye, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, DollarSign, Edit3, Save, X, Trash2, Filter, Search, Lock } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useState, useEffect, useMemo, useCallback } from "react"
 
 interface SiigoDue {
@@ -140,6 +141,8 @@ export default function PaymentSchedulingPage() {
   const [showFilters, setShowFilters] = useState<boolean>(false)
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false)
   const [approvingPayments, setApprovingPayments] = useState<boolean>(false)
+  const [showCancelDialog, setShowCancelDialog] = useState<boolean>(false)
+  const [cancellingPortfolio, setCancellingPortfolio] = useState<boolean>(false)
   const [costCenterFilter, setCostCenterFilter] = useState<'all' | 'deposito' | 'tyvg'>('all')
 
   useEffect(() => {
@@ -694,7 +697,9 @@ export default function PaymentSchedulingPage() {
 
   // Function to get display text for state based on status and state
   const getStateDisplayText = (status: string, state: string) => {
-
+    if (state === 'cancelled') {
+      return 'Cancelado'
+    }
     if (state === 'pending') {
       return 'Cartera por aprobar'
     }
@@ -706,6 +711,9 @@ export default function PaymentSchedulingPage() {
 
   // Function to get color for state display text
   const getStateDisplayColor = (status: string, state: string) => {
+    if (state === 'cancelled') {
+      return 'bg-red-100 text-red-800 border-red-300'
+    }
     if (state === 'pending') {
       return 'bg-yellow-100 text-yellow-800 border-yellow-300'
     }
@@ -743,6 +751,50 @@ export default function PaymentSchedulingPage() {
   const isPortfolioLocked = useCallback((): boolean => {
     return selectedRequest ? (selectedRequest.state === 'approved' || selectedRequest.state === 'cancelled') : false
   }, [selectedRequest])
+
+  const cancelPortfolio = async () => {
+    if (!selectedRequest) return
+
+    if (selectedRequest.state === 'approved') {
+      setError('No se puede cancelar una cartera aprobada')
+      return
+    }
+
+    if (selectedRequest.state === 'cancelled') {
+      setError('La cartera ya está cancelada')
+      return
+    }
+
+    try {
+      setCancellingPortfolio(true)
+      setError(null)
+
+      const response = await fetch('/api/accounts-payable/cancel-portfolio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generatedRequestId: selectedRequest.id
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setShowCancelDialog(false)
+        await fetchGeneratedRequests()
+        await fetchRequestAccounts(selectedRequest.id)
+      } else {
+        setError(result.error || 'Error al cancelar la cartera')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error canceling portfolio:', err)
+    } finally {
+      setCancellingPortfolio(false)
+    }
+  }
 
   const approvePayments = async () => {
     if (!selectedRequest) return
@@ -1293,27 +1345,42 @@ export default function PaymentSchedulingPage() {
         {selectedRequest && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Registros de Cartera
-                {isPortfolioLocked() && (
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${selectedRequest.state === 'approved'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                    }`}>
-                    {selectedRequest.state === 'approved' ? 'APROBADA' : 'CANCELADA'}
-                  </span>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    Registros de Cartera
+                    {isPortfolioLocked() && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${selectedRequest.state === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
+                        {selectedRequest.state === 'approved' ? 'APROBADA' : 'CANCELADA'}
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Solicitud del {new Date(selectedRequest.createdAt).toLocaleDateString()} - {selectedRequest.recordsProcessed} registros
+                    {isPortfolioLocked() && (
+                      <span className="block mt-1 text-orange-600 font-medium flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Esta cartera está bloqueada y no se puede editar
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
+                {selectedRequest.state === 'pending' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowCancelDialog(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancelar cartera
+                  </Button>
                 )}
-              </CardTitle>
-              <CardDescription>
-                Solicitud del {new Date(selectedRequest.createdAt).toLocaleDateString()} - {selectedRequest.recordsProcessed} registros
-                {isPortfolioLocked() && (
-                  <span className="block mt-1 text-orange-600 font-medium flex items-center gap-2">
-                    <Lock className="h-4 w-4" />
-                    Esta cartera está bloqueada y no se puede editar
-                  </span>
-                )}
-              </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingGenerated ? (
@@ -1728,6 +1795,49 @@ export default function PaymentSchedulingPage() {
             </Button>
           </div>
         )}
+
+        {/* Dialog de confirmación para cancelar cartera */}
+        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                ¿Estás seguro de que quieres cancelar la cartera?
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Esta acción cambiará el estado de la cartera a "Cancelada" y no podrás editarla ni aprobarla después.
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowCancelDialog(false)}
+                disabled={cancellingPortfolio}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={cancelPortfolio}
+                disabled={cancellingPortfolio}
+                className="flex items-center gap-2"
+              >
+                {cancellingPortfolio ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Cancelando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    Sí, cancelar cartera
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AreaLayout>
   )
