@@ -98,14 +98,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: Receipt,
         href: "/areas/accounting/electronic-invoices",
         status: ModuleStatus.DEVELOPMENT
-      },
-      {
-        id: "accounting-reports",
-        name: "Reportes Contables",
-        description: "Generación de reportes financieros y contables",
-        icon: FileBarChart,
-        href: "/areas/accounting/reports",
-        status: ModuleStatus.ACTIVE
       }
     ]
   },
@@ -212,14 +204,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: Truck,
         href: "/areas/logistics/trips",
         status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "logistics-reports",
-        name: "Reportes de Logística",
-        description: "Reportes de movimientos y rotación de inventarios",
-        icon: BarChart3,
-        href: "/areas/logistics/reports",
-        status: ModuleStatus.DEVELOPMENT
       }
     ],
     subsections: [
@@ -308,14 +292,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
         description: "Administración de información de clientes",
         icon: Users,
         href: "/areas/billing/customers",
-        status: ModuleStatus.ACTIVE
-      },
-      {
-        id: "billing-reports",
-        name: "Reportes de Facturación",
-        description: "Análisis de ventas y facturación",
-        icon: BarChart3,
-        href: "/areas/billing/reports",
         status: ModuleStatus.ACTIVE
       }
     ]
