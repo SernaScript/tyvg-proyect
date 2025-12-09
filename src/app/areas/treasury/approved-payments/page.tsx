@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DollarSign, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, ArrowRight, FileSpreadsheet } from "lucide-react"
+import { DollarSign, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, ArrowRight, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -28,6 +28,28 @@ interface DayData {
   totalValue: number
 }
 
+interface AccountPayable {
+  id: string
+  prefix: string
+  consecutive: string
+  quote: number
+  dueDate: string
+  balance: number
+  providerName: string
+  providerIdentification: string
+  providerBranchOffice: number
+  costCenterName: string
+  costCenterCode: number
+  currencyCode: string
+  currencyBalance: number
+  paymentValue: number
+  approved: boolean
+  paid: boolean
+  createdAt: string
+  updatedAt: string
+  generatedRequestId: string
+}
+
 
 export default function ApprovedPaymentsPage() {
   const router = useRouter()
@@ -40,6 +62,9 @@ export default function ApprovedPaymentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDateRequests, setSelectedDateRequests] = useState<ApprovedGeneratedRequest[]>([])
   const [loadingRequests, setLoadingRequests] = useState(false)
+  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set())
+  const [requestPayments, setRequestPayments] = useState<Map<string, AccountPayable[]>>(new Map())
+  const [loadingPayments, setLoadingPayments] = useState<Set<string>>(new Set())
 
   const fetchApprovedRequests = async () => {
     try {
@@ -156,6 +181,53 @@ export default function ApprovedPaymentsPage() {
 
   const handleRequestClick = (requestId: string) => {
     router.push(`/areas/treasury/approved-payments/${requestId}`)
+  }
+
+  const toggleRequestExpansion = async (requestId: string) => {
+    const isExpanded = expandedRequests.has(requestId)
+
+    if (isExpanded) {
+      // Colapsar
+      setExpandedRequests(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(requestId)
+        return newSet
+      })
+    } else {
+      // Expandir - cargar pagos si no están cargados
+      setExpandedRequests(prev => new Set(prev).add(requestId))
+
+      if (!requestPayments.has(requestId)) {
+        await fetchRequestPayments(requestId)
+      }
+    }
+  }
+
+  const fetchRequestPayments = async (requestId: string) => {
+    try {
+      setLoadingPayments(prev => new Set(prev).add(requestId))
+      const response = await fetch(`/api/accounts-payable/approved?generatedRequestId=${requestId}`)
+      const result = await response.json()
+
+      if (result.success) {
+        setRequestPayments(prev => {
+          const newMap = new Map(prev)
+          newMap.set(requestId, result.data)
+          return newMap
+        })
+      } else {
+        setError(result.error || 'Error al cargar pagos de la cartera')
+      }
+    } catch (err) {
+      setError('Error de conexión con la API')
+      console.error('Error fetching request payments:', err)
+    } finally {
+      setLoadingPayments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(requestId)
+        return newSet
+      })
+    }
   }
 
   const handleExportToExcel = async () => {
@@ -512,49 +584,156 @@ export default function ApprovedPaymentsPage() {
 
                 {/* Lista de Carteras */}
                 <div className="space-y-3">
-                  {selectedDateRequests.map((request) => (
-                    <Card
-                      key={request.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors border-l-4 border-l-green-500"
-                      onClick={() => handleRequestClick(request.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-semibold text-sm">
-                                Cartera #{request.id.slice(0, 8)}
-                              </h4>
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                Aprobada
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground text-xs">Fecha Solicitud</p>
-                                <p className="font-medium">{formatDate(request.requestDate)}</p>
+                  {selectedDateRequests.map((request) => {
+                    const isExpanded = expandedRequests.has(request.id)
+                    const payments = requestPayments.get(request.id) || []
+                    const isLoading = loadingPayments.has(request.id)
+
+                    return (
+                      <Card
+                        key={request.id}
+                        className="border-l-4 border-l-green-500"
+                      >
+                        <CardContent className="p-0">
+                          {/* Header de la Cartera */}
+                          <div
+                            className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                            onClick={() => toggleRequestExpansion(request.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h4 className="font-semibold text-sm">
+                                    Cartera #{request.id.slice(0, 8)}
+                                  </h4>
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                    Aprobada
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Fecha Solicitud</p>
+                                    <p className="font-medium">{formatDate(request.requestDate)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Pagos Aprobados</p>
+                                    <p className="font-medium">{request.approvedCount} de {request.totalRecords}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Valor Total</p>
+                                    <p className="font-bold text-green-600">
+                                      {formatCurrency(request.totalApprovedValue)}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-muted-foreground text-xs">Pagos Aprobados</p>
-                                <p className="font-medium">{request.approvedCount} de {request.totalRecords}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground text-xs">Valor Total</p>
-                                <p className="font-bold text-green-600">
-                                  {formatCurrency(request.totalApprovedValue)}
-                                </p>
+                              <div className="ml-4 flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRequestClick(request.id)
+                                  }}
+                                  title="Ver página completa"
+                                >
+                                  <ArrowRight className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </div>
                             </div>
                           </div>
-                          <div className="ml-4">
-                            <Button variant="ghost" size="sm">
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+
+                          {/* Contenido Expandido - Pagos */}
+                          {isExpanded && (
+                            <div className="border-t bg-gray-50">
+                              {isLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                  <div className="text-center">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto mb-2"></div>
+                                    <p className="text-xs text-muted-foreground">Cargando pagos...</p>
+                                  </div>
+                                </div>
+                              ) : payments.length === 0 ? (
+                                <div className="text-center py-8">
+                                  <p className="text-sm text-muted-foreground">No hay pagos aprobados en esta cartera</p>
+                                </div>
+                              ) : (
+                                <div className="p-4">
+                                  <div className="mb-3">
+                                    <p className="text-sm font-medium text-muted-foreground">
+                                      {payments.length} pago{payments.length !== 1 ? 's' : ''} aprobado{payments.length !== 1 ? 's' : ''}
+                                    </p>
+                                  </div>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse text-sm">
+                                      <thead>
+                                        <tr className="border-b bg-white">
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Proveedor</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">NIT</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Documento</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Vencimiento</th>
+                                          <th className="text-left p-2 font-medium text-xs text-muted-foreground">Centro de Costo</th>
+                                          <th className="text-right p-2 font-medium text-xs text-muted-foreground">Valor</th>
+                                          <th className="text-center p-2 font-medium text-xs text-muted-foreground">Estado</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {payments.map((payment) => (
+                                          <tr
+                                            key={payment.id}
+                                            className={`border-b hover:bg-white transition-colors ${payment.paid ? 'opacity-60' : ''
+                                              }`}
+                                          >
+                                            <td className="p-2">
+                                              <span className="font-medium text-xs">{payment.providerName}</span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="text-xs">{payment.providerIdentification}</span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="font-mono text-xs">
+                                                {payment.prefix}-{payment.consecutive}
+                                              </span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="text-xs">{formatDate(payment.dueDate)}</span>
+                                            </td>
+                                            <td className="p-2">
+                                              <span className="text-xs">{payment.costCenterName}</span>
+                                            </td>
+                                            <td className="p-2 text-right">
+                                              <span className="font-bold text-xs text-green-600">
+                                                {formatCurrency(payment.paymentValue)}
+                                              </span>
+                                            </td>
+                                            <td className="p-2 text-center">
+                                              <Badge
+                                                variant={payment.paid ? "default" : "secondary"}
+                                                className={`text-xs ${payment.paid ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}
+                                              >
+                                                {payment.paid ? "Ejecutado" : "Pendiente"}
+                                              </Badge>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               </div>
             )}
