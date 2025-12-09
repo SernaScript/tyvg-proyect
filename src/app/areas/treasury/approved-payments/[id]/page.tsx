@@ -6,7 +6,7 @@ import { AreaLayout } from "@/components/layout/AreaLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DollarSign, ArrowLeft, Check, CheckCircle, Clock } from "lucide-react"
+import { DollarSign, ArrowLeft, Check, CheckCircle, Clock, FileSpreadsheet } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -58,6 +58,7 @@ export default function PortfolioDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [processingPayments, setProcessingPayments] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (portfolioId) {
@@ -159,6 +160,75 @@ export default function PortfolioDetailPage() {
     }
   }
 
+  const handleExportToExcel = async () => {
+    if (payments.length === 0) {
+      setError('No hay pagos para exportar')
+      return
+    }
+
+    try {
+      setExporting(true)
+      const XLSX = await import('xlsx')
+
+      // Preparar los datos para exportar
+      const exportData = payments.map((payment) => ({
+        'Proveedor': payment.providerName,
+        'NIT': payment.providerIdentification,
+        'Documento': `${payment.prefix}-${payment.consecutive}`,
+        'Fecha Vencimiento': formatDate(payment.dueDate),
+        'Centro de Costo': payment.costCenterName,
+        'Valor Pago': payment.paymentValue,
+        'Estado': payment.paid ? 'Ejecutado' : 'Pendiente',
+        'Fecha Creación': formatDate(payment.createdAt),
+        'Fecha Actualización': formatDate(payment.updatedAt)
+      }))
+
+      // Crear hoja de trabajo
+      const ws = XLSX.utils.json_to_sheet(exportData)
+
+      // Configurar ancho de columnas
+      const colWidths = [
+        { wch: 30 }, // Proveedor
+        { wch: 15 }, // NIT
+        { wch: 20 }, // Documento
+        { wch: 18 }, // Fecha Vencimiento
+        { wch: 25 }, // Centro de Costo
+        { wch: 15 }, // Valor Pago
+        { wch: 12 }, // Estado
+        { wch: 18 }, // Fecha Creación
+        { wch: 18 }  // Fecha Actualización
+      ]
+      ws['!cols'] = colWidths
+
+      // Aplicar formato de moneda colombiana a la columna "Valor Pago"
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+      const valueColumnIndex = 5 // Columna F (índice 5, 0-based) - "Valor Pago"
+
+      for (let row = 1; row <= range.e.r; row++) { // Empezar desde la fila 1 (después del header)
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: valueColumnIndex })
+        if (ws[cellAddress]) {
+          // Aplicar formato de moneda colombiana
+          ws[cellAddress].z = '"$"#,##0'
+        }
+      }
+
+      // Crear libro de trabajo
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Pagos Aprobados')
+
+      // Generar nombre de archivo con ID de cartera y fecha
+      const fileName = `pagos_cartera_${portfolioId.slice(0, 8)}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Escribir el archivo y descargarlo
+      XLSX.writeFile(wb, fileName)
+    } catch (error) {
+      console.error('Error al exportar pagos a Excel:', error)
+      setError('Error al exportar los pagos a Excel')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (loading) {
     return (
       <AreaLayout areaId="treasury">
@@ -199,6 +269,16 @@ export default function PortfolioDetailPage() {
                 {generatedRequest && `Cartera aprobada el ${formatDate(generatedRequest.updatedAt)}`}
               </p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+              disabled={payments.length === 0 || exporting}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {exporting ? 'Exportando...' : 'Exportar a Excel'}
+            </Button>
           </div>
         </div>
 
@@ -299,7 +379,7 @@ export default function PortfolioDetailPage() {
                   </Button>
                   {selectedPaymentIds.length > 0 && (
                     <div className="text-sm">
-                      <span className="font-medium">{selectedPaymentIds.length}</span> pagos seleccionados • 
+                      <span className="font-medium">{selectedPaymentIds.length}</span> pagos seleccionados •
                       Total: <span className="font-bold text-green-600">
                         {formatCurrency(selectedTotalValue)}
                       </span>
@@ -375,9 +455,8 @@ export default function PortfolioDetailPage() {
                       {payments.map((payment) => (
                         <tr
                           key={payment.id}
-                          className={`border-b hover:bg-gray-50 transition-colors ${
-                            selectedPaymentIds.includes(payment.id) ? 'bg-blue-50' : ''
-                          } ${payment.paid ? 'opacity-60' : ''}`}
+                          className={`border-b hover:bg-gray-50 transition-colors ${selectedPaymentIds.includes(payment.id) ? 'bg-blue-50' : ''
+                            } ${payment.paid ? 'opacity-60' : ''}`}
                         >
                           <td className="p-3">
                             {!payment.paid && (

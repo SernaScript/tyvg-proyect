@@ -230,6 +230,71 @@ export default function ApprovedPaymentsPage() {
     }
   }
 
+  const handleExportPaymentsToExcel = async (
+    requestId: string,
+    payments: AccountPayable[],
+    request: ApprovedGeneratedRequest
+  ) => {
+    try {
+      const XLSX = await import('xlsx')
+
+      // Preparar los datos para exportar
+      const exportData = payments.map((payment) => ({
+        'Proveedor': payment.providerName,
+        'NIT': payment.providerIdentification,
+        'Documento': `${payment.prefix}-${payment.consecutive}`,
+        'Fecha Vencimiento': formatDate(payment.dueDate),
+        'Centro de Costo': payment.costCenterName,
+        'Valor Pago': payment.paymentValue,
+        'Estado': payment.paid ? 'Ejecutado' : 'Pendiente',
+        'Fecha Creación': formatDate(payment.createdAt),
+        'Fecha Actualización': formatDate(payment.updatedAt)
+      }))
+
+      // Crear hoja de trabajo
+      const ws = XLSX.utils.json_to_sheet(exportData)
+
+      // Configurar ancho de columnas
+      const colWidths = [
+        { wch: 30 }, // Proveedor
+        { wch: 15 }, // NIT
+        { wch: 20 }, // Documento
+        { wch: 18 }, // Fecha Vencimiento
+        { wch: 25 }, // Centro de Costo
+        { wch: 15 }, // Valor Pago
+        { wch: 12 }, // Estado
+        { wch: 18 }, // Fecha Creación
+        { wch: 18 }  // Fecha Actualización
+      ]
+      ws['!cols'] = colWidths
+
+      // Aplicar formato de moneda colombiana a la columna "Valor Pago"
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+      const valueColumnIndex = 5 // Columna F (índice 5, 0-based) - "Valor Pago"
+
+      for (let row = 1; row <= range.e.r; row++) { // Empezar desde la fila 1 (después del header)
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: valueColumnIndex })
+        if (ws[cellAddress]) {
+          // Aplicar formato de moneda colombiana
+          ws[cellAddress].z = '"$"#,##0'
+        }
+      }
+
+      // Crear libro de trabajo
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Pagos Aprobados')
+
+      // Generar nombre de archivo con ID de cartera y fecha
+      const fileName = `pagos_cartera_${requestId.slice(0, 8)}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Escribir el archivo y descargarlo
+      XLSX.writeFile(wb, fileName)
+    } catch (error) {
+      console.error('Error al exportar pagos a Excel:', error)
+      setError('Error al exportar los pagos a Excel')
+    }
+  }
+
   const handleExportToExcel = async () => {
     try {
       const XLSX = await import('xlsx')
@@ -666,10 +731,18 @@ export default function ApprovedPaymentsPage() {
                                 </div>
                               ) : (
                                 <div className="p-4">
-                                  <div className="mb-3">
+                                  <div className="mb-3 flex items-center justify-between">
                                     <p className="text-sm font-medium text-muted-foreground">
                                       {payments.length} pago{payments.length !== 1 ? 's' : ''} aprobado{payments.length !== 1 ? 's' : ''}
                                     </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleExportPaymentsToExcel(request.id, payments, request)}
+                                    >
+                                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                      Exportar a Excel
+                                    </Button>
                                   </div>
                                   <div className="overflow-x-auto">
                                     <table className="w-full border-collapse text-sm">
