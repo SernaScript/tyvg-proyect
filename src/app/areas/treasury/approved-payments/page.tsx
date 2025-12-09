@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DollarSign, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, ArrowRight } from "lucide-react"
+import { DollarSign, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, ArrowRight, FileSpreadsheet } from "lucide-react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -158,6 +158,63 @@ export default function ApprovedPaymentsPage() {
     router.push(`/areas/treasury/approved-payments/${requestId}`)
   }
 
+  const handleExportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx')
+
+      // Prepare the values
+
+      const exportData = approvedRequests.map((request) => ({
+        'ID Cartera': request.id,
+        'Fecha Solicitud': formatDate(request.requestDate),
+        'Fecha Aprobación': formatDate(request.updatedAt),
+        'Estado': request.state,
+        'Pagos Aprobados': request.approvedCount,
+        'Valor Total Aprobado': request.totalApprovedValue
+      }))
+
+      // Crear hoja de trabajo
+      const ws = XLSX.utils.json_to_sheet(exportData)
+
+      // Configurar ancho de columnas
+      const colWidths = [
+        { wch: 30 }, // ID Cartera
+        { wch: 18 }, // Fecha Solicitud
+        { wch: 18 }, // Fecha Aprobación
+        { wch: 15 }, // Estado
+        { wch: 18 }, // Pagos Aprobados
+        { wch: 20 }  // Valor Total Aprobado
+      ]
+      ws['!cols'] = colWidths
+
+      // Aplicar formato de moneda colombiana a la columna "Valor Total Aprobado"
+      // El formato "$#,##0" muestra pesos colombianos sin decimales
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+      const valueColumnIndex = 5 // Columna F (índice 5, 0-based) - "Valor Total Aprobado"
+
+      for (let row = 1; row <= range.e.r; row++) { // Empezar desde la fila 1 (después del header)
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: valueColumnIndex })
+        if (ws[cellAddress]) {
+          // Aplicar formato de moneda colombiana
+          ws[cellAddress].z = '"$"#,##0'
+        }
+      }
+
+      // Crear libro de trabajo
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Carteras Aprobadas')
+
+      // Generar nombre de archivo con fecha
+      const fileName = `carteras_aprobadas_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Escribir el archivo y descargarlo
+      XLSX.writeFile(wb, fileName)
+    } catch (error) {
+      console.error('Error al exportar a Excel:', error)
+      setError('Error al exportar los datos a Excel')
+    }
+  }
+
   const renderCalendarDay = (date: Date) => {
     const dayData = getDayData(date)
     const isCurrentMonth = isSameMonth(date, currentMonth)
@@ -251,6 +308,16 @@ export default function ApprovedPaymentsPage() {
             <p className="text-muted-foreground">
               Vista de calendario de solicitudes aprobadas con valores de pago
             </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+              disabled={approvedRequests.length === 0 || loading}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Exportar a Excel
+            </Button>
           </div>
         </div>
 
