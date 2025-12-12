@@ -625,6 +625,7 @@ enum RoleName {
   VIEWER
   DRIVER
   CLIENT
+  WAREHOUSE
 }
 
 enum PermissionAction {

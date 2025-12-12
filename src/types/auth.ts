@@ -37,7 +37,8 @@ export enum RoleName {
   LOGISTICS = 'LOGISTICS',
   BILLING = 'BILLING',
   VIEWER = 'VIEWER',
-  DRIVER = 'DRIVER'
+  DRIVER = 'DRIVER',
+  WAREHOUSE = 'WAREHOUSE'
 }
 
 export enum PermissionAction {
@@ -167,6 +168,18 @@ export const ROLE_PERMISSIONS_CONFIG: Record<RoleName, string[]> = {
     'trips:VIEW',
     'trips:EDIT',
     'trips:CREATE'
+  ],
+  [RoleName.WAREHOUSE]: [
+    'warehouse:MANAGE',
+    'logistics:warehouses:view',
+    'logistics:warehouses:create',
+    'logistics:warehouses:edit',
+    'logistics:inventory:view',
+    'logistics:inventory:create',
+    'logistics:inventory:edit',
+    'logistics:materials:view',
+    'logistics:trips:view',
+    'reports:VIEW'
   ]
 }
 
@@ -263,6 +276,48 @@ export const AREA_PERMISSIONS_MAP: Record<string, AreaPermission> = {
         displayName: 'Centros de Costo',
         requiredPermission: {
           resource: 'siigo',
+          action: PermissionAction.VIEW
+        }
+      }
+    ]
+  },
+  warehouse: {
+    areaId: 'warehouse',
+    displayName: 'Depósito',
+    requiredPermission: {
+      resource: 'warehouse',
+      action: PermissionAction.VIEW
+    },
+    modules: [
+      {
+        moduleId: 'sales',
+        displayName: 'Registrar Ventas',
+        requiredPermission: {
+          resource: 'warehouse',
+          action: PermissionAction.CREATE
+        }
+      },
+      {
+        moduleId: 'purchases',
+        displayName: 'Registrar Compras',
+        requiredPermission: {
+          resource: 'warehouse',
+          action: PermissionAction.CREATE
+        }
+      },
+      {
+        moduleId: 'articles',
+        displayName: 'Crear Artículos',
+        requiredPermission: {
+          resource: 'warehouse',
+          action: PermissionAction.CREATE
+        }
+      },
+      {
+        moduleId: 'kardex',
+        displayName: 'Visualizar Kardex',
+        requiredPermission: {
+          resource: 'warehouse',
           action: PermissionAction.VIEW
         }
       }
