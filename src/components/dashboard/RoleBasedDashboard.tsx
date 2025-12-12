@@ -10,6 +10,7 @@ import { LogisticsDashboard } from "@/components/dashboard/LogisticsDashboard"
 import { BillingDashboard } from "@/components/dashboard/BillingDashboard"
 import { ViewerDashboard } from "@/components/dashboard/ViewerDashboard"
 import { DriverDashboard } from "@/components/dashboard/DriverDashboard"
+import { WarehouseDashboard } from "@/components/dashboard/WarehouseDashboard"
 
 export function RoleBasedDashboard() {
   const { user, isLoading } = useAuth()
@@ -52,6 +53,8 @@ export function RoleBasedDashboard() {
       return <ViewerDashboard user={user} />
     case RoleName.DRIVER:
       return <DriverDashboard user={user} />
+    case RoleName.WAREHOUSE:
+      return <WarehouseDashboard user={user} />
     default:
       return <ViewerDashboard user={user} />
   }

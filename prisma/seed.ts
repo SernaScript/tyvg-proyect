@@ -70,6 +70,12 @@ const TEST_USERS = [
     password: 'Cliente2024!',
     name: 'Cliente Ejemplo',
     role: RoleName.CLIENT
+  },
+  {
+    email: 'deposito@tyvg.com',
+    password: 'Deposito2024!',
+    name: 'Usuario Depósito',
+    role: RoleName.WAREHOUSE
   }
 ]
 
@@ -118,6 +124,11 @@ const ROLES_DATA = [
     name: RoleName.CLIENT,
     displayName: 'Cliente',
     description: 'Acceso para clientes que solicitan servicios'
+  },
+  {
+    name: RoleName.WAREHOUSE,
+    displayName: 'Usuario de Depósito',
+    description: 'Acceso para usuarios de depósito, gestión de inventarios y almacenes'
   }
 ]
 
@@ -213,7 +224,20 @@ const PERMISSIONS_DATA = [
   { name: 'logistics:advances:create', resource: 'logistics_advances', action: PermissionAction.CREATE, description: 'Crear anticipos' },
   { name: 'logistics:advances:legalize', resource: 'logistics_advances', action: PermissionAction.EDIT, description: 'Legalizar anticipos' },
   { name: 'logistics:alerts:view', resource: 'logistics_alerts', action: PermissionAction.VIEW, description: 'Ver alertas' },
-  { name: 'logistics:alerts:manage', resource: 'logistics_alerts', action: PermissionAction.MANAGE, description: 'Gestionar alertas' }
+  { name: 'logistics:alerts:manage', resource: 'logistics_alerts', action: PermissionAction.MANAGE, description: 'Gestionar alertas' },
+  
+  // Warehouse permissions
+  { name: 'warehouse:view', resource: 'warehouse', action: PermissionAction.VIEW, description: 'Ver área de depósito' },
+  { name: 'warehouse:edit', resource: 'warehouse', action: PermissionAction.EDIT, description: 'Editar datos de depósito' },
+  { name: 'warehouse:create', resource: 'warehouse', action: PermissionAction.CREATE, description: 'Crear registros de depósito' },
+  { name: 'warehouse:delete', resource: 'warehouse', action: PermissionAction.DELETE, description: 'Eliminar registros de depósito' },
+  { name: 'warehouse:manage', resource: 'warehouse', action: PermissionAction.MANAGE, description: 'Gestión completa de depósito' },
+  { name: 'logistics:warehouses:view', resource: 'logistics_warehouses', action: PermissionAction.VIEW, description: 'Ver almacenes' },
+  { name: 'logistics:warehouses:create', resource: 'logistics_warehouses', action: PermissionAction.CREATE, description: 'Crear almacenes' },
+  { name: 'logistics:warehouses:edit', resource: 'logistics_warehouses', action: PermissionAction.EDIT, description: 'Editar almacenes' },
+  { name: 'logistics:inventory:view', resource: 'logistics_inventory', action: PermissionAction.VIEW, description: 'Ver inventarios' },
+  { name: 'logistics:inventory:create', resource: 'logistics_inventory', action: PermissionAction.CREATE, description: 'Crear registros de inventario' },
+  { name: 'logistics:inventory:edit', resource: 'logistics_inventory', action: PermissionAction.EDIT, description: 'Editar inventarios' }
 ]
 
 // Role-Permission mappings
@@ -319,6 +343,19 @@ const ROLE_PERMISSIONS_MAPPING = {
     'dashboard:view',
     'logistics:projects:view',
     'logistics:trips:view'
+  ],
+  [RoleName.WAREHOUSE]: [
+    'dashboard:view',
+    'warehouse:manage',
+    'logistics:warehouses:view',
+    'logistics:warehouses:create',
+    'logistics:warehouses:edit',
+    'logistics:inventory:view',
+    'logistics:inventory:create',
+    'logistics:inventory:edit',
+    'logistics:materials:view',
+    'logistics:trips:view',
+    'reports:view'
   ]
 }
 
