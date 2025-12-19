@@ -15,7 +15,8 @@ export interface UserActivationEmailData {
 
 export class EmailService {
   private static readonly FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@tyvg.com';
-  private static readonly COMPANY_NAME = 'TYVG';
+  private static readonly COMPANY_NAME = 'Logística Nutabe';
+
 
   /**
    * Envía un correo de activación de cuenta a un nuevo usuario
@@ -28,7 +29,7 @@ export class EmailService {
       }
 
       const { email, name, password, roleName, loginUrl } = data;
-      
+
       const htmlContent = this.generateActivationEmailHTML({
         name: name || 'Usuario',
         email,
@@ -62,7 +63,7 @@ export class EmailService {
 
     } catch (error: any) {
       console.error('Error enviando correo de activación:', error);
-      
+
       // Log detallado del error para debugging
       if (error.response) {
         console.error('SendGrid Response Error:', {
@@ -70,13 +71,13 @@ export class EmailService {
           statusText: error.response.statusText,
           body: error.response.body
         });
-        
+
         // Log específico de los errores de SendGrid
         if (error.response.body && error.response.body.errors) {
           console.error('SendGrid Errors Details:', error.response.body.errors);
         }
       }
-      
+
       return false;
     }
   }
@@ -101,251 +102,196 @@ export class EmailService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Bienvenido a ${this.COMPANY_NAME}</title>
         <style>
+          /* Reset de estilos para clientes de correo */
+          body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+          img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+          
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 0;
+            color: #334155;
+          }
+
+          .email-wrapper {
+            width: 100%;
+            background-color: #f4f7f9;
+            padding: 40px 10px;
+          }
+
+          .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
-          }
-          .container {
-            background-color: white;
-            padding: 0;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background-color: #ffffff;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
           }
+
           .header {
-            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
-            color: white;
+            background-color: #1e293b; /* Azul marino profesional */
+            padding: 40px 30px;
             text-align: center;
-            padding: 40px 30px;
-            position: relative;
           }
-          .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><pattern id="truck" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M2 8h12v6H2z" fill="rgba(255,255,255,0.1)"/><circle cx="4" cy="14" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="12" cy="14" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="20" fill="url(%23truck)"/></svg>');
-            opacity: 0.3;
+
+          .logo-text {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
           }
-          .logo {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            position: relative;
-            z-index: 1;
-          }
-          .truck-icon {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 20px;
-            position: relative;
-            z-index: 1;
-          }
+
           .content {
-            padding: 40px 30px;
+            padding: 40px 50px;
+            line-height: 1.6;
           }
-          .welcome-text {
-            font-size: 18px;
-            color: #374151;
+
+          .greeting {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 15px;
+          }
+
+          .intro-text {
+            font-size: 16px;
+            color: #64748b;
             margin-bottom: 30px;
           }
-          .credentials-box {
-            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%);
-            border: 2px solid #ea580c;
-            border-radius: 12px;
-            padding: 25px;
-            margin: 25px 0;
-            position: relative;
-          }
-          .credentials-box::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(135deg, #ea580c, #f97316);
-            border-radius: 12px;
-            z-index: -1;
-          }
-          .credentials-title {
-            margin: 0 0 20px 0;
-            color: #ea580c;
-            font-size: 20px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          .credential-item {
-            margin: 15px 0;
-            padding: 15px;
-            background-color: white;
-            border-radius: 8px;
-            border-left: 4px solid #ea580c;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          .label {
-            font-weight: bold;
-            color: #374151;
-            display: inline-block;
-            width: 120px;
-            font-size: 14px;
-          }
-          .value {
-            color: #1f2937;
-            font-family: 'Courier New', monospace;
-            background-color: #f3f4f6;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            border: 1px solid #e5e7eb;
-          }
-          .button {
-            display: inline-block;
-            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-            margin: 25px 0;
-            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
-            transition: all 0.3s ease;
-          }
-          .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(234, 88, 12, 0.4);
-          }
-          .footer {
-            margin-top: 40px;
-            padding: 25px 30px;
+
+          .credentials-card {
             background-color: #f8fafc;
-            border-top: 3px solid #ea580c;
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-          }
-          .warning {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-            color: #92400e;
-            position: relative;
+            padding: 25px;
+            margin-bottom: 30px;
           }
-          .warning::before {
-            content: '';
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            width: 20px;
-            height: 20px;
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2392400e"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/></svg>');
-            background-size: contain;
-            background-repeat: no-repeat;
+
+          .credential-row {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 8px;
           }
-          .warning-text {
-            margin-left: 35px;
+
+          .credential-row:last-child { border: none; }
+
+          .label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
           }
-          .truck-decoration {
+
+          .value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+            font-family: 'Monaco', 'Consolas', monospace;
+          }
+
+          .role-badge {
+            display: inline-block;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .cta-container {
             text-align: center;
-            margin: 20px 0;
-            opacity: 0.1;
+            margin: 35px 0;
           }
-          .section-icon {
-            width: 24px;
-            height: 24px;
-            vertical-align: middle;
-            margin-right: 8px;
+
+          .button {
+            background-color: #2563eb; /* Azul brillante moderno */
+            color: #ffffff !important;
+            padding: 16px 32px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+          }
+
+          .security-note {
+            font-size: 13px;
+            color: #94a3b8;
+            text-align: center;
+            padding: 0 20px;
+          }
+
+          .footer {
+            background-color: #f8fafc;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+          }
+
+          .footer-text {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 5px 0;
+          }
+
+          @media only screen and (max-width: 480px) {
+            .content { padding: 30px 20px; }
+            .greeting { font-size: 20px; }
           }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="header">
-            <div class="truck-icon">
-              <svg viewBox="0 0 100 100" fill="white">
-                <path d="M20 30h50v30H20z" fill="white"/>
-                <path d="M70 35h15v20H70z" fill="white"/>
-                <circle cx="30" cy="70" r="8" fill="white"/>
-                <circle cx="70" cy="70" r="8" fill="white"/>
-                <path d="M25 30v-5c0-5 5-10 10-10h20c5 0 10 5 10 10v5" fill="white"/>
-                <rect x="35" y="25" width="20" height="10" fill="rgba(0,0,0,0.1)"/>
-              </svg>
+        <div class="email-wrapper">
+          <div class="container">
+            <div class="header">
+              <div class="logo-text">${this.COMPANY_NAME}</div>
             </div>
-            <div class="logo">${this.COMPANY_NAME}</div>
-            <h1 style="margin: 0; font-size: 24px;">¡Bienvenido al Sistema!</h1>
-          </div>
 
-          <div class="content">
-            <p class="welcome-text">Hola <strong>${name}</strong>,</p>
-            
-            <p>Tu cuenta ha sido creada exitosamente en el sistema de gestión logística de ${this.COMPANY_NAME}. A continuación encontrarás tus datos de acceso para comenzar a trabajar:</p>
+            <div class="content">
+              <h1 class="greeting">Bienvenido a bordo, ${name}</h1>
+              <p class="intro-text">
+                Es un gusto saludarte. Tu perfil ha sido habilitado con éxito en nuestra plataforma de gestión. 
+                A partir de ahora, tienes acceso a todas las herramientas necesarias para optimizar tus procesos logísticos.
+              </p>
 
-            <div class="credentials-box">
-              <h3 class="credentials-title">
-                <svg class="section-icon" viewBox="0 0 24 24" fill="#ea580c">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
-                  <polyline points="14,2 14,8 20,8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                  <polyline points="10,9 9,9 8,9"/>
-                </svg>
-                Datos de Acceso
-              </h3>
-              
-              <div class="credential-item">
-                <span class="label">Email:</span>
-                <span class="value">${email}</span>
+              <div class="credentials-card">
+                <div class="credential-row">
+                  <span class="label">Usuario</span>
+                  <span class="value">${email}</span>
+                </div>
+                <div class="credential-row">
+                  <span class="label">Contraseña temporal</span>
+                  <span class="value">${password}</span>
+                </div>
+                <div class="credential-row">
+                  <span class="label">Perfil asignado</span>
+                  <span class="role-badge">${roleName}</span>
+                </div>
               </div>
-              
-              <div class="credential-item">
-                <span class="label">Contraseña:</span>
-                <span class="value">${password}</span>
+
+              <div class="cta-container">
+                <a href="${loginUrl}" class="button">Iniciar sesión en la consola</a>
               </div>
-              
-              <div class="credential-item">
-                <span class="label">Rol:</span>
-                <span class="value">${roleName}</span>
-              </div>
+
+              <p class="security-note">
+                Por motivos de seguridad, el sistema le solicitará actualizar su contraseña tras el primer ingreso. 
+                Si tiene alguna dificultad técnica, nuestro equipo de soporte está a su disposición.
+              </p>
             </div>
 
-            <div class="warning">
-              <div class="warning-text">
-                <strong>Importante:</strong> Por seguridad, te recomendamos cambiar tu contraseña después del primer inicio de sesión.
-              </div>
+            <div class="footer">
+              <p class="footer-text"><strong>${this.COMPANY_NAME}</strong> • Soluciones Logísticas Inteligentes</p>
+              <p class="footer-text">© ${new Date().getFullYear()} Todos los derechos reservados.</p>
+              <p class="footer-text" style="margin-top: 15px; font-style: italic;">
+                Este es un mensaje automático, por favor no responda a esta dirección de correo.
+              </p>
             </div>
-
-            <div style="text-align: center;">
-              <a href="${loginUrl}" class="button">Acceder al Sistema</a>
-            </div>
-
-            <div class="truck-decoration">
-              <svg viewBox="0 0 200 50" fill="#ea580c" opacity="0.1">
-                <path d="M20 20h80v20H20z"/>
-                <path d="M100 25h30v10H100z"/>
-                <circle cx="40" cy="50" r="8"/>
-                <circle cx="120" cy="50" r="8"/>
-                <path d="M25 20v-5c0-5 5-10 10-10h30c5 0 10 5 10 10v5"/>
-                <rect x="50" y="15" width="30" height="10"/>
-              </svg>
-            </div>
-
-            <p>Si tienes alguna pregunta o necesitas ayuda con el sistema, no dudes en contactar al administrador del sistema.</p>
-          </div>
-
-          <div class="footer">
-            <p>Este es un correo automático del sistema ${this.COMPANY_NAME}. Por favor, no respondas a este mensaje.</p>
-            <p>© ${new Date().getFullYear()} ${this.COMPANY_NAME}. Todos los derechos reservados.</p>
           </div>
         </div>
       </body>

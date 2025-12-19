@@ -38,6 +38,7 @@ export function CreateDriverModal({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -61,16 +62,29 @@ export function CreateDriverModal({
         body: JSON.stringify(formData),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al crear el conductor')
+        throw new Error(result.error || 'Error al crear el conductor')
       }
 
+      // Mostrar mensaje de éxito con información del correo
+      let message = 'Conductor creado exitosamente.'
+      if (result.emailSent) {
+        message += ' Se ha enviado un correo con los datos de acceso.'
+      } else if (result.emailError) {
+        message += ` Conductor creado, pero hubo un problema enviando el correo: ${result.emailError}`
+      } else {
+        message += ' El correo no pudo ser enviado (SendGrid no configurado).'
+      }
+      
+      setSuccessMessage(message)
       setSuccess(true)
+      
       setTimeout(() => {
         onSuccess()
         onClose()
-      }, 1500)
+      }, 2000)
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error al crear el conductor')
@@ -96,6 +110,7 @@ export function CreateDriverModal({
       resetForm()
       setError('')
       setSuccess(false)
+      setSuccessMessage('')
       onClose()
     }
   }
@@ -280,13 +295,13 @@ export function CreateDriverModal({
               </div>
             )}
 
-            {success && (
+            {success && successMessage && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-green-600 rounded-full flex items-center justify-center">
+                <div className="flex items-start gap-2">
+                  <div className="h-5 w-5 bg-green-600 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
                     <div className="h-2 w-2 bg-white rounded-full"></div>
                   </div>
-                  <p className="text-green-800">Conductor creado exitosamente</p>
+                  <p className="text-green-800">{successMessage}</p>
                 </div>
               </div>
             )}

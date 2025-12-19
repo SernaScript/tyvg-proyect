@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { EmailService } from '@/lib/EmailService'
 
 // GET /api/drivers - Listar conductores
 export async function GET(request: NextRequest) {
@@ -144,7 +145,12 @@ export async function POST(request: NextRequest) {
 
     // Obtener el rol de conductor
     const driverRole = await prisma.role.findUnique({
-      where: { name: 'DRIVER' }
+      where: { name: 'DRIVER' },
+      select: {
+        id: true,
+        name: true,
+        displayName: true
+      }
     })
 
     if (!driverRole) {
@@ -200,7 +206,32 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(driver, { status: 201 })
+    // Enviar correo de activación al nuevo conductor/usuario
+    let emailSent = false
+    let emailError = null
+    
+    try {
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/login`
+      
+      emailSent = await EmailService.sendUserActivationEmail({
+        email: driver.user.email,
+        name: driver.user.name,
+        password: password, // Usar la contraseña original, no la encriptada
+        roleName: driverRole.displayName || 'Conductor',
+        loginUrl
+      })
+    } catch (error) {
+      console.error('Error enviando correo de activación:', error)
+      emailError = error instanceof Error ? error.message : 'Error desconocido'
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: driver,
+      message: 'Conductor creado exitosamente',
+      emailSent,
+      emailError: emailError || null
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating driver:', error)
     return NextResponse.json(
