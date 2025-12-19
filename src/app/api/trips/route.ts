@@ -170,7 +170,13 @@ export async function GET(request: NextRequest) {
       prisma.trip.count({ where })
     ])
 
-    return NextResponse.json(trips)
+    return NextResponse.json({
+      trips,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    })
   } catch (error) {
     console.error('Error fetching trips:', error)
     return NextResponse.json(
