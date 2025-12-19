@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CreateUserModal } from '@/components/modals/CreateUserModal';
+import { EditUserModal } from '@/components/modals/EditUserModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionAction } from '@/types/auth';
 import { 
@@ -19,7 +20,8 @@ import {
   Filter,
   Shield,
   Eye,
-  EyeOff
+  EyeOff,
+  Power
 } from "lucide-react"
 
 interface User {
@@ -44,17 +46,20 @@ interface UsersResponse {
 }
 
 export default function UsersPage() {
-  const { user, hasPermission } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [showInactive, setShowInactive] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Verificar permisos
   const canViewUsers = hasPermission('users', PermissionAction.VIEW);
   const canCreateUsers = hasPermission('users', PermissionAction.CREATE);
+  const canEditUsers = hasPermission('users', PermissionAction.EDIT);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -93,6 +98,45 @@ export default function UsersPage() {
   const toggleInactiveUsers = () => {
     setShowInactive(!showInactive);
     loadUsers();
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleToggleActive = async (user: User) => {
+    if (!canEditUsers) {
+      alert('No tiene permisos para editar usuarios');
+      return;
+    }
+
+    // Confirmar acción
+    const action = user.isActive ? 'desactivar' : 'activar';
+    if (!confirm(`¿Está seguro de que desea ${action} a ${user.name || user.email}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${user.id}/toggle-active`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(result.message || `Usuario ${action}do exitosamente`);
+        loadUsers();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error cambiando estado del usuario:', error);
+      alert('Error de conexión');
+    }
   };
 
   const getRoleColor = (roleName: string) => {
@@ -301,12 +345,31 @@ export default function UsersPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {canEditUsers && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleEditUser(user)}
+                                  title="Editar usuario"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className={user.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
+                                  onClick={() => handleToggleActive(user)}
+                                  title={user.isActive ? "Desactivar usuario" : "Activar usuario"}
+                                  disabled={user.id === currentUser?.id}
+                                >
+                                  <Power className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                            {!canEditUsers && (
+                              <span className="text-sm text-gray-400">Sin permisos</span>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -324,6 +387,19 @@ export default function UsersPage() {
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             onUserCreated={loadUsers}
+          />
+        )}
+
+        {/* Modal de editar usuario */}
+        {canEditUsers && (
+          <EditUserModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedUser(null);
+            }}
+            onUserUpdated={loadUsers}
+            user={selectedUser}
           />
         )}
       </div>
