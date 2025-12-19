@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { 
@@ -23,7 +24,9 @@ import {
   Eye,
   Edit,
   Trash2,
-  DollarSign
+  DollarSign,
+  Filter,
+  X
 } from 'lucide-react'
 import { ViewTripModal } from '@/components/modals/ViewTripModal'
 import { EditTripModal } from '@/components/modals/EditTripModal'
@@ -35,7 +38,11 @@ export default function TripsPage() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [isApprovedFilter, setIsApprovedFilter] = useState<string>('all')
+  const [dateFromFilter, setDateFromFilter] = useState<string>('')
+  const [dateToFilter, setDateToFilter] = useState<string>('')
+  const [showFilters, setShowFilters] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -55,6 +62,8 @@ export default function TripsPage() {
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (isApprovedFilter !== 'all') params.append('isApproved', isApprovedFilter)
+      if (dateFromFilter) params.append('dateFrom', dateFromFilter)
+      if (dateToFilter) params.append('dateTo', dateToFilter)
 
       const response = await fetch(`/api/trips?${params}`)
       if (response.ok) {
@@ -70,7 +79,19 @@ export default function TripsPage() {
 
   useEffect(() => {
     fetchTrips()
-  }, [searchTerm, isApprovedFilter])
+  }, [searchTerm, isApprovedFilter, dateFromFilter, dateToFilter])
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput)
+  }
+
+  const handleClearFilters = () => {
+    setSearchInput('')
+    setSearchTerm('')
+    setIsApprovedFilter('all')
+    setDateFromFilter('')
+    setDateToFilter('')
+  }
 
   const handleViewTrip = (tripId: string) => {
     setSelectedTripId(tripId)
@@ -159,6 +180,7 @@ export default function TripsPage() {
 
   const filteredTrips = trips.filter(trip => {
     const matchesSearch = 
+      !searchTerm ||
       trip.incomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       trip.outcomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       trip.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,14 +193,12 @@ export default function TripsPage() {
       (isApprovedFilter === 'true' && trip.isApproved) ||
       (isApprovedFilter === 'false' && !trip.isApproved)
 
-    return matchesSearch && matchesApproved
+    const matchesDateFrom = !dateFromFilter || new Date(trip.date) >= new Date(dateFromFilter)
+    const matchesDateTo = !dateToFilter || new Date(trip.date) <= new Date(dateToFilter)
+
+    return matchesSearch && matchesApproved && matchesDateFrom && matchesDateTo
   })
 
-  const stats = {
-    total: trips.length,
-    approved: trips.filter(t => t.isApproved).length,
-    pending: trips.filter(t => !t.isApproved).length
-  }
 
   if (loading) {
     return (
@@ -210,62 +230,22 @@ export default function TripsPage() {
           </Button>
         </div>
 
-        {/* Statistics */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Viajes</CardTitle>
-              <Truck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                Viajes registrados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aprobados</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.approved}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}% del total
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">
-                Viajes pendientes de aprobación
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
+        {/* Search and Filters Toggle */}
         <Card>
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Buscar por recibo, proyecto, cliente, conductor, placa o material..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch()
+                      }
+                    }}
                     className="pl-10"
                     autoComplete="off"
                     autoCorrect="off"
@@ -274,17 +254,65 @@ export default function TripsPage() {
                   />
                 </div>
               </div>
-              <Select value={isApprovedFilter} onValueChange={setIsApprovedFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Estado de Aprobación" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="true">Aprobados</SelectItem>
-                  <SelectItem value="false">Pendientes</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Button onClick={handleSearch} variant="default">
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar
+                </Button>
+                <Button 
+                  onClick={() => setShowFilters(!showFilters)} 
+                  variant={showFilters ? "default" : "outline"}
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filtros
+                </Button>
+                {(searchTerm || isApprovedFilter !== 'all' || dateFromFilter || dateToFilter) && (
+                  <Button onClick={handleClearFilters} variant="outline">
+                    <X className="h-4 w-4 mr-2" />
+                    Limpiar
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Filters Panel */}
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateFrom">Fecha Desde</Label>
+                    <Input
+                      id="dateFrom"
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(e) => setDateFromFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dateTo">Fecha Hasta</Label>
+                    <Input
+                      id="dateTo"
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(e) => setDateToFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="isApproved">Estado de Aprobación</Label>
+                    <Select value={isApprovedFilter} onValueChange={setIsApprovedFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Estado de Aprobación" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="true">Aprobados</SelectItem>
+                        <SelectItem value="false">Pendientes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

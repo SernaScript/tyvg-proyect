@@ -145,6 +145,19 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
   }
 
   const handleInputChange = (field: string, value: string) => {
+    // Special handling for quantity field - only allow numbers and decimal point
+    if (field === 'quantity') {
+      // Allow empty string, numbers, and a single decimal point
+      const numericRegex = /^[0-9]*\.?[0-9]*$/
+      if (value === '' || numericRegex.test(value)) {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        if (errors[field]) {
+          setErrors(prev => ({ ...prev, [field]: '' }))
+        }
+      }
+      return
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
@@ -174,8 +187,13 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
       newErrors.vehicleId = 'El vehículo es requerido'
     }
 
-    if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
-      newErrors.quantity = 'La cantidad debe ser mayor a cero'
+    if (!formData.quantity || formData.quantity.trim() === '') {
+      newErrors.quantity = 'La cantidad es requerida'
+    } else {
+      const quantityValue = parseFloat(formData.quantity)
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        newErrors.quantity = 'La cantidad debe ser un número mayor a cero'
+      }
     }
 
     if (!formData.measure) {
@@ -414,24 +432,33 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
             {/* Quantity and Measure */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Cantidad *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={formData.quantity}
-                  onChange={(e) => handleInputChange('quantity', e.target.value)}
-                  placeholder="0.000"
-                />
-                {errors.quantity && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.quantity}
-                  </p>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Cantidad *</Label>
+                  <Input
+                    id="quantity"
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.quantity}
+                    onChange={(e) => handleInputChange('quantity', e.target.value)}
+                    onBlur={(e) => {
+                      // Format the value on blur to ensure proper decimal format
+                      const value = e.target.value.trim()
+                      if (value && !isNaN(parseFloat(value))) {
+                        const numValue = parseFloat(value)
+                        if (numValue > 0) {
+                          setFormData(prev => ({ ...prev, quantity: numValue.toString() }))
+                        }
+                      }
+                    }}
+                    placeholder="0.000"
+                  />
+                  {errors.quantity && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.quantity}
+                    </p>
+                  )}
+                </div>
 
               <div className="space-y-2">
                 <Label htmlFor="measure">Medida *</Label>
