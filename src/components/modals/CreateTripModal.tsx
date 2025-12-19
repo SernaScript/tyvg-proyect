@@ -7,47 +7,19 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { 
-  X, 
-  Calendar, 
-  User, 
-  Truck, 
-  Package, 
-  MapPin,
-  Clock,
+import {
+  X,
+  Calendar,
+  User,
+  Truck,
+  Package,
   AlertCircle,
-  CheckCircle,
-  Search
+  DollarSign,
+  Scale
 } from 'lucide-react'
 import { ProjectAutocomplete } from '@/components/ui/ProjectAutocomplete'
 import { MaterialAutocomplete } from '@/components/ui/MaterialAutocomplete'
-
-interface TripRequest {
-  id: string
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
-  observations?: string
-  project: {
-    id: string
-    name: string
-    address?: string
-    client: {
-      id: string
-      name: string
-      identification: string
-    }
-  }
-  materials: Array<{
-    id: string
-    quantity: number
-    material: {
-      id: string
-      name: string
-      type: string
-      unitOfMeasure: string
-    }
-  }>
-}
+import { MeasureType } from '@/types/trip'
 
 interface Driver {
   id: string
@@ -66,7 +38,7 @@ interface Vehicle {
   model: string
   capacityTons?: number
   capacityM3?: number
-  ownershipType: 'OWNED' | 'RENTED' | 'PROVIDED'
+  ownershipType: 'OWNED' | 'OUTSOURCED'
   isActive: boolean
 }
 
@@ -74,8 +46,8 @@ interface Project {
   id: string
   name: string
   description?: string
-  location?: string
-  status: string
+  address?: string
+  isActive: boolean
   client: {
     id: string
     name: string
@@ -102,17 +74,22 @@ interface CreateTripModalProps {
 
 export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalProps) {
   const [formData, setFormData] = useState({
+    materialId: '',
     projectId: '',
+    date: '',
     driverId: '',
     vehicleId: '',
-    waybillNumber: '',
-    scheduledDate: '',
-    certifiedWeight: '',
-    observations: ''
+    incomingReceiptNumber: '',
+    outcomingReceiptNumber: '',
+    quantity: '',
+    measure: '' as MeasureType | '',
+    salePrice: '',
+    outsourcedPrice: '',
+    observation: ''
   })
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [selectedMaterials, setSelectedMaterials] = useState<Material[]>([])
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(false)
@@ -134,12 +111,18 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
   }
 
   const handleMaterialSelect = (materials: Material[]) => {
-    setSelectedMaterials(materials)
+    // Only take the first material since we now have a single material per trip
+    const material = materials.length > 0 ? materials[0] : null
+    setSelectedMaterial(material)
+    setFormData(prev => ({ ...prev, materialId: material?.id || '' }))
+    if (errors.materialId) {
+      setErrors(prev => ({ ...prev, materialId: '' }))
+    }
   }
 
   const fetchDrivers = async () => {
     try {
-      const response = await fetch('/api/drivers?isActive=true')
+      const response = await fetch('/api/drivers?active=true')
       if (response.ok) {
         const data = await response.json()
         setDrivers(data)
@@ -171,8 +154,16 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
+    if (!formData.materialId) {
+      newErrors.materialId = 'El material es requerido'
+    }
+
     if (!formData.projectId) {
       newErrors.projectId = 'El proyecto es requerido'
+    }
+
+    if (!formData.date) {
+      newErrors.date = 'La fecha es requerida'
     }
 
     if (!formData.driverId) {
@@ -183,18 +174,20 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
       newErrors.vehicleId = 'El vehículo es requerido'
     }
 
-    if (!formData.scheduledDate) {
-      newErrors.scheduledDate = 'La fecha programada es requerida'
-    } else {
-      const scheduledDate = new Date(formData.scheduledDate)
-      const now = new Date()
-      if (scheduledDate < now) {
-        newErrors.scheduledDate = 'La fecha programada no puede ser en el pasado'
-      }
+    if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
+      newErrors.quantity = 'La cantidad debe ser mayor a cero'
     }
 
-    if (formData.certifiedWeight && parseFloat(formData.certifiedWeight) <= 0) {
-      newErrors.certifiedWeight = 'El peso certificado debe ser mayor a 0'
+    if (!formData.measure) {
+      newErrors.measure = 'La medida es requerida'
+    }
+
+    if (formData.salePrice && parseFloat(formData.salePrice) < 0) {
+      newErrors.salePrice = 'El precio de venta no puede ser negativo'
+    }
+
+    if (formData.outsourcedPrice && parseFloat(formData.outsourcedPrice) < 0) {
+      newErrors.outsourcedPrice = 'El precio tercerizado no puede ser negativo'
     }
 
     setErrors(newErrors)
@@ -203,56 +196,36 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
     try {
-      // Primero crear la solicitud de viaje
-      const tripRequestResponse = await fetch('/api/trip-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          projectId: formData.projectId,
-          priority: 'MEDIUM',
-          materials: selectedMaterials.map(material => ({
-            materialId: material.id,
-            quantity: 1 // Cantidad por defecto, se puede ajustar después
-          })),
-          observations: formData.observations
-        }),
-      })
-
-      if (!tripRequestResponse.ok) {
-        const errorData = await tripRequestResponse.json()
-        setErrors({ submit: errorData.message || 'Error al crear la solicitud de viaje' })
-        return
-      }
-
-      const tripRequest = await tripRequestResponse.json()
-
-      // Luego crear el viaje
       const tripResponse = await fetch('/api/trips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tripRequestId: tripRequest.id,
+          materialId: formData.materialId,
+          projectId: formData.projectId,
+          date: formData.date,
           driverId: formData.driverId,
           vehicleId: formData.vehicleId,
-          waybillNumber: formData.waybillNumber || null,
-          scheduledDate: formData.scheduledDate,
-          certifiedWeight: formData.certifiedWeight ? parseFloat(formData.certifiedWeight) : null,
-          observations: formData.observations
+          incomingReceiptNumber: formData.incomingReceiptNumber || null,
+          outcomingReceiptNumber: formData.outcomingReceiptNumber || null,
+          quantity: parseFloat(formData.quantity),
+          measure: formData.measure,
+          salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
+          outsourcedPrice: formData.outsourcedPrice ? parseFloat(formData.outsourcedPrice) : 0,
+          observation: formData.observation || null
         }),
       })
 
       if (tripResponse.ok) {
         onSuccess()
         resetForm()
+        onClose()
       } else {
         const errorData = await tripResponse.json()
         setErrors({ submit: errorData.message || 'Error al crear el viaje' })
@@ -267,16 +240,21 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
   const resetForm = () => {
     setFormData({
+      materialId: '',
       projectId: '',
+      date: '',
       driverId: '',
       vehicleId: '',
-      waybillNumber: '',
-      scheduledDate: '',
-      certifiedWeight: '',
-      observations: ''
+      incomingReceiptNumber: '',
+      outcomingReceiptNumber: '',
+      quantity: '',
+      measure: '',
+      salePrice: '',
+      outsourcedPrice: '',
+      observation: ''
     })
     setSelectedProject(null)
-    setSelectedMaterials([])
+    setSelectedMaterial(null)
     setErrors({})
   }
 
@@ -288,26 +266,6 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
   const selectedDriver = drivers.find(d => d.id === formData.driverId)
   const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId)
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'LOW': return 'bg-green-100 text-green-800'
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800'
-      case 'HIGH': return 'bg-orange-100 text-orange-800'
-      case 'URGENT': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'LOW': return 'Baja'
-      case 'MEDIUM': return 'Media'
-      case 'HIGH': return 'Alta'
-      case 'URGENT': return 'Urgente'
-      default: return priority
-    }
-  }
-
   if (!isOpen) return null
 
   return (
@@ -315,9 +273,9 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle>Programar Viaje</CardTitle>
+            <CardTitle>Crear Viaje</CardTitle>
             <CardDescription>
-              Crea un nuevo viaje basado en una solicitud existente
+              Crea un nuevo viaje con todos los detalles necesarios
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={handleClose}>
@@ -340,84 +298,37 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
 
             {/* Material Selection */}
             <div className="space-y-2">
-              <Label>Materiales a Transportar</Label>
-              <div className="space-y-3">
-                {selectedMaterials.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedMaterials.map((material) => (
-                      <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                        <div>
-                          <p className="font-semibold">{material.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {material.type} • {material.unitOfMeasure}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedMaterials(selectedMaterials.filter(m => m.id !== material.id))}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                    <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-muted-foreground">No hay materiales seleccionados</p>
-                  </div>
-                )}
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {}}
-                  className="w-full"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  {selectedMaterials.length > 0 ? 'Agregar Más Materiales' : 'Seleccionar Materiales'}
-                </Button>
-              </div>
+              <Label>Material *</Label>
+              <MaterialAutocomplete
+                selectedMaterials={selectedMaterial ? [selectedMaterial] : []}
+                onMaterialsChange={handleMaterialSelect}
+                disabled={loading}
+                multiple={false}
+              />
+              {errors.materialId && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.materialId}
+                </p>
+              )}
             </div>
 
-            {/* Selected Project Details */}
-            {selectedProject && (
-              <Card className="bg-muted/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Detalles de la Solicitud</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Proyecto</Label>
-                      <p className="font-medium">{selectedProject.name}</p>
-                      {selectedProject.location && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{selectedProject.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Cliente</Label>
-                      <p className="font-medium">{selectedProject.client.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Doc: {selectedProject.client.identification}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedProject.description && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Descripción</Label>
-                      <p className="text-sm mt-1">{selectedProject.description}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+            {/* Date */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Fecha *</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+              />
+              {errors.date && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.date}
+                </p>
+              )}
+            </div>
 
             {/* Driver and Vehicle Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -478,106 +389,139 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
               </div>
             </div>
 
-            {/* Selected Driver and Vehicle Details */}
-            {(selectedDriver || selectedVehicle) && (
-              <Card className="bg-muted/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Asignación</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedDriver && (
-                      <div className="flex items-center gap-3 p-3 bg-background rounded border">
-                        <User className="h-8 w-8 text-primary" />
-                        <div>
-                          <p className="font-medium">{selectedDriver.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Lic: {selectedDriver.license} • Doc: {selectedDriver.identification}
-                          </p>
-                          {selectedDriver.phone && (
-                            <p className="text-sm text-muted-foreground">Tel: {selectedDriver.phone}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedVehicle && (
-                      <div className="flex items-center gap-3 p-3 bg-background rounded border">
-                        <Truck className="h-8 w-8 text-primary" />
-                        <div>
-                          <p className="font-medium">{selectedVehicle.plate}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedVehicle.brand} {selectedVehicle.model}
-                          </p>
-                          <div className="flex gap-2 text-sm text-muted-foreground">
-                            {selectedVehicle.capacityTons && (
-                              <span>{selectedVehicle.capacityTons}T</span>
-                            )}
-                            {selectedVehicle.capacityM3 && (
-                              <span>{selectedVehicle.capacityM3}m³</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Trip Details */}
+            {/* Receipt Numbers */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="waybillNumber">Número de Guía</Label>
+                <Label htmlFor="incomingReceiptNumber">Número de Recibo de Entrada</Label>
                 <Input
-                  id="waybillNumber"
-                  value={formData.waybillNumber}
-                  onChange={(e) => handleInputChange('waybillNumber', e.target.value)}
-                  placeholder="Opcional - se puede asignar después"
+                  id="incomingReceiptNumber"
+                  value={formData.incomingReceiptNumber}
+                  onChange={(e) => handleInputChange('incomingReceiptNumber', e.target.value)}
+                  placeholder="Opcional"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="scheduledDate">Fecha Programada *</Label>
+                <Label htmlFor="outcomingReceiptNumber">Número de Recibo de Salida</Label>
                 <Input
-                  id="scheduledDate"
-                  type="datetime-local"
-                  value={formData.scheduledDate}
-                  onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
+                  id="outcomingReceiptNumber"
+                  value={formData.outcomingReceiptNumber}
+                  onChange={(e) => handleInputChange('outcomingReceiptNumber', e.target.value)}
+                  placeholder="Opcional"
                 />
-                {errors.scheduledDate && (
+              </div>
+            </div>
+
+            {/* Quantity and Measure */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Cantidad *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={formData.quantity}
+                  onChange={(e) => handleInputChange('quantity', e.target.value)}
+                  placeholder="0.000"
+                />
+                {errors.quantity && (
                   <p className="text-sm text-red-600 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {errors.scheduledDate}
+                    {errors.quantity}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="measure">Medida *</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.measure === MeasureType.METROS_CUBICOS ? "default" : "outline"}
+                    onClick={() => handleInputChange('measure', MeasureType.METROS_CUBICOS)}
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    <Scale className="h-4 w-4 mr-2" />
+                    Metros Cúbicos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.measure === MeasureType.TONELADAS ? "default" : "outline"}
+                    onClick={() => handleInputChange('measure', MeasureType.TONELADAS)}
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    <Scale className="h-4 w-4 mr-2" />
+                    Toneladas
+                  </Button>
+                </div>
+                {errors.measure && (
+                  <p className="text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.measure}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="certifiedWeight">Peso Certificado (kg)</Label>
-              <Input
-                id="certifiedWeight"
-                type="number"
-                step="0.001"
-                value={formData.certifiedWeight}
-                onChange={(e) => handleInputChange('certifiedWeight', e.target.value)}
-                placeholder="Opcional - se puede registrar después"
-              />
-              {errors.certifiedWeight && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.certifiedWeight}
-                </p>
-              )}
+            {/* Prices */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="salePrice">Precio de Venta</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="salePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.salePrice}
+                    onChange={(e) => handleInputChange('salePrice', e.target.value)}
+                    placeholder="0.00"
+                    className="pl-9"
+                  />
+                </div>
+                {errors.salePrice && (
+                  <p className="text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.salePrice}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="outsourcedPrice">Precio Tercerizado</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="outsourcedPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.outsourcedPrice}
+                    onChange={(e) => handleInputChange('outsourcedPrice', e.target.value)}
+                    placeholder="0.00"
+                    className="pl-9"
+                  />
+                </div>
+                {errors.outsourcedPrice && (
+                  <p className="text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.outsourcedPrice}
+                  </p>
+                )}
+              </div>
             </div>
 
+            {/* Observation */}
             <div className="space-y-2">
-              <Label htmlFor="observations">Observaciones</Label>
+              <Label htmlFor="observation">Observaciones</Label>
               <Textarea
-                id="observations"
-                value={formData.observations}
-                onChange={(e) => handleInputChange('observations', e.target.value)}
+                id="observation"
+                value={formData.observation}
+                onChange={(e) => handleInputChange('observation', e.target.value)}
                 placeholder="Observaciones adicionales para el viaje..."
                 rows={3}
               />
@@ -596,17 +540,16 @@ export function CreateTripModal({ isOpen, onClose, onSuccess }: CreateTripModalP
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={loading || !formData.projectId || !formData.driverId || !formData.vehicleId || !formData.scheduledDate}
+              <Button
+                type="submit"
+                disabled={loading || !formData.materialId || !formData.projectId || !formData.date || !formData.driverId || !formData.vehicleId || !formData.quantity || !formData.measure}
               >
-                {loading ? 'Programando...' : 'Programar Viaje'}
+                {loading ? 'Creando...' : 'Crear Viaje'}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
-
     </div>
   )
 }

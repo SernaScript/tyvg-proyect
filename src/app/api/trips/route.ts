@@ -16,14 +16,18 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
-    const status = searchParams.get('status')
-    const priority = searchParams.get('priority')
+    const isApproved = searchParams.get('isApproved')
+    const projectId = searchParams.get('projectId')
+    const driverId = searchParams.get('driverId')
+    const materialId = searchParams.get('materialId')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
     const skip = (page - 1) * limit
 
     // Get current user to filter by driver if needed
-    let driverId: string | null = null
+    let currentDriverId: string | null = null
 
     // If user is a driver, get their driverId
     if (currentUser && currentUser.role.name === RoleName.DRIVER) {
@@ -32,70 +36,75 @@ export async function GET(request: NextRequest) {
         select: { id: true }
       })
       if (driver) {
-        driverId = driver.id
+        currentDriverId = driver.id
       }
     }
 
     // If driverId is passed as parameter and user is not a driver, use the parameter
     // If user is a driver, always use their own driverId
-    const requestedDriverId = searchParams.get('driverId')
-    if (requestedDriverId && !driverId) {
-      driverId = requestedDriverId
+    const requestedDriverId = driverId
+    if (requestedDriverId && !currentDriverId) {
+      currentDriverId = requestedDriverId
     }
 
     const where: any = {}
 
     // If there is a driverId (from current driver or parameter), filter by it
-    if (driverId) {
-      where.driverId = driverId
+    if (currentDriverId) {
+      where.driverId = currentDriverId
     }
 
     if (search) {
       where.OR = [
-        { waybillNumber: { contains: search, mode: 'insensitive' } },
-        { tripRequest: { project: { name: { contains: search, mode: 'insensitive' } } } },
-        { tripRequest: { project: { client: { name: { contains: search, mode: 'insensitive' } } } } },
+        { incomingReceiptNumber: { contains: search, mode: 'insensitive' } },
+        { outcomingReceiptNumber: { contains: search, mode: 'insensitive' } },
+        { project: { name: { contains: search, mode: 'insensitive' } } },
+        { project: { client: { name: { contains: search, mode: 'insensitive' } } } },
         { driver: { name: { contains: search, mode: 'insensitive' } } },
-        { vehicle: { plate: { contains: search, mode: 'insensitive' } } }
+        { vehicle: { plate: { contains: search, mode: 'insensitive' } } },
+        { material: { name: { contains: search, mode: 'insensitive' } } }
       ]
     }
 
-    if (status && status !== 'all') {
-      where.status = status
+    if (isApproved !== null && isApproved !== undefined && isApproved !== 'all') {
+      where.isApproved = isApproved === 'true'
     }
 
-    if (priority && priority !== 'all') {
-      where.tripRequest = { ...where.tripRequest, priority }
+    if (projectId) {
+      where.projectId = projectId
     }
 
+    if (materialId) {
+      where.materialId = materialId
+    }
+
+    if (dateFrom) {
+      where.date = { ...where.date, gte: new Date(dateFrom) }
+    }
+
+    if (dateTo) {
+      where.date = { ...where.date, lte: new Date(dateTo) }
+    }
 
     const [trips, total] = await Promise.all([
       prisma.trip.findMany({
         where,
         include: {
-          tripRequest: {
+          material: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              unitOfMeasure: true
+            }
+          },
+          project: {
             include: {
-              project: {
-                include: {
-                  client: {
-                    select: {
-                      id: true,
-                      name: true,
-                      identification: true
-                    }
-                  }
-                }
-              },
-              materials: {
-                include: {
-                  material: {
-                    select: {
-                      id: true,
-                      name: true,
-                      type: true,
-                      unitOfMeasure: true
-                    }
-                  }
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  identification: true
                 }
               }
             }
@@ -118,21 +127,41 @@ export async function GET(request: NextRequest) {
               capacityM3: true
             }
           },
-          materials: {
-            include: {
-              material: {
-                select: {
-                  id: true,
-                  name: true,
-                  type: true,
-                  unitOfMeasure: true
-                }
-              }
+          invoice: {
+            select: {
+              id: true,
+              invoiceNumber: true
+            }
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          updater: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          evidences: {
+            select: {
+              id: true,
+              photoUrl: true,
+              description: true,
+              dateTime: true,
+              createdAt: true
+            },
+            orderBy: {
+              createdAt: 'desc'
             }
           }
         },
         orderBy: [
-          { scheduledDate: 'desc' },
+          { date: 'desc' },
           { createdAt: 'desc' }
         ],
         skip,
@@ -164,19 +193,39 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      tripRequestId,
+      materialId,
+      projectId,
+      date,
       driverId,
       vehicleId,
-      waybillNumber,
-      scheduledDate,
-      certifiedWeight,
-      observations
+      incomingReceiptNumber,
+      outcomingReceiptNumber,
+      quantity,
+      measure,
+      salePrice,
+      outsourcedPrice,
+      invoiceId,
+      observation
     } = body
 
     // Validations
-    if (!tripRequestId) {
+    if (!materialId) {
       return NextResponse.json(
-        { message: 'La solicitud de viaje es requerida' },
+        { message: 'El material es requerido' },
+        { status: 400 }
+      )
+    }
+
+    if (!projectId) {
+      return NextResponse.json(
+        { message: 'El proyecto es requerido' },
+        { status: 400 }
+      )
+    }
+
+    if (!date) {
+      return NextResponse.json(
+        { message: 'La fecha es requerida' },
         { status: 400 }
       )
     }
@@ -195,31 +244,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!scheduledDate) {
+    if (!quantity || parseFloat(quantity) <= 0) {
       return NextResponse.json(
-        { message: 'La fecha programada es requerida' },
+        { message: 'La cantidad debe ser mayor a cero' },
         { status: 400 }
       )
     }
 
-    // Verify that the trip request exists and is pending
-    const tripRequest = await prisma.tripRequest.findUnique({
-      where: { id: tripRequestId },
-      include: {
-        trips: true
-      }
-    })
-
-    if (!tripRequest) {
+    if (!measure || !['METROS_CUBICOS', 'TONELADAS'].includes(measure)) {
       return NextResponse.json(
-        { message: 'La solicitud de viaje no existe' },
-        { status: 404 }
+        { message: 'La medida debe ser METROS_CUBICOS o TONELADAS' },
+        { status: 400 }
       )
     }
 
-    if (tripRequest.status !== 'PENDING') {
+    // Verify that the material exists and is active
+    const material = await prisma.material.findUnique({
+      where: { id: materialId }
+    })
+
+    if (!material || !material.isActive) {
       return NextResponse.json(
-        { message: 'La solicitud de viaje ya no está pendiente' },
+        { message: 'El material no existe o no está activo' },
+        { status: 400 }
+      )
+    }
+
+    // Verify that the project exists and is active
+    const project = await prisma.project.findUnique({
+      where: { id: projectId }
+    })
+
+    if (!project || !project.isActive) {
+      return NextResponse.json(
+        { message: 'El proyecto no existe o no está activo' },
         { status: 400 }
       )
     }
@@ -249,19 +307,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify that the scheduled date is not in the past
-    const scheduledDateTime = new Date(scheduledDate)
-    if (scheduledDateTime < new Date()) {
-      return NextResponse.json(
-        { message: 'La fecha programada no puede ser en el pasado' },
-        { status: 400 }
-      )
+    // Verify invoice if provided
+    if (invoiceId) {
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId }
+      })
+
+      if (!invoice) {
+        return NextResponse.json(
+          { message: 'La factura no existe' },
+          { status: 400 }
+        )
+      }
     }
 
-    // Verify that the certified weight is valid if provided
-    if (certifiedWeight && (isNaN(certifiedWeight) || certifiedWeight <= 0)) {
+    // Parse date
+    const tripDate = new Date(date)
+    if (isNaN(tripDate.getTime())) {
       return NextResponse.json(
-        { message: 'El peso certificado debe ser mayor a 0' },
+        { message: 'La fecha es inválida' },
         { status: 400 }
       )
     }
@@ -269,39 +333,38 @@ export async function POST(request: NextRequest) {
     // Create the trip
     const trip = await prisma.trip.create({
       data: {
-        tripRequestId,
+        materialId,
+        projectId,
+        date: tripDate,
         driverId,
         vehicleId,
-        waybillNumber: waybillNumber || null,
-        scheduledDate: scheduledDateTime,
-        certifiedWeight: certifiedWeight ? parseFloat(certifiedWeight) : null,
-        observations: observations || null,
-        status: 'SCHEDULED'
+        incomingReceiptNumber: incomingReceiptNumber || null,
+        outcomingReceiptNumber: outcomingReceiptNumber || null,
+        quantity: parseFloat(quantity),
+        measure: measure as 'METROS_CUBICOS' | 'TONELADAS',
+        salePrice: salePrice ? parseFloat(salePrice) : 0,
+        outsourcedPrice: outsourcedPrice ? parseFloat(outsourcedPrice) : 0,
+        invoiceId: invoiceId || null,
+        observation: observation || null,
+        createdBy: currentUser.id,
+        updatedBy: currentUser.id
       },
       include: {
-        tripRequest: {
+        material: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            unitOfMeasure: true
+          }
+        },
+        project: {
           include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    identification: true
-                  }
-                }
-              }
-            },
-            materials: {
-              include: {
-                material: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                    unitOfMeasure: true
-                  }
-                }
+            client: {
+              select: {
+                id: true,
+                name: true,
+                identification: true
               }
             }
           }
@@ -323,14 +386,28 @@ export async function POST(request: NextRequest) {
             capacityTons: true,
             capacityM3: true
           }
+        },
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true
+          }
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        updater: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
         }
       }
-    })
-
-    // Update the trip request status to SCHEDULED
-    await prisma.tripRequest.update({
-      where: { id: tripRequestId },
-      data: { status: 'SCHEDULED' }
     })
 
     return NextResponse.json(trip, { status: 201 })

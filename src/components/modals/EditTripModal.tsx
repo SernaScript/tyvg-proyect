@@ -7,48 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { 
   X, 
   Truck, 
   Save,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  Scale,
+  CheckCircle
 } from 'lucide-react'
-
-interface Trip {
-  id: string
-  waybillNumber?: string
-  scheduledDate: Date
-  actualStartDate?: Date
-  actualEndDate?: Date
-  status: string
-  certifiedWeight?: number
-  observations?: string
-  tripRequest: {
-    id: string
-    priority: string
-    project: {
-      id: string
-      name: string
-      client: {
-        id: string
-        name: string
-        identification: string
-      }
-    }
-  }
-  driver: {
-    id: string
-    name: string
-    identification: string
-    license: string
-  }
-  vehicle: {
-    id: string
-    plate: string
-    brand: string
-    model: string
-  }
-}
+import { Trip, MeasureType } from '@/types/trip'
+import { ProjectAutocomplete } from '@/components/ui/ProjectAutocomplete'
+import { MaterialAutocomplete } from '@/components/ui/MaterialAutocomplete'
 
 interface Driver {
   id: string
@@ -66,6 +37,27 @@ interface Vehicle {
   isActive: boolean
 }
 
+interface Project {
+  id: string
+  name: string
+  address?: string
+  client: {
+    id: string
+    name: string
+    identification: string
+  }
+}
+
+interface Material {
+  id: string
+  name: string
+  type: string
+  unitOfMeasure: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 interface EditTripModalProps {
   isOpen: boolean
   onClose: () => void
@@ -77,19 +69,25 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
   const [trip, setTrip] = useState<Trip | null>(null)
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const [formData, setFormData] = useState({
+    materialId: '',
+    projectId: '',
+    date: '',
     driverId: '',
     vehicleId: '',
-    waybillNumber: '',
-    scheduledDate: '',
-    actualStartDate: '',
-    actualEndDate: '',
-    status: '',
-    certifiedWeight: '',
-    observations: ''
+    incomingReceiptNumber: '',
+    outcomingReceiptNumber: '',
+    quantity: '',
+    measure: '' as MeasureType | '',
+    salePrice: '',
+    outsourcedPrice: '',
+    isApproved: false,
+    observation: ''
   })
 
   useEffect(() => {
@@ -106,16 +104,41 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
       if (response.ok) {
         const data = await response.json()
         setTrip(data)
+        
+        // Set project and material from trip data
+        if (data.project) {
+          setSelectedProject({
+            id: data.project.id,
+            name: data.project.name,
+            address: data.project.address,
+            client: data.project.client || { id: '', name: '', identification: '' }
+          })
+        }
+        
+        if (data.material) {
+          setSelectedMaterial({
+            id: data.material.id,
+            name: data.material.name,
+            type: data.material.type,
+            unitOfMeasure: data.material.unitOfMeasure,
+            isActive: true
+          })
+        }
+
         setFormData({
-          driverId: data.driverId,
-          vehicleId: data.vehicleId,
-          waybillNumber: data.waybillNumber || '',
-          scheduledDate: data.scheduledDate ? new Date(data.scheduledDate).toISOString().slice(0, 16) : '',
-          actualStartDate: data.actualStartDate ? new Date(data.actualStartDate).toISOString().slice(0, 16) : '',
-          actualEndDate: data.actualEndDate ? new Date(data.actualEndDate).toISOString().slice(0, 16) : '',
-          status: data.status,
-          certifiedWeight: data.certifiedWeight ? data.certifiedWeight.toString() : '',
-          observations: data.observations || ''
+          materialId: data.materialId || '',
+          projectId: data.projectId || '',
+          date: data.date ? new Date(data.date).toISOString().split('T')[0] : '',
+          driverId: data.driverId || '',
+          vehicleId: data.vehicleId || '',
+          incomingReceiptNumber: data.incomingReceiptNumber || '',
+          outcomingReceiptNumber: data.outcomingReceiptNumber || '',
+          quantity: data.quantity ? data.quantity.toString() : '',
+          measure: data.measure || '',
+          salePrice: data.salePrice ? data.salePrice.toString() : '',
+          outsourcedPrice: data.outsourcedPrice ? data.outsourcedPrice.toString() : '',
+          isApproved: data.isApproved || false,
+          observation: data.observation || ''
         })
       }
     } catch (error) {
@@ -125,7 +148,7 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
 
   const fetchDrivers = async () => {
     try {
-      const response = await fetch('/api/drivers?isActive=true')
+      const response = await fetch('/api/drivers?active=true')
       if (response.ok) {
         const data = await response.json()
         setDrivers(data)
@@ -147,7 +170,24 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleProjectSelect = (project: Project | null) => {
+    setSelectedProject(project)
+    setFormData(prev => ({ ...prev, projectId: project?.id || '' }))
+    if (errors.projectId) {
+      setErrors(prev => ({ ...prev, projectId: '' }))
+    }
+  }
+
+  const handleMaterialSelect = (materials: Material[]) => {
+    const material = materials.length > 0 ? materials[0] : null
+    setSelectedMaterial(material)
+    setFormData(prev => ({ ...prev, materialId: material?.id || '' }))
+    if (errors.materialId) {
+      setErrors(prev => ({ ...prev, materialId: '' }))
+    }
+  }
+
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
@@ -157,6 +197,18 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
+    if (!formData.materialId) {
+      newErrors.materialId = 'El material es requerido'
+    }
+
+    if (!formData.projectId) {
+      newErrors.projectId = 'El proyecto es requerido'
+    }
+
+    if (!formData.date) {
+      newErrors.date = 'La fecha es requerida'
+    }
+
     if (!formData.driverId) {
       newErrors.driverId = 'El conductor es requerido'
     }
@@ -165,20 +217,20 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
       newErrors.vehicleId = 'El vehículo es requerido'
     }
 
-    if (!formData.scheduledDate) {
-      newErrors.scheduledDate = 'La fecha programada es requerida'
+    if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
+      newErrors.quantity = 'La cantidad debe ser mayor a cero'
     }
 
-    if (formData.certifiedWeight && (isNaN(parseFloat(formData.certifiedWeight)) || parseFloat(formData.certifiedWeight) <= 0)) {
-      newErrors.certifiedWeight = 'El peso certificado debe ser mayor a 0'
+    if (!formData.measure) {
+      newErrors.measure = 'La medida es requerida'
     }
 
-    if (formData.actualStartDate && formData.actualEndDate) {
-      const startDate = new Date(formData.actualStartDate)
-      const endDate = new Date(formData.actualEndDate)
-      if (endDate < startDate) {
-        newErrors.actualEndDate = 'La fecha de finalización no puede ser anterior a la fecha de inicio'
-      }
+    if (formData.salePrice && parseFloat(formData.salePrice) < 0) {
+      newErrors.salePrice = 'El precio de venta no puede ser negativo'
+    }
+
+    if (formData.outsourcedPrice && parseFloat(formData.outsourcedPrice) < 0) {
+      newErrors.outsourcedPrice = 'El precio tercerizado no puede ser negativo'
     }
 
     setErrors(newErrors)
@@ -200,15 +252,19 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          materialId: formData.materialId,
+          projectId: formData.projectId,
+          date: formData.date,
           driverId: formData.driverId,
           vehicleId: formData.vehicleId,
-          waybillNumber: formData.waybillNumber || null,
-          scheduledDate: formData.scheduledDate,
-          actualStartDate: formData.actualStartDate || null,
-          actualEndDate: formData.actualEndDate || null,
-          status: formData.status,
-          certifiedWeight: formData.certifiedWeight ? parseFloat(formData.certifiedWeight) : null,
-          observations: formData.observations || null
+          incomingReceiptNumber: formData.incomingReceiptNumber || null,
+          outcomingReceiptNumber: formData.outcomingReceiptNumber || null,
+          quantity: parseFloat(formData.quantity),
+          measure: formData.measure,
+          salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
+          outsourcedPrice: formData.outsourcedPrice ? parseFloat(formData.outsourcedPrice) : 0,
+          isApproved: formData.isApproved,
+          observation: formData.observation || null
         }),
       })
 
@@ -230,16 +286,22 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
   const handleClose = () => {
     if (!loading) {
       setFormData({
+        materialId: '',
+        projectId: '',
+        date: '',
         driverId: '',
         vehicleId: '',
-        waybillNumber: '',
-        scheduledDate: '',
-        actualStartDate: '',
-        actualEndDate: '',
-        status: '',
-        certifiedWeight: '',
-        observations: ''
+        incomingReceiptNumber: '',
+        outcomingReceiptNumber: '',
+        quantity: '',
+        measure: '' as MeasureType | '',
+        salePrice: '',
+        outsourcedPrice: '',
+        isApproved: false,
+        observation: ''
       })
+      setSelectedProject(null)
+      setSelectedMaterial(null)
       setErrors({})
       onClose()
     }
@@ -257,7 +319,7 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
               Editar Viaje
             </CardTitle>
             <CardDescription>
-              {trip?.waybillNumber ? `Guía: ${trip.waybillNumber}` : 'Sin número de guía'}
+              {trip?.incomingReceiptNumber ? `Recibo Entrada: ${trip.incomingReceiptNumber}` : 'Sin número de recibo'}
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={handleClose} disabled={loading}>
@@ -266,15 +328,15 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {trip && (
+          {trip && trip.project && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
                   <p className="font-medium text-blue-900">Información del Proyecto</p>
                   <p className="text-sm text-blue-700">
-                    <strong>Proyecto:</strong> {trip.tripRequest.project.name} • 
-                    <strong> Cliente:</strong> {trip.tripRequest.project.client.name}
+                    <strong>Proyecto:</strong> {trip.project.name} • 
+                    <strong> Cliente:</strong> {trip.project.client?.name || 'N/A'}
                   </p>
                 </div>
               </div>
@@ -282,8 +344,50 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Project Selection */}
+            <ProjectAutocomplete
+              label="Proyecto"
+              placeholder="Buscar proyecto..."
+              value={selectedProject}
+              onChange={handleProjectSelect}
+              error={errors.projectId}
+              disabled={loading}
+              required
+            />
+
+            {/* Material Selection */}
+            <div className="space-y-2">
+              <Label>Material *</Label>
+              <MaterialAutocomplete
+                selectedMaterials={selectedMaterial ? [selectedMaterial] : []}
+                onMaterialsChange={handleMaterialSelect}
+                disabled={loading}
+                multiple={false}
+              />
+              {errors.materialId && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.materialId}
+                </p>
+              )}
+            </div>
+
+            {/* Date */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Fecha *</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+              />
+              {errors.date && (
+                <p className="text-sm text-red-600">{errors.date}</p>
+              )}
+            </div>
+
+            {/* Driver and Vehicle Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Conductor */}
               <div className="space-y-2">
                 <Label htmlFor="driverId">Conductor *</Label>
                 <Select value={formData.driverId} onValueChange={(value) => handleInputChange('driverId', value)}>
@@ -303,7 +407,6 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
                 )}
               </div>
 
-              {/* Vehículo */}
               <div className="space-y-2">
                 <Label htmlFor="vehicleId">Vehículo *</Label>
                 <Select value={formData.vehicleId} onValueChange={(value) => handleInputChange('vehicleId', value)}>
@@ -324,102 +427,156 @@ export function EditTripModal({ isOpen, onClose, onSuccess, tripId }: EditTripMo
               </div>
             </div>
 
+            {/* Receipt Numbers */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Número de Guía */}
               <div className="space-y-2">
-                <Label htmlFor="waybillNumber">Número de Guía</Label>
+                <Label htmlFor="incomingReceiptNumber">Número de Recibo de Entrada</Label>
                 <Input
-                  id="waybillNumber"
-                  value={formData.waybillNumber}
-                  onChange={(e) => handleInputChange('waybillNumber', e.target.value)}
+                  id="incomingReceiptNumber"
+                  value={formData.incomingReceiptNumber}
+                  onChange={(e) => handleInputChange('incomingReceiptNumber', e.target.value)}
                   placeholder="Opcional"
                 />
               </div>
 
-              {/* Estado */}
               <div className="space-y-2">
-                <Label htmlFor="status">Estado *</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SCHEDULED">Programado</SelectItem>
-                    <SelectItem value="LOADING">Cargando</SelectItem>
-                    <SelectItem value="IN_TRANSIT">En Tránsito</SelectItem>
-                    <SelectItem value="DELIVERED">Entregado</SelectItem>
-                    <SelectItem value="COMPLETED">Completado</SelectItem>
-                    <SelectItem value="INVOICED">Facturado</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="outcomingReceiptNumber">Número de Recibo de Salida</Label>
+                <Input
+                  id="outcomingReceiptNumber"
+                  value={formData.outcomingReceiptNumber}
+                  onChange={(e) => handleInputChange('outcomingReceiptNumber', e.target.value)}
+                  placeholder="Opcional"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Fecha Programada */}
+            {/* Quantity and Measure */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="scheduledDate">Fecha Programada *</Label>
+                <Label htmlFor="quantity">Cantidad *</Label>
                 <Input
-                  id="scheduledDate"
-                  type="datetime-local"
-                  value={formData.scheduledDate}
-                  onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
+                  id="quantity"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={formData.quantity}
+                  onChange={(e) => handleInputChange('quantity', e.target.value)}
+                  placeholder="0.000"
                 />
-                {errors.scheduledDate && (
-                  <p className="text-sm text-red-600">{errors.scheduledDate}</p>
+                {errors.quantity && (
+                  <p className="text-sm text-red-600">{errors.quantity}</p>
                 )}
               </div>
 
-              {/* Fecha de Inicio Real */}
               <div className="space-y-2">
-                <Label htmlFor="actualStartDate">Fecha de Inicio Real</Label>
-                <Input
-                  id="actualStartDate"
-                  type="datetime-local"
-                  value={formData.actualStartDate}
-                  onChange={(e) => handleInputChange('actualStartDate', e.target.value)}
-                />
-              </div>
-
-              {/* Fecha de Finalización Real */}
-              <div className="space-y-2">
-                <Label htmlFor="actualEndDate">Fecha de Finalización Real</Label>
-                <Input
-                  id="actualEndDate"
-                  type="datetime-local"
-                  value={formData.actualEndDate}
-                  onChange={(e) => handleInputChange('actualEndDate', e.target.value)}
-                />
-                {errors.actualEndDate && (
-                  <p className="text-sm text-red-600">{errors.actualEndDate}</p>
+                <Label htmlFor="measure">Medida *</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.measure === MeasureType.METROS_CUBICOS ? "default" : "outline"}
+                    onClick={() => handleInputChange('measure', MeasureType.METROS_CUBICOS)}
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    <Scale className="h-4 w-4 mr-2" />
+                    Metros Cúbicos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.measure === MeasureType.TONELADAS ? "default" : "outline"}
+                    onClick={() => handleInputChange('measure', MeasureType.TONELADAS)}
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    <Scale className="h-4 w-4 mr-2" />
+                    Toneladas
+                  </Button>
+                </div>
+                {errors.measure && (
+                  <p className="text-sm text-red-600">{errors.measure}</p>
                 )}
               </div>
             </div>
 
-            {/* Peso Certificado */}
-            <div className="space-y-2">
-              <Label htmlFor="certifiedWeight">Peso Certificado (toneladas)</Label>
-              <Input
-                id="certifiedWeight"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.certifiedWeight}
-                onChange={(e) => handleInputChange('certifiedWeight', e.target.value)}
-                placeholder="Opcional"
+            {/* Prices */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="salePrice">Precio de Venta</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="salePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.salePrice}
+                    onChange={(e) => handleInputChange('salePrice', e.target.value)}
+                    placeholder="0.00"
+                    className="pl-9"
+                  />
+                </div>
+                {errors.salePrice && (
+                  <p className="text-sm text-red-600">{errors.salePrice}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="outsourcedPrice">Precio Tercerizado</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="outsourcedPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.outsourcedPrice}
+                    onChange={(e) => handleInputChange('outsourcedPrice', e.target.value)}
+                    placeholder="0.00"
+                    className="pl-9"
+                  />
+                </div>
+                {errors.outsourcedPrice && (
+                  <p className="text-sm text-red-600">{errors.outsourcedPrice}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Approval Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+              <div className="space-y-0.5">
+                <Label htmlFor="isApproved" className="text-base font-medium">
+                  Aprobar Viaje
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Marca esta opción para aprobar el viaje
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                id="isApproved"
+                checked={formData.isApproved}
+                onChange={(e) => handleInputChange('isApproved', e.target.checked)}
+                disabled={loading}
+                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              {errors.certifiedWeight && (
-                <p className="text-sm text-red-600">{errors.certifiedWeight}</p>
-              )}
             </div>
 
-            {/* Observaciones */}
+            {formData.isApproved && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <p className="text-sm text-green-700">
+                  Este viaje será marcado como aprobado al guardar
+                </p>
+              </div>
+            )}
+
+            {/* Observation */}
             <div className="space-y-2">
-              <Label htmlFor="observations">Observaciones</Label>
+              <Label htmlFor="observation">Observaciones</Label>
               <Textarea
-                id="observations"
-                value={formData.observations}
-                onChange={(e) => handleInputChange('observations', e.target.value)}
+                id="observation"
+                value={formData.observation}
+                onChange={(e) => handleInputChange('observation', e.target.value)}
                 placeholder="Observaciones adicionales..."
                 rows={3}
               />

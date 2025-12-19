@@ -21,16 +21,19 @@ Implementación completa del módulo de logística con gestión de clientes, pro
 - `ProjectMaterialPrice` - Precios por material/obra con vigencia
 - `Driver` - Conductores vinculados a User
 - `DriverDocument` - Documentos de conductores con vencimientos
-- `TripRequest` - Solicitudes de viaje por obra
-- `TripRequestMaterial` - Materiales solicitados en cada solicitud
-- `Trip` - Viajes programados y ejecutados
-- `TripMaterial` - Materiales por viaje con cantidades
-- `TripEvidence` - Evidencias fotográficas de viajes
+- `Trip` - Viajes con modelo simplificado (sin TripRequest)
+  - Campos: materialId, projectId, date, driverId, vehicleId, quantity, measure, salePrice, outsourcedPrice, isApproved, etc.
+- `TripEvidence` - Evidencias fotográficas simplificadas (sin EvidenceType)
 - `Advance` - Anticipos a conductores por periodo
-- `TripExpense` - Gastos de viaje (combustible, peajes, etc.)
 - `AdvanceLegalization` - Legalización de anticipos
 - `Alert` - Sistema de alertas operacionales
 - `TripAudit` - Auditoría de cambios en viajes
+
+#### **Modelos Eliminados (Refactorización):**
+- ❌ `TripRequest` - Consolidado en Trip
+- ❌ `TripRequestMaterial` - Consolidado en Trip
+- ❌ `TripMaterial` - Consolidado en Trip (un solo material por viaje)
+- ❌ `TripExpense` - Eliminado del modelo actual
 
 ### **2. Gestión de Clientes (100% Completo)**
 - ✅ **Página de gestión** (`/areas/logistics/clients`)
@@ -69,16 +72,19 @@ Implementación completa del módulo de logística con gestión de clientes, pro
 - ✅ **Estadísticas en tiempo real**
 - ✅ **Navegación integrada**
 
-### **6. Solicitudes de Viaje (100% Completo)**
-- ✅ **Página de gestión** (`/areas/logistics/trip-requests`)
-- ✅ **Modal de creación/edición** con validaciones
+### **6. Gestión de Viajes (100% Completo) - REFACTORIZADO**
+- ✅ **Página de gestión** (`/areas/logistics/trips`)
+- ✅ **Modal de creación** con todos los campos del nuevo modelo
+- ✅ **Modal de edición** con aprobación de viajes
+- ✅ **Modal de visualización** con gestión de evidencias
 - ✅ **APIs completas** (GET, POST, PUT, DELETE)
-- ✅ **Gestión de materiales** por solicitud
-- ✅ **Prioridades** (NORMAL/URGENT)
-- ✅ **Estados** (PENDING/SCHEDULED/CANCELLED)
-- ✅ **Filtros y búsqueda** funcionales
+- ✅ **Nuevo modelo Trip** simplificado sin TripRequest
+- ✅ **Campos nuevos**: materialId, projectId, date, quantity, measure, salePrice, outsourcedPrice, isApproved
+- ✅ **Sistema de aprobación** con approvedAt
+- ✅ **Filtros y búsqueda** funcionales (por aprobación, proyecto, conductor, material)
 - ✅ **Estadísticas en tiempo real**
 - ✅ **Navegación integrada**
+- ✅ **Eliminado**: Sistema de solicitudes de viaje (TripRequest) - consolidado en Trip
 
 ### **7. Gestión de Conductores (100% Completo)**
 - ✅ **Página de gestión** (`/areas/logistics/drivers`)
@@ -115,22 +121,14 @@ Implementación completa del módulo de logística con gestión de clientes, pro
 
 ## 📋 **PENDIENTE - Funcionalidades por Implementar**
 
-### **1. Gestión de Viajes (0% Completo)**
-- ❌ **Página de gestión** (`/areas/logistics/trips`)
-- ❌ **Modal de programación** de viajes desde solicitudes
-- ❌ **Asignación de conductores** y vehículos
-- ❌ **Seguimiento de estados** (SCHEDULED, LOADING, IN_TRANSIT, DELIVERED, COMPLETED, INVOICED)
-- ❌ **APIs completas** (GET, POST, PUT, DELETE)
-- ❌ **Filtros y búsqueda** funcionales
-- ❌ **Estadísticas en tiempo real**
-- ❌ **Navegación integrada**
-
-### **2. Gestión de Evidencias de Viajes (0% Completo)**
-- ❌ **Modal de carga de evidencias** fotográficas
-- ❌ **Tipos de evidencias** (WAYBILL, LOADING, UNLOADING, ODOMETER, SCALE, OTHER)
-- ❌ **APIs de evidencias** (GET, POST, PUT, DELETE)
-- ❌ **Visualización de imágenes** en la interfaz
-- ❌ **Validaciones de archivos**
+### **1. Gestión de Evidencias de Viajes (50% Completo)**
+- ✅ **APIs de evidencias** (GET, POST, DELETE) implementadas
+- ✅ **Modelo TripEvidence** simplificado (sin EvidenceType enum)
+- ✅ **Visualización de evidencias** en ViewTripModal
+- ✅ **Eliminación de evidencias** funcional
+- ❌ **Componente de carga de evidencias** (pendiente de Uploadthing)
+- ❌ **API de upload de archivos** (pendiente de Uploadthing)
+- ❌ **Validaciones de archivos** (pendiente)
 
 ### **3. Gestión de Anticipos (0% Completo)**
 - ❌ **Página de gestión** (`/areas/logistics/advances`)
@@ -198,23 +196,23 @@ Implementación completa del módulo de logística con gestión de clientes, pro
 
 ## 📊 **Estadísticas del Proyecto**
 
-### **Progreso General: 60% Completado**
-- ✅ **Base de datos**: 100% (18/18 modelos)
-- ✅ **APIs básicas**: 100% (6/6 módulos principales)
-- ✅ **Interfaces de usuario**: 60% (6/10 módulos)
+### **Progreso General: 70% Completado**
+- ✅ **Base de datos**: 100% (15/15 modelos - refactorizado)
+- ✅ **APIs básicas**: 100% (7/7 módulos principales)
+- ✅ **Interfaces de usuario**: 70% (7/10 módulos)
 - ✅ **Funcionalidades avanzadas**: 0% (0/4 módulos)
 
 ### **Módulos por Estado:**
-- ✅ **Completados**: 6 módulos
-- 🔄 **En progreso**: 0 módulos
-- ❌ **Pendientes**: 4 módulos principales + 4 funcionalidades avanzadas
+- ✅ **Completados**: 7 módulos (incluye Gestión de Viajes refactorizado)
+- 🔄 **En progreso**: 1 módulo (Evidencias - pendiente Uploadthing)
+- ❌ **Pendientes**: 3 módulos principales + 4 funcionalidades avanzadas
 
 ### **Archivos Creados/Modificados:**
-- 📁 **Páginas**: 6 nuevas páginas
-- 📁 **Modales**: 8 nuevos modales
-- 📁 **APIs**: 12 nuevas rutas de API
+- 📁 **Páginas**: 6 nuevas páginas (trip-requests eliminada)
+- 📁 **Modales**: 7 modales (CreateTripRequestModal eliminado)
+- 📁 **APIs**: 10 rutas de API (trip-requests eliminadas, trip-evidence agregadas)
 - 📁 **Configuración**: 1 archivo de configuración actualizado
-- 📁 **Esquema**: 1 archivo de esquema completo
+- 📁 **Esquema**: 1 archivo de esquema refactorizado
 
 ---
 
@@ -271,7 +269,7 @@ src/app/areas/logistics/
 ├── projects/page.tsx
 ├── materials/page.tsx
 ├── material-prices/page.tsx
-├── trip-requests/page.tsx
+├── trips/page.tsx (refactorizado)
 └── drivers/page.tsx
 ```
 
@@ -282,7 +280,9 @@ src/components/modals/
 ├── CreateProjectModal.tsx
 ├── CreateMaterialModal.tsx
 ├── CreateMaterialPriceModal.tsx
-├── CreateTripRequestModal.tsx
+├── CreateTripModal.tsx (refactorizado)
+├── EditTripModal.tsx (refactorizado)
+├── ViewTripModal.tsx (refactorizado)
 ├── CreateDriverModal.tsx
 ├── EditDriverModal.tsx
 └── DriverDocumentsModal.tsx
@@ -302,9 +302,12 @@ src/app/api/
 │   └── [id]/route.ts
 ├── project-material-prices/
 │   └── route.ts
-├── trip-requests/
-│   ├── route.ts
-│   └── [id]/route.ts
+├── trips/
+│   ├── route.ts (refactorizado)
+│   └── [id]/route.ts (refactorizado)
+├── trip-evidence/
+│   ├── route.ts (nuevo)
+│   └── [id]/route.ts (nuevo)
 ├── drivers/
 │   ├── route.ts
 │   └── [id]/route.ts
@@ -355,8 +358,26 @@ npm run build
 
 ---
 
+## 🔄 **Cambios Recientes - Refactorización del Modelo Trip**
+
+### **Refactorización Completa (Diciembre 2024)**
+- ✅ **Eliminado modelo TripRequest**: Consolidado en Trip
+- ✅ **Nuevo modelo Trip simplificado**: Incluye todos los campos necesarios
+- ✅ **Campos nuevos**: materialId, projectId, date, quantity, measure (METROS_CUBICOS/TONELADAS), salePrice, outsourcedPrice, isApproved, approvedAt
+- ✅ **Sistema de aprobación**: Reemplaza el sistema de estados anterior
+- ✅ **TripEvidence simplificado**: Eliminado EvidenceType enum
+- ✅ **APIs refactorizadas**: Todos los endpoints actualizados
+- ✅ **Frontend actualizado**: Modales y páginas refactorizadas
+- ✅ **Navegación actualizada**: Eliminada ruta trip-requests
+
+### **Pendiente de Integración:**
+- ⏳ **Uploadthing**: Configuración de almacenamiento de archivos para evidencias
+- ⏳ **Componente TripEvidenceUpload**: UI para carga de archivos
+
+---
+
 *Este documento se actualiza automáticamente con cada implementación completada.*
 
-**Última actualización**: $(date)
-**Versión**: 1.0.0
-**Estado**: 60% Completado
+**Última actualización**: Diciembre 2024
+**Versión**: 2.0.0
+**Estado**: 70% Completado

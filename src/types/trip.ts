@@ -1,125 +1,151 @@
 // Trip domain types following TypeScript/React naming conventions
 
-export enum TripStatus {
-  DRAFT = 'draft',
-  SUBMITTED = 'submitted',
-  UNDER_REVIEW = 'under_review',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  PAID = 'paid'
+export enum MeasureType {
+  METROS_CUBICOS = 'METROS_CUBICOS',
+  TONELADAS = 'TONELADAS'
 }
 
-export enum MaterialType {
-  CONSTRUCTION_MATERIALS = 'construction_materials',
-  INDUSTRIAL_MATERIALS = 'industrial_materials',
-  MINING_MATERIALS = 'mining_materials',
-  AGRICULTURAL_MATERIALS = 'agricultural_materials',
-  OTHER = 'other'
-}
-
-export enum VehicleType {
-  TRUCK = 'truck',
-  TRAILER = 'trailer',
-  DUMP_TRUCK = 'dump_truck',
-  TANKER = 'tanker',
-  FLATBED = 'flatbed'
-}
-
-export interface TripLocation {
-  address: string
-  city: string
-  department: string
-  coordinates?: {
-    latitude: number
-    longitude: number
+export interface TripEvidence {
+  id: string
+  tripId: string
+  photoUrl: string
+  description?: string
+  latitude?: number
+  longitude?: number
+  dateTime: Date
+  uploadedByUserId: string
+  createdAt: Date
+  updatedAt: Date
+  uploadedByUser?: {
+    id: string
+    name: string
+    email: string
   }
 }
 
-export interface TripData {
+export interface Trip {
   id: string
-  providerId: string
-  tripNumber: string
-  status: TripStatus
-  materialType: MaterialType
-  materialDescription: string
+  materialId: string
+  projectId: string
+  date: Date
+  driverId: string
+  vehicleId: string
+  incomingReceiptNumber?: string
+  outcomingReceiptNumber?: string
   quantity: number
-  unit: string
-  vehicleType: VehicleType
-  vehiclePlate: string
-  driverName: string
-  driverLicense: string
-  origin: TripLocation
-  destination: TripLocation
-  scheduledDate: Date
-  completedDate?: Date
-  distance: number
-  rate: number
-  totalAmount: number
+  measure: MeasureType
+  salePrice: number
+  outsourcedPrice: number
+  invoiceId?: string
+  isApproved: boolean
+  approvedAt?: Date
+  observation?: string
   createdAt: Date
   updatedAt: Date
-  notes?: string
-  attachments?: TripAttachment[]
+  createdBy: string
+  updatedBy?: string
+  material?: {
+    id: string
+    name: string
+    type: string
+    unitOfMeasure: string
+  }
+  project?: {
+    id: string
+    name: string
+    address?: string
+    client?: {
+      id: string
+      name: string
+      identification: string
+    }
+  }
+  driver?: {
+    id: string
+    name: string
+    identification: string
+    license: string
+  }
+  vehicle?: {
+    id: string
+    plate: string
+    brand: string
+    model: string
+    capacityTons?: number
+    capacityM3?: number
+  }
+  invoice?: {
+    id: string
+    invoiceNumber: string
+  }
+  creator?: {
+    id: string
+    name: string
+    email: string
+  }
+  updater?: {
+    id: string
+    name: string
+    email: string
+  }
+  evidences?: TripEvidence[]
 }
 
-export interface TripAttachment {
-  id: string
-  fileName: string
-  fileType: string
-  fileSize: number
-  uploadedAt: Date
-  url: string
+export interface CreateTripRequest {
+  materialId: string
+  projectId: string
+  date: string
+  driverId: string
+  vehicleId: string
+  incomingReceiptNumber?: string
+  outcomingReceiptNumber?: string
+  quantity: number
+  measure: MeasureType
+  salePrice?: number
+  outsourcedPrice?: number
+  invoiceId?: string
+  observation?: string
+}
+
+export interface UpdateTripRequest {
+  materialId?: string
+  projectId?: string
+  date?: string
+  driverId?: string
+  vehicleId?: string
+  incomingReceiptNumber?: string
+  outcomingReceiptNumber?: string
+  quantity?: number
+  measure?: MeasureType
+  salePrice?: number
+  outsourcedPrice?: number
+  invoiceId?: string
+  isApproved?: boolean
+  observation?: string
+}
+
+export interface CreateTripEvidenceRequest {
+  tripId: string
+  photoUrl: string
   description?: string
-}
-
-export interface TripSummary {
-  totalTrips: number
-  pendingTrips: number
-  approvedTrips: number
-  rejectedTrips: number
-  totalRevenue: number
-  averageRate: number
+  latitude?: number
+  longitude?: number
+  dateTime: string
 }
 
 export interface TripFilter {
-  status?: TripStatus[]
-  materialType?: MaterialType[]
-  dateFrom?: Date
-  dateTo?: Date
-  vehicleType?: VehicleType[]
-  amountMin?: number
-  amountMax?: number
+  search?: string
+  isApproved?: boolean
+  projectId?: string
+  driverId?: string
+  materialId?: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 export interface TripListResponse {
-  trips: TripData[]
+  trips: Trip[]
   totalCount: number
   hasNextPage: boolean
   hasPreviousPage: boolean
-}
-
-// API request/response types
-export interface CreateTripRequest {
-  materialType: MaterialType
-  materialDescription: string
-  quantity: number
-  unit: string
-  vehicleType: VehicleType
-  vehiclePlate: string
-  driverName: string
-  driverLicense: string
-  origin: TripLocation
-  destination: TripLocation
-  scheduledDate: Date
-  notes?: string
-}
-
-export interface UpdateTripRequest extends Partial<CreateTripRequest> {
-  tripId: string
-}
-
-export interface UpdateTripStatusRequest {
-  tripId: string
-  status: TripStatus
-  completedDate?: Date
-  notes?: string
 }

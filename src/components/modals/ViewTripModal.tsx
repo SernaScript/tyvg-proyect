@@ -11,103 +11,17 @@ import {
   User, 
   MapPin, 
   Calendar, 
-  Clock, 
   Package, 
   FileText, 
-  Weight,
   AlertCircle,
   CheckCircle,
   DollarSign,
   Camera,
-  History
+  History,
+  Scale,
+  Receipt
 } from 'lucide-react'
-
-interface Trip {
-  id: string
-  waybillNumber?: string
-  scheduledDate: Date
-  actualStartDate?: Date
-  actualEndDate?: Date
-  status: string
-  certifiedWeight?: number
-  observations?: string
-  createdAt: Date
-  updatedAt: Date
-  tripRequest: {
-    id: string
-    priority: string
-    project: {
-      id: string
-      name: string
-      client: {
-        id: string
-        name: string
-        identification: string
-      }
-    }
-    materials: Array<{
-      id: string
-      quantity: number
-      material: {
-        id: string
-        name: string
-        type: string
-        unitOfMeasure: string
-      }
-    }>
-  }
-  driver: {
-    id: string
-    name: string
-    identification: string
-    license: string
-    phone?: string
-    email?: string
-  }
-  vehicle: {
-    id: string
-    plate: string
-    brand: string
-    model: string
-    capacityTons: number
-    capacityM3: number
-    ownershipType: string
-  }
-  materials?: Array<{
-    id: string
-    quantity: number
-    material: {
-      id: string
-      name: string
-      type: string
-      unitOfMeasure: string
-    }
-  }>
-  evidences?: Array<{
-    id: string
-    type: string
-    fileUrl?: string
-    description?: string
-    createdAt: Date
-  }>
-  expenses?: Array<{
-    id: string
-    type: string
-    amount: number
-    description?: string
-    createdAt: Date
-  }>
-  audits?: Array<{
-    id: string
-    action: string
-    details?: string
-    createdAt: Date
-    user: {
-      id: string
-      name: string
-    }
-  }>
-}
+import { Trip, MeasureType } from '@/types/trip'
 
 interface ViewTripModalProps {
   isOpen: boolean
@@ -118,10 +32,12 @@ interface ViewTripModalProps {
 export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
   const [trip, setTrip] = useState<Trip | null>(null)
   const [loading, setLoading] = useState(false)
+  const [evidences, setEvidences] = useState<any[]>([])
 
   useEffect(() => {
     if (isOpen && tripId) {
       fetchTrip()
+      fetchEvidences()
     }
   }, [isOpen, tripId])
 
@@ -142,7 +58,27 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
     }
   }
 
+  const fetchEvidences = async () => {
+    try {
+      const response = await fetch(`/api/trip-evidence?tripId=${tripId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setEvidences(data)
+      }
+    } catch (error) {
+      console.error('Error fetching evidences:', error)
+    }
+  }
+
   const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const formatDateTime = (date: Date | string) => {
     return new Date(date).toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
@@ -152,47 +88,46 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
     })
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED': return 'bg-blue-100 text-blue-800'
-      case 'LOADING': return 'bg-yellow-100 text-yellow-800'
-      case 'IN_TRANSIT': return 'bg-orange-100 text-orange-800'
-      case 'DELIVERED': return 'bg-green-100 text-green-800'
-      case 'COMPLETED': return 'bg-emerald-100 text-emerald-800'
-      case 'INVOICED': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const getMeasureText = (measure: MeasureType) => {
+    switch (measure) {
+      case MeasureType.METROS_CUBICOS:
+        return 'Metros Cúbicos (m³)'
+      case MeasureType.TONELADAS:
+        return 'Toneladas (T)'
+      default:
+        return measure
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED': return 'Programado'
-      case 'LOADING': return 'Cargando'
-      case 'IN_TRANSIT': return 'En Tránsito'
-      case 'DELIVERED': return 'Entregado'
-      case 'COMPLETED': return 'Completado'
-      case 'INVOICED': return 'Facturado'
-      default: return status
+  const handleDeleteEvidence = async (evidenceId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta evidencia?')) {
+      return
     }
-  }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'LOW': return 'bg-green-100 text-green-800'
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800'
-      case 'HIGH': return 'bg-orange-100 text-orange-800'
-      case 'URGENT': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+    try {
+      const response = await fetch(`/api/trip-evidence/${evidenceId}`, {
+        method: 'DELETE'
+      })
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'LOW': return 'Baja'
-      case 'MEDIUM': return 'Media'
-      case 'HIGH': return 'Alta'
-      case 'URGENT': return 'Urgente'
-      default: return priority
+      if (response.ok) {
+        fetchEvidences()
+        if (trip) {
+          fetchTrip() // Refresh trip to update evidences count
+        }
+      } else {
+        alert('Error al eliminar la evidencia')
+      }
+    } catch (error) {
+      console.error('Error deleting evidence:', error)
+      alert('Error de conexión')
     }
   }
 
@@ -244,7 +179,7 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
               Detalles del Viaje
             </CardTitle>
             <CardDescription>
-              {trip.waybillNumber ? `Guía: ${trip.waybillNumber}` : 'Sin número de guía'}
+              {trip.incomingReceiptNumber ? `Recibo Entrada: ${trip.incomingReceiptNumber}` : 'Sin número de recibo'}
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -253,14 +188,22 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Estado y Prioridad */}
+          {/* Approval Status */}
           <div className="flex items-center gap-4">
-            <Badge className={`${getStatusColor(trip.status)} text-sm px-3 py-1`}>
-              {getStatusText(trip.status)}
-            </Badge>
-            <Badge className={`${getPriorityColor(trip.tripRequest.priority)} text-sm px-3 py-1`}>
-              {getPriorityText(trip.tripRequest.priority)}
-            </Badge>
+            {trip.isApproved ? (
+              <Badge className="bg-green-100 text-green-800 text-sm px-3 py-1">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Aprobado
+                {trip.approvedAt && (
+                  <span className="ml-2">• {formatDateTime(trip.approvedAt)}</span>
+                )}
+              </Badge>
+            ) : (
+              <Badge className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Pendiente de Aprobación
+              </Badge>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -275,14 +218,16 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Proyecto</p>
-                  <p className="font-semibold">{trip.tripRequest.project.name}</p>
+                  <p className="font-semibold">{trip.project?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Cliente</p>
-                  <p className="font-semibold">{trip.tripRequest.project.client.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    ID: {trip.tripRequest.project.client.identification}
-                  </p>
+                  <p className="font-semibold">{trip.project?.client?.name || 'N/A'}</p>
+                  {trip.project?.client?.identification && (
+                    <p className="text-sm text-muted-foreground">
+                      ID: {trip.project.client.identification}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -298,110 +243,132 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Conductor</p>
-                  <p className="font-semibold">{trip.driver.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Licencia: {trip.driver.license}
-                  </p>
-                  {trip.driver.phone && (
+                  <p className="font-semibold">{trip.driver?.name || 'N/A'}</p>
+                  {trip.driver?.license && (
                     <p className="text-sm text-muted-foreground">
-                      Tel: {trip.driver.phone}
+                      Licencia: {trip.driver.license}
                     </p>
                   )}
                 </div>
                 <Separator />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Vehículo</p>
-                  <p className="font-semibold">{trip.vehicle.plate}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {trip.vehicle.brand} {trip.vehicle.model}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Capacidad: {trip.vehicle.capacityTons} ton / {trip.vehicle.capacityM3} m³
-                  </p>
+                  <p className="font-semibold">{trip.vehicle?.plate || 'N/A'}</p>
+                  {trip.vehicle && (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        {trip.vehicle.brand} {trip.vehicle.model}
+                      </p>
+                      {(trip.vehicle.capacityTons || trip.vehicle.capacityM3) && (
+                        <p className="text-sm text-muted-foreground">
+                          Capacidad: {trip.vehicle.capacityTons ? `${trip.vehicle.capacityTons}T` : ''}
+                          {trip.vehicle.capacityTons && trip.vehicle.capacityM3 && ' / '}
+                          {trip.vehicle.capacityM3 ? `${trip.vehicle.capacityM3}m³` : ''}
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Fechas y Horarios */}
+          {/* Material y Cantidad */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Fechas y Horarios
+                <Package className="h-4 w-4" />
+                Material y Cantidad
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Programado</p>
-                  <p className="font-semibold">{formatDate(trip.scheduledDate)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Material</p>
+                  <p className="font-semibold">{trip.material?.name || 'N/A'}</p>
+                  {trip.material && (
+                    <p className="text-sm text-muted-foreground">
+                      {trip.material.type} • {trip.material.unitOfMeasure}
+                    </p>
+                  )}
                 </div>
-                {trip.actualStartDate && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Inicio Real</p>
-                    <p className="font-semibold">{formatDate(trip.actualStartDate)}</p>
-                  </div>
-                )}
-                {trip.actualEndDate && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Finalización Real</p>
-                    <p className="font-semibold">{formatDate(trip.actualEndDate)}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Cantidad</p>
+                  <p className="font-semibold text-lg">{trip.quantity}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Medida</p>
+                  <p className="font-semibold">{getMeasureText(trip.measure)}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Materiales */}
+          {/* Fecha */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Materiales a Transportar
+                <Calendar className="h-4 w-4" />
+                Fecha del Viaje
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {trip.tripRequest.materials && trip.tripRequest.materials.length > 0 ? (
-                <div className="space-y-3">
-                  {trip.tripRequest.materials.map((material) => (
-                    <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-semibold">{material.material.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {material.material.type} • {material.material.unitOfMeasure}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{material.quantity}</p>
-                        <p className="text-sm text-muted-foreground">{material.material.unitOfMeasure}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No hay materiales asignados</p>
-              )}
+              <p className="font-semibold text-lg">{formatDate(trip.date)}</p>
             </CardContent>
           </Card>
 
-          {/* Peso Certificado */}
-          {trip.certifiedWeight && (
+          {/* Recibos */}
+          {(trip.incomingReceiptNumber || trip.outcomingReceiptNumber) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Weight className="h-4 w-4" />
-                  Peso Certificado
+                  <Receipt className="h-4 w-4" />
+                  Números de Recibo
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{trip.certifiedWeight} toneladas</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {trip.incomingReceiptNumber && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Recibo de Entrada</p>
+                      <p className="font-semibold">{trip.incomingReceiptNumber}</p>
+                    </div>
+                  )}
+                  {trip.outcomingReceiptNumber && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Recibo de Salida</p>
+                      <p className="font-semibold">{trip.outcomingReceiptNumber}</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Precios */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Precios
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Precio de Venta</p>
+                  <p className="font-semibold text-lg">{formatCurrency(trip.salePrice)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Precio Tercerizado</p>
+                  <p className="font-semibold text-lg">{formatCurrency(trip.outsourcedPrice)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Observaciones */}
-          {trip.observations && (
+          {trip.observation && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -410,78 +377,69 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{trip.observations}</p>
+                <p className="text-sm whitespace-pre-wrap">{trip.observation}</p>
               </CardContent>
             </Card>
           )}
 
           {/* Evidencias */}
-          {trip.evidences && trip.evidences.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Evidencias ({trip.evidences.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Evidencias ({evidences.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {evidences.length > 0 ? (
                 <div className="space-y-3">
-                  {trip.evidences.map((evidence) => (
+                  {evidences.map((evidence) => (
                     <div key={evidence.id} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">{evidence.type}</p>
+                        <div className="flex-1">
                           {evidence.description && (
-                            <p className="text-sm text-muted-foreground">{evidence.description}</p>
+                            <p className="font-semibold mb-1">{evidence.description}</p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {formatDate(evidence.createdAt)}
+                            {formatDateTime(evidence.dateTime)}
+                            {evidence.uploadedByUser && (
+                              <span> • Por: {evidence.uploadedByUser.name}</span>
+                            )}
                           </p>
+                          {evidence.latitude && evidence.longitude && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              📍 {evidence.latitude}, {evidence.longitude}
+                            </p>
+                          )}
                         </div>
-                        {evidence.fileUrl && (
-                          <Button size="sm" variant="outline" asChild>
-                            <a href={evidence.fileUrl} target="_blank" rel="noopener noreferrer">
-                              Ver Archivo
-                            </a>
+                        <div className="flex gap-2">
+                          {evidence.photoUrl && (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={evidence.photoUrl} target="_blank" rel="noopener noreferrer">
+                                Ver Foto
+                              </a>
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleDeleteEvidence(evidence.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            Eliminar
                           </Button>
-                        )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Gastos */}
-          {trip.expenses && trip.expenses.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Gastos ({trip.expenses.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {trip.expenses.map((expense) => (
-                    <div key={expense.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-semibold">{expense.type}</p>
-                        {expense.description && (
-                          <p className="text-sm text-muted-foreground">{expense.description}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(expense.createdAt)}
-                        </p>
-                      </div>
-                      <p className="font-semibold text-lg">${expense.amount.toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  No hay evidencias registradas para este viaje
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Historial de Auditoría */}
           {trip.audits && trip.audits.length > 0 && (
@@ -499,11 +457,8 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold">{audit.action}</p>
-                          {audit.details && (
-                            <p className="text-sm text-muted-foreground">{audit.details}</p>
-                          )}
                           <p className="text-xs text-muted-foreground">
-                            Por: {audit.user.name} • {formatDate(audit.createdAt)}
+                            Por: {audit.user?.name || 'N/A'} • {formatDateTime(audit.createdAt)}
                           </p>
                         </div>
                       </div>
@@ -513,6 +468,40 @@ export function ViewTripModal({ isOpen, onClose, tripId }: ViewTripModalProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Información de Creación */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Información del Sistema
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Creado por</p>
+                  <p className="font-medium">{trip.creator?.name || 'N/A'}</p>
+                  {trip.createdAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDateTime(trip.createdAt)}
+                    </p>
+                  )}
+                </div>
+                {trip.updater && (
+                  <div>
+                    <p className="text-muted-foreground">Última actualización por</p>
+                    <p className="font-medium">{trip.updater.name}</p>
+                    {trip.updatedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDateTime(trip.updatedAt)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
     </div>

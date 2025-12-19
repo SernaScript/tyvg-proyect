@@ -27,6 +27,7 @@ interface AreaLayoutProps {
   description?: string
   actions?: ReactNode
   className?: string
+  hideSidebar?: boolean
 }
 
 export function AreaLayout({
@@ -36,7 +37,8 @@ export function AreaLayout({
   title,
   description,
   actions,
-  className
+  className,
+  hideSidebar = false
 }: AreaLayoutProps) {
   const pathname = usePathname()
   const area = getAreaById(areaId)
@@ -150,14 +152,19 @@ export function AreaLayout({
 
       {/* Sidebar and Content */}
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className={cn(
+          "grid gap-6",
+          hideSidebar ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-4"
+        )}>
           {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <AreaSidebar area={area} currentPath={pathname} />
-          </div>
+          {!hideSidebar && (
+            <div className="lg:col-span-1">
+              <AreaSidebar area={area} currentPath={pathname} />
+            </div>
+          )}
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className={hideSidebar ? "col-span-1" : "lg:col-span-3"}>
             {children}
           </div>
         </div>

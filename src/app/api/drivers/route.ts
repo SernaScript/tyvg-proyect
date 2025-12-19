@@ -53,18 +53,18 @@ export async function GET(request: NextRequest) {
         trips: {
           select: {
             id: true,
-            status: true,
-            scheduledDate: true,
-            tripRequest: {
+            date: true,
+            isApproved: true,
+            project: {
               select: {
                 id: true,
-                project: {
-                  select: {
-                    name: true
-                  }
-                }
+                name: true
               }
             }
+          },
+          take: 5,
+          orderBy: {
+            date: 'desc'
           }
         },
         advances: {

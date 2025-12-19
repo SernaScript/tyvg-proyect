@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { authenticateRequest } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -9,29 +10,21 @@ export async function GET(
     const trip = await prisma.trip.findUnique({
       where: { id: params.id },
       include: {
-        tripRequest: {
+        material: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            unitOfMeasure: true
+          }
+        },
+        project: {
           include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    identification: true
-                  }
-                }
-              }
-            },
-            materials: {
-              include: {
-                material: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                    unitOfMeasure: true
-                  }
-                }
+            client: {
+              select: {
+                id: true,
+                name: true,
+                identification: true
               }
             }
           }
@@ -42,8 +35,7 @@ export async function GET(
             name: true,
             identification: true,
             license: true,
-            phone: true,
-            email: true
+            phone: true
           }
         },
         vehicle: {
@@ -57,41 +49,54 @@ export async function GET(
             ownershipType: true
           }
         },
-        materials: {
-          include: {
-            material: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                unitOfMeasure: true
-              }
-            }
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true
+          }
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        updater: {
+          select: {
+            id: true,
+            name: true,
+            email: true
           }
         },
         evidences: {
           select: {
             id: true,
-            type: true,
-            fileUrl: true,
+            photoUrl: true,
             description: true,
-            createdAt: true
-          }
-        },
-        expenses: {
-          select: {
-            id: true,
-            type: true,
-            amount: true,
-            description: true,
-            createdAt: true
+            latitude: true,
+            longitude: true,
+            dateTime: true,
+            createdAt: true,
+            uploadedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         },
         audits: {
           select: {
             id: true,
             action: true,
-            details: true,
+            previousData: true,
+            newData: true,
+            timestamp: true,
             createdAt: true,
             user: {
               select: {
@@ -129,20 +134,34 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Authenticate user
+    const currentUser = await authenticateRequest(request)
+    if (!currentUser) {
+      return NextResponse.json(
+        { message: 'No autenticado' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const {
+      materialId,
+      projectId,
+      date,
       driverId,
       vehicleId,
-      waybillNumber,
-      scheduledDate,
-      actualStartDate,
-      actualEndDate,
-      status,
-      certifiedWeight,
-      observations
+      incomingReceiptNumber,
+      outcomingReceiptNumber,
+      quantity,
+      measure,
+      salePrice,
+      outsourcedPrice,
+      invoiceId,
+      isApproved,
+      observation
     } = body
 
-    // Verificar que el viaje existe
+    // Verify that the trip exists
     const existingTrip = await prisma.trip.findUnique({
       where: { id: params.id }
     })
@@ -154,130 +173,162 @@ export async function PUT(
       )
     }
 
-    // Validaciones
-    if (driverId) {
-      const driver = await prisma.driver.findUnique({
-        where: { id: driverId },
-        include: { user: true }
-      })
+    // Prepare update data
+    const updateData: any = {}
 
+    if (materialId !== undefined) {
+      const material = await prisma.material.findUnique({
+        where: { id: materialId }
+      })
+      if (!material || !material.isActive) {
+        return NextResponse.json(
+          { message: 'El material no existe o no está activo' },
+          { status: 400 }
+        )
+      }
+      updateData.materialId = materialId
+    }
+
+    if (projectId !== undefined) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId }
+      })
+      if (!project || !project.isActive) {
+        return NextResponse.json(
+          { message: 'El proyecto no existe o no está activo' },
+          { status: 400 }
+        )
+      }
+      updateData.projectId = projectId
+    }
+
+    if (date !== undefined) {
+      const tripDate = new Date(date)
+      if (isNaN(tripDate.getTime())) {
+        return NextResponse.json(
+          { message: 'La fecha es inválida' },
+          { status: 400 }
+        )
+      }
+      updateData.date = tripDate
+    }
+
+    if (driverId !== undefined) {
+      const driver = await prisma.driver.findUnique({
+        where: { id: driverId }
+      })
       if (!driver || !driver.isActive) {
         return NextResponse.json(
           { message: 'El conductor no existe o no está activo' },
           { status: 400 }
         )
       }
+      updateData.driverId = driverId
     }
 
-    if (vehicleId) {
+    if (vehicleId !== undefined) {
       const vehicle = await prisma.vehicle.findUnique({
         where: { id: vehicleId }
       })
-
       if (!vehicle || !vehicle.isActive) {
         return NextResponse.json(
           { message: 'El vehículo no existe o no está activo' },
           { status: 400 }
         )
       }
+      updateData.vehicleId = vehicleId
     }
 
-    if (scheduledDate) {
-      const scheduledDateTime = new Date(scheduledDate)
-      if (scheduledDateTime < new Date()) {
+    if (incomingReceiptNumber !== undefined) {
+      updateData.incomingReceiptNumber = incomingReceiptNumber || null
+    }
+
+    if (outcomingReceiptNumber !== undefined) {
+      updateData.outcomingReceiptNumber = outcomingReceiptNumber || null
+    }
+
+    if (quantity !== undefined) {
+      if (parseFloat(quantity) <= 0) {
         return NextResponse.json(
-          { message: 'La fecha programada no puede ser en el pasado' },
+          { message: 'La cantidad debe ser mayor a cero' },
           { status: 400 }
         )
       }
+      updateData.quantity = parseFloat(quantity)
     }
 
-    if (actualStartDate) {
-      const startDateTime = new Date(actualStartDate)
-      if (startDateTime > new Date()) {
+    if (measure !== undefined) {
+      if (!['METROS_CUBICOS', 'TONELADAS'].includes(measure)) {
         return NextResponse.json(
-          { message: 'La fecha de inicio no puede ser en el futuro' },
+          { message: 'La medida debe ser METROS_CUBICOS o TONELADAS' },
           { status: 400 }
         )
       }
+      updateData.measure = measure
     }
 
-    if (actualEndDate) {
-      const endDateTime = new Date(actualEndDate)
-      if (endDateTime > new Date()) {
-        return NextResponse.json(
-          { message: 'La fecha de finalización no puede ser en el futuro' },
-          { status: 400 }
-        )
+    if (salePrice !== undefined) {
+      updateData.salePrice = salePrice ? parseFloat(salePrice) : 0
+    }
+
+    if (outsourcedPrice !== undefined) {
+      updateData.outsourcedPrice = outsourcedPrice ? parseFloat(outsourcedPrice) : 0
+    }
+
+    if (invoiceId !== undefined) {
+      if (invoiceId) {
+        const invoice = await prisma.invoice.findUnique({
+          where: { id: invoiceId }
+        })
+        if (!invoice) {
+          return NextResponse.json(
+            { message: 'La factura no existe' },
+            { status: 400 }
+          )
+        }
+      }
+      updateData.invoiceId = invoiceId || null
+    }
+
+    // Handle approval
+    if (isApproved !== undefined) {
+      updateData.isApproved = isApproved
+      if (isApproved && !existingTrip.isApproved) {
+        // Trip is being approved
+        updateData.approvedAt = new Date()
+      } else if (!isApproved && existingTrip.isApproved) {
+        // Trip is being unapproved
+        updateData.approvedAt = null
       }
     }
 
-    if (actualStartDate && actualEndDate) {
-      const startDateTime = new Date(actualStartDate)
-      const endDateTime = new Date(actualEndDate)
-      if (endDateTime < startDateTime) {
-        return NextResponse.json(
-          { message: 'La fecha de finalización no puede ser anterior a la fecha de inicio' },
-          { status: 400 }
-        )
-      }
+    if (observation !== undefined) {
+      updateData.observation = observation || null
     }
 
-    if (certifiedWeight && (isNaN(certifiedWeight) || certifiedWeight <= 0)) {
-      return NextResponse.json(
-        { message: 'El peso certificado debe ser mayor a 0' },
-        { status: 400 }
-      )
-    }
+    // Always update updatedBy
+    updateData.updatedBy = currentUser.id
 
-    if (status && !['SCHEDULED', 'LOADING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'INVOICED'].includes(status)) {
-      return NextResponse.json(
-        { message: 'Estado de viaje inválido' },
-        { status: 400 }
-      )
-    }
-
-    // Preparar datos para actualización
-    const updateData: any = {}
-    
-    if (driverId !== undefined) updateData.driverId = driverId
-    if (vehicleId !== undefined) updateData.vehicleId = vehicleId
-    if (waybillNumber !== undefined) updateData.waybillNumber = waybillNumber
-    if (scheduledDate !== undefined) updateData.scheduledDate = new Date(scheduledDate)
-    if (actualStartDate !== undefined) updateData.actualStartDate = actualStartDate ? new Date(actualStartDate) : null
-    if (actualEndDate !== undefined) updateData.actualEndDate = actualEndDate ? new Date(actualEndDate) : null
-    if (status !== undefined) updateData.status = status
-    if (certifiedWeight !== undefined) updateData.certifiedWeight = certifiedWeight ? parseFloat(certifiedWeight) : null
-    if (observations !== undefined) updateData.observations = observations
-
-    // Actualizar el viaje
+    // Update the trip
     const trip = await prisma.trip.update({
       where: { id: params.id },
       data: updateData,
       include: {
-        tripRequest: {
+        material: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            unitOfMeasure: true
+          }
+        },
+        project: {
           include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    identification: true
-                  }
-                }
-              }
-            },
-            materials: {
-              include: {
-                material: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                    unitOfMeasure: true
-                  }
-                }
+            client: {
+              select: {
+                id: true,
+                name: true,
+                identification: true
               }
             }
           }
@@ -300,34 +351,36 @@ export async function PUT(
             capacityM3: true
           }
         },
-        materials: {
-          include: {
-            material: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                unitOfMeasure: true
-              }
-            }
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true
+          }
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        updater: {
+          select: {
+            id: true,
+            name: true,
+            email: true
           }
         },
         evidences: {
           select: {
             id: true,
-            type: true,
-            fileUrl: true,
+            photoUrl: true,
             description: true,
+            dateTime: true,
             createdAt: true
-          }
-        },
-        expenses: {
-          select: {
-            id: true,
-            type: true,
-            amount: true,
-            description: true,
-            createdAt: true
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         }
       }
@@ -348,14 +401,20 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verificar que el viaje existe
+    // Authenticate user
+    const currentUser = await authenticateRequest(request)
+    if (!currentUser) {
+      return NextResponse.json(
+        { message: 'No autenticado' },
+        { status: 401 }
+      )
+    }
+
+    // Verify that the trip exists
     const existingTrip = await prisma.trip.findUnique({
       where: { id: params.id },
       include: {
-        tripRequest: true,
         evidences: true,
-        expenses: true,
-        materials: true,
         audits: true
       }
     })
@@ -367,23 +426,9 @@ export async function DELETE(
       )
     }
 
-    // Verificar que el viaje se puede eliminar (solo si está programado)
-    if (existingTrip.status !== 'SCHEDULED') {
-      return NextResponse.json(
-        { message: 'Solo se pueden eliminar viajes programados' },
-        { status: 400 }
-      )
-    }
-
-    // Eliminar el viaje (esto eliminará automáticamente las relaciones debido a onDelete: Cascade)
+    // Delete the trip (this will automatically delete related records due to onDelete: Cascade)
     await prisma.trip.delete({
       where: { id: params.id }
-    })
-
-    // Actualizar el estado de la solicitud de viaje a PENDING
-    await prisma.tripRequest.update({
-      where: { id: existingTrip.tripRequestId },
-      data: { status: 'PENDING' }
     })
 
     return NextResponse.json({ message: 'Viaje eliminado exitosamente' })

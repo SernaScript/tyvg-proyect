@@ -190,14 +190,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
         status: ModuleStatus.ACTIVE
       },
       {
-        id: "trip-requests",
-        name: "Solicitudes de Viaje",
-        description: "Gestión de solicitudes de transporte de materiales",
-        icon: ClipboardList,
-        href: "/areas/logistics/trip-requests",
-        status: ModuleStatus.ACTIVE
-      },
-      {
         id: "trips",
         name: "Gestión de Viajes",
         description: "Programación y seguimiento de viajes de transporte",
