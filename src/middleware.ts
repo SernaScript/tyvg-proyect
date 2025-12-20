@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server'
 import {
   getTokenFromRequest,
   verifyToken
-} from '@/lib/auth'
+} from '@/lib/auth-middleware'
 import { PermissionAction, RoleName } from '@/types/auth'
 
 // Public routes that don't require authentication

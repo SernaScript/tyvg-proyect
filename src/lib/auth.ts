@@ -189,50 +189,13 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   }
 }
 
-// Permission utilities
-export const hasPermission = (
-  userPermissions: Permission[],
-  resource: string,
-  action: PermissionAction
-): boolean => {
-  return userPermissions.some(
-    permission => 
-      permission.resource === resource && 
-      (permission.action === action || permission.action === PermissionAction.MANAGE)
-  )
-}
-
-export const canAccessArea = (userPermissions: Permission[], areaId: string): boolean => {
-  const areaConfig = AREA_PERMISSIONS_MAP[areaId]
-  if (!areaConfig) return false
-
-  return hasPermission(
-    userPermissions,
-    areaConfig.requiredPermission.resource,
-    areaConfig.requiredPermission.action
-  )
-}
-
-export const canAccessModule = (
-  userPermissions: Permission[],
-  areaId: string,
-  moduleId: string
-): boolean => {
-  const areaConfig = AREA_PERMISSIONS_MAP[areaId]
-  if (!areaConfig) return false
-
-  const moduleConfig = areaConfig.modules.find(m => m.moduleId === moduleId)
-  if (!moduleConfig) {
-    // If module not configured, check area permission
-    return canAccessArea(userPermissions, areaId)
-  }
-
-  return hasPermission(
-    userPermissions,
-    moduleConfig.requiredPermission.resource,
-    moduleConfig.requiredPermission.action
-  )
-}
+// Re-export permission utilities from auth-utils for server-side compatibility
+// These functions don't use Prisma and are safe to use anywhere
+export { 
+  hasPermission, 
+  canAccessArea, 
+  canAccessModule 
+} from './auth-utils'
 
 // Route protection utilities
 export const getTokenFromRequest = (request: NextRequest): string | null => {

@@ -16,7 +16,7 @@ import {
   hasPermission, 
   canAccessArea, 
   canAccessModule 
-} from '@/lib/auth'
+} from '@/lib/auth-utils'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 

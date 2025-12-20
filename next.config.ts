@@ -54,6 +54,34 @@ const nextConfig: NextConfig = {
           },
         };
       }
+    } else {
+      // Excluir módulos de Node.js del bundle del cliente
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      };
+      
+      // Excluir pg y adaptadores de Prisma del bundle del cliente
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push({
+          'pg': 'commonjs pg',
+          '@prisma/adapter-pg': 'commonjs @prisma/adapter-pg',
+          '@prisma/client': 'commonjs @prisma/client',
+        });
+      } else {
+        config.externals = [
+          config.externals,
+          {
+            'pg': 'commonjs pg',
+            '@prisma/adapter-pg': 'commonjs @prisma/adapter-pg',
+            '@prisma/client': 'commonjs @prisma/client',
+          }
+        ];
+      }
     }
     return config;
   },
