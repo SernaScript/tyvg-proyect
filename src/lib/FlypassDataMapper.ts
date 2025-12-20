@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export interface FlypassExcelRow {
   Estado: string;
