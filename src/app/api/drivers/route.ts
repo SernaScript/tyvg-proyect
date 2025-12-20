@@ -208,22 +208,48 @@ export async function POST(request: NextRequest) {
     })
 
     // Enviar correo de activación al nuevo conductor/usuario
+    // NOTA DE SEGURIDAD: No enviamos la contraseña en texto plano por correo
+    // Generamos un token de reset para que el usuario establezca su contraseña
     let emailSent = false
     let emailError = null
 
     try {
-      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/login`
+      const { randomBytes } = await import('crypto')
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+      const loginUrl = `${baseUrl}/login`
+
+      // Generar token de reset para nuevo usuario
+      const token = randomBytes(32).toString('hex')
+      const expiresAt = new Date()
+      expiresAt.setHours(expiresAt.getHours() + 24) // Token válido por 24 horas para nuevos usuarios
+
+      // Intentar crear el token de reset
+      // Nota: Si el modelo no existe, esto fallará y se capturará en el catch
+      await (prisma as any).passwordResetToken.create({
+        data: {
+          userId: driver.user.id,
+          token,
+          expiresAt
+        }
+      })
+
+      const resetPasswordUrl = `${baseUrl}/reset-password/${token}`
 
       emailSent = await EmailService.sendUserActivationEmail({
         email: driver.user.email,
         name: driver.user.name,
-        password: password, // Usar la contraseña original, no la encriptada
+        // No enviamos la contraseña por seguridad
         roleName: driverRole.displayName || 'Conductor',
-        loginUrl
+        loginUrl,
+        resetPasswordUrl
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error enviando correo de activación:', error)
-      emailError = error instanceof Error ? error.message : 'Error desconocido'
+      if (error?.message?.includes('passwordResetToken') || error?.message?.includes('Cannot read properties')) {
+        emailError = 'Modelo PasswordResetToken no disponible. Ejecuta: npx prisma generate && npx prisma db push'
+      } else {
+        emailError = error instanceof Error ? error.message : 'Error desconocido'
+      }
     }
 
     return NextResponse.json({

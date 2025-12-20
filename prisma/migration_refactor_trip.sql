@@ -53,17 +53,26 @@ UPDATE "trips"
 SET "measure" = 'TONELADAS'::"MeasureType"
 WHERE "measure" IS NULL;
 
--- Step 6: Set default date from scheduledDate if exists
+-- Step 6: Set default date from scheduledDate if exists, or use current date
 UPDATE "trips"
-SET "date" = "scheduledDate"::DATE
-WHERE "date" IS NULL AND "scheduledDate" IS NOT NULL;
+SET "date" = COALESCE("scheduledDate"::DATE, CURRENT_DATE)
+WHERE "date" IS NULL;
 
--- Step 7: Set default createdBy (use first user or adjust as needed)
+-- Step 7: Set default quantity to 0 if null
 UPDATE "trips"
-SET "createdBy" = (SELECT "id" FROM "users" LIMIT 1)
+SET "quantity" = 0
+WHERE "quantity" IS NULL;
+
+-- Step 8: Set default createdBy (use first user or adjust as needed)
+-- This ensures all trips have a createdBy value
+UPDATE "trips"
+SET "createdBy" = COALESCE(
+  (SELECT "id" FROM "users" WHERE "isActive" = true ORDER BY "createdAt" ASC LIMIT 1),
+  (SELECT "id" FROM "users" ORDER BY "createdAt" ASC LIMIT 1)
+)
 WHERE "createdBy" IS NULL;
 
--- Step 8: Remove old columns from trips table
+-- Step 9: Remove old columns from trips table
 ALTER TABLE "trips"
   DROP COLUMN IF EXISTS "tripRequestId",
   DROP COLUMN IF EXISTS "waybillNumber",
@@ -74,18 +83,18 @@ ALTER TABLE "trips"
   DROP COLUMN IF EXISTS "certifiedWeight",
   DROP COLUMN IF EXISTS "observations";
 
--- Step 9: Remove old indexes
+-- Step 10: Remove old indexes
 DROP INDEX IF EXISTS "trips_status_scheduledDate_idx";
 DROP INDEX IF EXISTS "trips_driverId_status_idx";
 DROP INDEX IF EXISTS "trips_tripRequestId_idx";
 
--- Step 10: Add new indexes
+-- Step 11: Add new indexes
 CREATE INDEX IF NOT EXISTS "trips_projectId_date_idx" ON "trips"("projectId", "date");
 CREATE INDEX IF NOT EXISTS "trips_driverId_date_idx" ON "trips"("driverId", "date");
 CREATE INDEX IF NOT EXISTS "trips_materialId_idx" ON "trips"("materialId");
 CREATE INDEX IF NOT EXISTS "trips_isApproved_idx" ON "trips"("isApproved");
 
--- Step 11: Add foreign keys for new columns
+-- Step 12: Add foreign keys for new columns
 DO $$ 
 BEGIN
   -- Add foreign key for materialId
@@ -139,20 +148,66 @@ BEGIN
   END IF;
 END $$;
 
--- Step 12: Make required columns NOT NULL (only if all data is migrated)
--- Uncomment these lines after verifying all trips have the required data
--- ALTER TABLE "trips" ALTER COLUMN "materialId" SET NOT NULL;
--- ALTER TABLE "trips" ALTER COLUMN "projectId" SET NOT NULL;
--- ALTER TABLE "trips" ALTER COLUMN "date" SET NOT NULL;
--- ALTER TABLE "trips" ALTER COLUMN "quantity" SET NOT NULL;
--- ALTER TABLE "trips" ALTER COLUMN "measure" SET NOT NULL;
--- ALTER TABLE "trips" ALTER COLUMN "createdBy" SET NOT NULL;
+-- Step 13: Verify all required data exists before making columns NOT NULL
+-- Check for any NULL values in required fields
+DO $$
+DECLARE
+  null_material_count INTEGER;
+  null_project_count INTEGER;
+  null_date_count INTEGER;
+  null_quantity_count INTEGER;
+  null_measure_count INTEGER;
+  null_created_by_count INTEGER;
+BEGIN
+  -- Count NULL values in required fields
+  SELECT COUNT(*) INTO null_material_count FROM "trips" WHERE "materialId" IS NULL;
+  SELECT COUNT(*) INTO null_project_count FROM "trips" WHERE "projectId" IS NULL;
+  SELECT COUNT(*) INTO null_date_count FROM "trips" WHERE "date" IS NULL;
+  SELECT COUNT(*) INTO null_quantity_count FROM "trips" WHERE "quantity" IS NULL;
+  SELECT COUNT(*) INTO null_measure_count FROM "trips" WHERE "measure" IS NULL;
+  SELECT COUNT(*) INTO null_created_by_count FROM "trips" WHERE "createdBy" IS NULL;
 
--- Step 13: Remove evidenceType from trip_evidences
+  -- Raise an error if any required fields have NULL values
+  IF null_material_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL materialId. Please fix data before making column NOT NULL.', null_material_count;
+  END IF;
+
+  IF null_project_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL projectId. Please fix data before making column NOT NULL.', null_project_count;
+  END IF;
+
+  IF null_date_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL date. Please fix data before making column NOT NULL.', null_date_count;
+  END IF;
+
+  IF null_quantity_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL quantity. Please fix data before making column NOT NULL.', null_quantity_count;
+  END IF;
+
+  IF null_measure_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL measure. Please fix data before making column NOT NULL.', null_measure_count;
+  END IF;
+
+  IF null_created_by_count > 0 THEN
+    RAISE EXCEPTION 'Cannot proceed: % trips have NULL createdBy. Please fix data before making column NOT NULL.', null_created_by_count;
+  END IF;
+
+  -- All validations passed, make columns NOT NULL
+  ALTER TABLE "trips" ALTER COLUMN "materialId" SET NOT NULL;
+  ALTER TABLE "trips" ALTER COLUMN "projectId" SET NOT NULL;
+  ALTER TABLE "trips" ALTER COLUMN "date" SET NOT NULL;
+  ALTER TABLE "trips" ALTER COLUMN "quantity" SET NOT NULL;
+  ALTER TABLE "trips" ALTER COLUMN "measure" SET NOT NULL;
+  ALTER TABLE "trips" ALTER COLUMN "createdBy" SET NOT NULL;
+
+  RAISE NOTICE 'Successfully made all required columns NOT NULL';
+END $$;
+
+-- Step 14: Remove evidenceType from trip_evidences
 ALTER TABLE "trip_evidences"
   DROP COLUMN IF EXISTS "evidenceType";
 
--- Step 14: Drop old tables (WARNING: This will delete all data in these tables)
+-- Step 15: Drop old tables (WARNING: This will delete all data in these tables)
 -- Only run these if you are sure you don't need the data
 -- Review your data first before uncommenting these lines
 -- DROP TABLE IF EXISTS "trip_expenses" CASCADE;
@@ -160,7 +215,7 @@ ALTER TABLE "trip_evidences"
 -- DROP TABLE IF EXISTS "trip_request_materials" CASCADE;
 -- DROP TABLE IF EXISTS "trip_requests" CASCADE;
 
--- Step 15: Drop old enums (WARNING: This will fail if any tables still reference them)
+-- Step 16: Drop old enums (WARNING: This will fail if any tables still reference them)
 -- Only run these after dropping the tables above
 -- DROP TYPE IF EXISTS "TripRequestPriority";
 -- DROP TYPE IF EXISTS "TripRequestStatus";
