@@ -18,6 +18,10 @@ import {
   Check,
   X
 } from "lucide-react"
+import { CreateRoleModal } from '@/components/modals/CreateRoleModal';
+import { EditRoleModal } from '@/components/modals/EditRoleModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { PermissionAction } from '@/types/auth';
 
 interface Role {
   id: string;
@@ -37,10 +41,18 @@ interface Permission {
 }
 
 export default function ConfiguracionPage() {
+  const { hasPermission } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("roles");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+
+  // Verificar permisos
+  const canCreateRoles = hasPermission('roles', PermissionAction.CREATE);
+  const canEditRoles = hasPermission('roles', PermissionAction.EDIT);
 
   const loadRoles = async () => {
     setLoading(true);
@@ -79,6 +91,19 @@ export default function ConfiguracionPage() {
     loadRoles();
     loadPermissions();
   }, []);
+
+  const handleEditRole = (role: Role) => {
+    setSelectedRole(role);
+    setShowEditModal(true);
+  };
+
+  const handleRoleCreated = () => {
+    loadRoles();
+  };
+
+  const handleRoleUpdated = () => {
+    loadRoles();
+  };
 
   const getRoleColor = (roleName: string) => {
     const colors: { [key: string]: string } = {
@@ -163,10 +188,15 @@ export default function ConfiguracionPage() {
                       Administra los roles del sistema y sus permisos
                     </CardDescription>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear Rol
-                  </Button>
+                  {canCreateRoles && (
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setShowCreateModal(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear Rol
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -190,12 +220,19 @@ export default function ConfiguracionPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {canEditRoles && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleEditRole(role)}
+                                title="Editar rol"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {!canEditRoles && (
+                              <span className="text-sm text-gray-400">Sin permisos</span>
+                            )}
                           </div>
                         </div>
                         
@@ -314,6 +351,28 @@ export default function ConfiguracionPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Modal de crear rol */}
+        {canCreateRoles && (
+          <CreateRoleModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onRoleCreated={handleRoleCreated}
+          />
+        )}
+
+        {/* Modal de editar rol */}
+        {canEditRoles && (
+          <EditRoleModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedRole(null);
+            }}
+            onRoleUpdated={handleRoleUpdated}
+            role={selectedRole}
+          />
+        )}
       </div>
     </MainLayout>
   )

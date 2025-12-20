@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Calendar, 
-  Truck, 
-  User, 
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Calendar,
+  Truck,
+  User,
   CheckCircle,
   AlertCircle,
   Package,
@@ -68,7 +68,9 @@ export default function TripsPage() {
       const response = await fetch(`/api/trips?${params}`)
       if (response.ok) {
         const data = await response.json()
-        setTrips(data)
+        // El endpoint devuelve un objeto con { trips, total, page, limit, totalPages }
+        // Necesitamos extraer el array 'trips'
+        setTrips(data.trips || [])
       }
     } catch (error) {
       console.error('Error fetching trips:', error)
@@ -179,7 +181,7 @@ export default function TripsPage() {
   }
 
   const filteredTrips = trips.filter(trip => {
-    const matchesSearch = 
+    const matchesSearch =
       !searchTerm ||
       trip.incomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       trip.outcomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,7 +191,7 @@ export default function TripsPage() {
       trip.vehicle?.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
       trip.material?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesApproved = isApprovedFilter === 'all' || 
+    const matchesApproved = isApprovedFilter === 'all' ||
       (isApprovedFilter === 'true' && trip.isApproved) ||
       (isApprovedFilter === 'false' && !trip.isApproved)
 
@@ -259,8 +261,8 @@ export default function TripsPage() {
                   <Search className="h-4 w-4 mr-2" />
                   Buscar
                 </Button>
-                <Button 
-                  onClick={() => setShowFilters(!showFilters)} 
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
                   variant={showFilters ? "default" : "outline"}
                 >
                   <Filter className="h-4 w-4 mr-2" />
@@ -426,7 +428,7 @@ export default function TripsPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => handleDeleteTrip(trip)}
                               >

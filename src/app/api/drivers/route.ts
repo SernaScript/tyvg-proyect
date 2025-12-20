@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { EmailService } from '@/lib/EmailService'
+import { RoleName } from '@/types/auth'
 
 // GET /api/drivers - Listar conductores
 export async function GET(request: NextRequest) {
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener el rol de conductor
     const driverRole = await prisma.role.findUnique({
-      where: { name: 'DRIVER' },
+      where: { name: RoleName.DRIVER },
       select: {
         id: true,
         name: true,
@@ -209,10 +210,10 @@ export async function POST(request: NextRequest) {
     // Enviar correo de activación al nuevo conductor/usuario
     let emailSent = false
     let emailError = null
-    
+
     try {
       const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/login`
-      
+
       emailSent = await EmailService.sendUserActivationEmail({
         email: driver.user.email,
         name: driver.user.name,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { authenticateRequest, hasPermission } from '@/lib/auth';
-import { PermissionAction } from '@/types/auth';
+import { PermissionAction, RoleName } from '@/types/auth';
 import { EmailService } from '@/lib/EmailService';
 
 export async function GET(request: NextRequest) {
@@ -46,7 +46,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (role) {
-      where.role = { name: role };
+      // Validar que el rol sea un valor válido del enum
+      if (Object.values(RoleName).includes(role as RoleName)) {
+        where.role = {
+          name: role as RoleName
+        };
+      }
     }
 
     if (active === 'true') {

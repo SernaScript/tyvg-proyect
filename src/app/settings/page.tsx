@@ -525,11 +525,11 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Estado</label>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <div className="text-sm text-gray-600 mt-1">
                             <Badge className="bg-green-100 text-green-800">
                               {siigoCredentials.isActive ? 'Activo' : 'Inactivo'}
                             </Badge>
-                          </p>
+                          </div>
                         </div>
                       </div>
                       

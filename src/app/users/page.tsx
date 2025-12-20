@@ -45,9 +45,16 @@ interface UsersResponse {
   totalCount: number;
 }
 
+interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+}
+
 export default function UsersPage() {
   const { user: currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -163,10 +170,26 @@ export default function UsersPage() {
     });
   };
 
-  // Cargar usuarios al montar el componente
+  const loadRoles = async () => {
+    try {
+      const response = await fetch('/api/roles');
+      const result = await response.json();
+      
+      if (result.success) {
+        setRoles(result.data.roles);
+      } else {
+        console.error('Error cargando roles:', result.error);
+      }
+    } catch (error) {
+      console.error('Error cargando roles:', error);
+    }
+  };
+
+  // Cargar usuarios y roles al montar el componente
   useEffect(() => {
     if (canViewUsers) {
       loadUsers();
+      loadRoles();
     }
   }, [canViewUsers]);
 
@@ -230,18 +253,16 @@ export default function UsersPage() {
                 <select
                   id="roleFilter"
                   title="Seleccionar rol para filtrar"
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                   value={roleFilter}
                   onChange={(e) => handleRoleFilterChange(e.target.value)}
                 >
                   <option value="">Todos los roles</option>
-                  <option value="SUPER_ADMIN">Super Administrador</option>
-                  <option value="ADMIN">Administrador</option>
-                  <option value="ACCOUNTING">Contabilidad</option>
-                  <option value="TREASURY">Tesorería</option>
-                  <option value="LOGISTICS">Logística</option>
-                  <option value="BILLING">Facturación</option>
-                  <option value="VIEWER">Solo Lectura</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.name}>
+                      {role.displayName}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="flex items-end">
