@@ -172,6 +172,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
         icon: Truck,
         href: "/areas/logistics/trips",
         status: ModuleStatus.ACTIVE
+      },
+      {
+        id: "preoperational",
+        name: "Preoperacionales",
+        description: "Gestión de inspecciones y verificaciones preoperacionales",
+        icon: ClipboardList,
+        href: "/areas/logistics/preoperational",
+        status: ModuleStatus.ACTIVE
       }
     ],
     subsections: [

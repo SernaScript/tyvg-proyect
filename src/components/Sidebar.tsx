@@ -286,23 +286,25 @@ export function Sidebar() {
 
                         {/* Subsections - Show as single configuration link */}
                         {area.subsections?.map((subsection) => {
-                          const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
+                          const hasAccessibleModules = subsection.modules.length > 0
+                            ? subsection.modules.some(module => canAccessModule(area.id, module.id))
+                            : true // Show subsection even if it has no modules yet
 
                           if (!hasAccessibleModules) return null
 
-                          const configurationPath = `/areas/${area.id}/configuration`
-                          const isConfigActive = pathname === configurationPath || pathname.startsWith(configurationPath + '/')
+                          const subsectionPath = `/areas/${area.id}/${subsection.id}`
+                          const isSubsectionActive = pathname === subsectionPath || pathname.startsWith(subsectionPath + '/')
 
                           return (
                             <div key={subsection.id} className="mt-2">
-                              <Link href={configurationPath} title={subsection.name}>
+                              <Link href={subsectionPath} title={subsection.name}>
                                 <Button
-                                  variant={isConfigActive ? "default" : "ghost"}
+                                  variant={isSubsectionActive ? "default" : "ghost"}
                                   size="sm"
                                   className={cn(
                                     "w-full gap-2 text-sm h-8 transition-all duration-200",
                                     isExpanded ? "justify-start text-left" : "justify-center",
-                                    isConfigActive && "bg-primary text-primary-foreground"
+                                    isSubsectionActive && "bg-primary text-primary-foreground"
                                   )}
                                 >
                                   <Settings className="h-3 w-3 flex-shrink-0" />

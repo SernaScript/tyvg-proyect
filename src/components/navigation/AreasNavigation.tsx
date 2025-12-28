@@ -203,18 +203,20 @@ export function AreaModules({ areaId, className }: AreaModulesProps) {
 
       {/* Subsections - Show as single configuration card */}
       {area.subsections?.map((subsection) => {
-        const hasAccessibleModules = subsection.modules.some(module => canAccessModule(area.id, module.id))
+        const hasAccessibleModules = subsection.modules.length > 0 
+          ? subsection.modules.some(module => canAccessModule(area.id, module.id))
+          : true // Show subsection even if it has no modules yet
         
         if (!hasAccessibleModules) return null
 
-        const configurationPath = `/areas/${area.id}/configuration`
-        const isConfigActive = pathname === configurationPath || pathname.startsWith(configurationPath + '/')
+        const subsectionPath = `/areas/${area.id}/${subsection.id}`
+        const isSubsectionActive = pathname === subsectionPath || pathname.startsWith(subsectionPath + '/')
 
         return (
-          <Link key={subsection.id} href={configurationPath}>
+          <Link key={subsection.id} href={subsectionPath}>
             <Card className={cn(
               "hover:shadow-lg transition-all cursor-pointer h-full",
-              isConfigActive && "ring-2 ring-blue-500 ring-offset-2",
+              isSubsectionActive && "ring-2 ring-blue-500 ring-offset-2",
               getAreaColorClasses(area.color).border
             )}>
               <CardHeader className="pb-3">
@@ -225,12 +227,14 @@ export function AreaModules({ areaId, className }: AreaModulesProps) {
                   </div>
                 </div>
                 <CardDescription className="text-sm">
-                  Configuración y administración del sistema
+                  {subsection.modules.length > 0 
+                    ? "Configuración y administración del sistema"
+                    : "Sección en desarrollo"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 <Button 
-                  variant={isConfigActive ? "default" : "outline"} 
+                  variant={isSubsectionActive ? "default" : "outline"} 
                   size="sm" 
                   className="w-full"
                 >
