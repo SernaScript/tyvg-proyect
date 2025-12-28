@@ -92,7 +92,7 @@ export function CreateTripModalDriver({ isOpen, onClose, onSuccess, driverId }: 
       // Resetear la fecha a la actual cada vez que se abre el modal
       setFormData(prev => ({ ...prev, date: getTodayDate() }))
     }
-  }, [isOpen])
+  }, [isOpen, driverId])
 
   const handleProjectSelect = (project: Project | null) => {
     setSelectedProject(project)
@@ -113,7 +113,7 @@ export function CreateTripModalDriver({ isOpen, onClose, onSuccess, driverId }: 
 
   const fetchVehicles = async () => {
     try {
-      const response = await fetch('/api/vehicles?isActive=true')
+      const response = await fetch(`/api/vehicles?isActive=true&driverId=${driverId}`)
       if (response.ok) {
         const data = await response.json()
         setVehicles(data)

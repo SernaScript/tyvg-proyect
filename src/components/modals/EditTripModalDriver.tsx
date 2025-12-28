@@ -104,7 +104,7 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
       fetchTrip()
       fetchVehicles()
     }
-  }, [isOpen, tripId])
+  }, [isOpen, tripId, driverId])
 
   const fetchTrip = async () => {
     try {
@@ -149,7 +149,7 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
 
   const fetchVehicles = async () => {
     try {
-      const response = await fetch('/api/vehicles?isActive=true')
+      const response = await fetch(`/api/vehicles?isActive=true&driverId=${driverId}`)
       if (response.ok) {
         const data = await response.json()
         setVehicles(data)

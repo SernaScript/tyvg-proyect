@@ -193,6 +193,7 @@ model Vehicle {
   trips         Trip[]
   owner         Owner?         @relation(fields: [ownerId], references: [id])
   provider      Owner?         @relation("VehicleProvider", fields: [providerId], references: [id])
+  driverVehicles DriverVehicle[]
 
   @@index([ownershipType, isActive])
   @@map("vehicles")
@@ -405,6 +406,7 @@ model Driver {
   documents      DriverDocument[]
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   trips          Trip[]
+  driverVehicles DriverVehicle[]
 
   @@index([isActive])
   @@map("drivers")
@@ -426,6 +428,22 @@ model DriverDocument {
 
   @@index([driverId, expirationDate, isActive])
   @@map("driver_documents")
+}
+
+model DriverVehicle {
+  id        String   @id @default(cuid())
+  driverId String
+  vehicleId String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  driver    Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, vehicleId])
+  @@index([driverId, isActive])
+  @@index([vehicleId, isActive])
+  @@map("driver_vehicles")
 }
 
 model Trip {

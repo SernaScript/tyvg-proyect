@@ -6,7 +6,44 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('active') === 'true'
-    
+    const driverId = searchParams.get('driverId')
+
+    // Si se proporciona driverId, filtrar solo vehículos asignados a ese conductor
+    if (driverId) {
+      const driverVehicles = await prisma.driverVehicle.findMany({
+        where: {
+          driverId,
+          isActive: true,
+          vehicle: {
+            isActive: activeOnly !== false // Por defecto solo activos, a menos que se especifique lo contrario
+          }
+        },
+        include: {
+          vehicle: {
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  document: true,
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          vehicle: {
+            plate: 'asc'
+          }
+        }
+      })
+
+      const vehicles = driverVehicles.map(dv => dv.vehicle).filter(Boolean)
+      return NextResponse.json(vehicles)
+    }
+
+    // Comportamiento original: obtener todos los vehículos
     const vehicles = await prisma.vehicle.findMany({
       where: activeOnly ? { isActive: true } : {},
       include: {
