@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { 
   Fuel, 
   Download, 
@@ -259,89 +258,66 @@ export default function FuelPage() {
               Descarga plantillas y importa datos de combustible desde archivos Excel
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Descarga de Plantilla */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Download className="h-5 w-5 text-blue-600" />
-                <div>
-                  <h3 className="font-semibold">Descargar Plantilla</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Obtén la plantilla en formato Excel para cargar datos de combustible
-                  </p>
-                </div>
-              </div>
-              <Button onClick={downloadTemplate} className="w-full md:w-auto">
-                <Download className="h-4 w-4 mr-2" />
-                Descargar Plantilla Excel
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Botón Descargar */}
+              <Button 
+                onClick={downloadTemplate} 
+                variant="outline"
+                className="h-auto py-6 flex flex-col items-center gap-2"
+              >
+                <Download className="h-6 w-6 text-blue-600" />
+                <span className="font-semibold">Descargar</span>
+                <span className="text-xs text-muted-foreground">Plantilla Excel</span>
               </Button>
-            </div>
 
-            {/* Separador */}
-            <div className="border-t"></div>
-
-            {/* Migración a Siigo Nube */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Cloud className="h-5 w-5 text-purple-600" />
-                <div>
-                  <h3 className="font-semibold">Migración a Siigo Nube</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Sincroniza los datos de combustible con Siigo nube
-                  </p>
-                </div>
-              </div>
+              {/* Botón Migrar */}
               <Button 
                 onClick={() => router.push('/areas/logistics/fuel/siigo-migration')}
                 variant="outline"
-                className="w-full md:w-auto"
+                className="h-auto py-6 flex flex-col items-center gap-2"
               >
-                <Cloud className="h-4 w-4 mr-2" />
-                Migrar a Siigo Nube
+                <Cloud className="h-6 w-6 text-purple-600" />
+                <span className="font-semibold">Migrar</span>
+                <span className="text-xs text-muted-foreground">A Siigo Nube</span>
               </Button>
+
+              {/* Botón Importar */}
+              <div className="relative">
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button 
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  variant="outline"
+                  className="h-auto py-6 w-full flex flex-col items-center gap-2"
+                >
+                  <Upload className="h-6 w-6 text-green-600" />
+                  <span className="font-semibold">Importar Datos</span>
+                  <span className="text-xs text-muted-foreground">Archivo Excel</span>
+                </Button>
+              </div>
             </div>
 
-            {/* Separador */}
-            <div className="border-t"></div>
-
-            {/* Carga de Archivo */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Upload className="h-5 w-5 text-green-600" />
-                <div>
-                  <h3 className="font-semibold">Importar Datos</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Carga un archivo Excel con los datos de combustible
-                  </p>
+            {/* Estado del archivo seleccionado y validación */}
+            {selectedFile && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                  <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">{selectedFile.name}</span>
+                  <Badge variant="outline" className="ml-auto">
+                    {(selectedFile.size / 1024).toFixed(1)} KB
+                  </Badge>
                 </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="file-upload">Seleccionar archivo</Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileUpload}
-                    className="mt-1"
-                  />
-                </div>
-                
-                {selectedFile && (
-                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                    <FileSpreadsheet className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">{selectedFile.name}</span>
-                    <Badge variant="outline" className="ml-auto">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
-                    </Badge>
-                  </div>
-                )}
 
                 <Button 
                   onClick={validateFile} 
                   disabled={!selectedFile || uploadStatus === 'validating' || uploadStatus === 'migrating'}
-                  className="w-full md:w-auto"
+                  className="w-full"
                 >
                   {uploadStatus === 'validating' ? (
                     <>
@@ -452,7 +428,7 @@ export default function FuelPage() {
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
