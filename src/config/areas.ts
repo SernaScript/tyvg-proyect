@@ -158,30 +158,6 @@ export const AREAS_CONFIG: AreaConfig[] = [
     color: AreaColor.ORANGE,
     modules: [
       {
-        id: "inventory",
-        name: "Control de Inventarios",
-        description: "Gestión y control de inventarios en tiempo real",
-        icon: Package,
-        href: "/areas/logistics/inventory",
-        status: ModuleStatus.DEVELOPMENT
-      },
-      {
-        id: "purchase-orders",
-        name: "Órdenes de Compra",
-        description: "Gestión de órdenes de compra y proveedores",
-        icon: ClipboardList,
-        href: "/areas/logistics/purchase-orders",
-        status: ModuleStatus.DEVELOPMENT
-      },
-      {
-        id: "warehouses",
-        name: "Gestión de Almacenes",
-        description: "Control de almacenes y ubicaciones",
-        icon: Building2,
-        href: "/areas/logistics/warehouses",
-        status: ModuleStatus.PLANNED
-      },
-      {
         id: "fuel",
         name: "Combustible",
         description: "Gestión de consumo y costos de combustible",
@@ -249,6 +225,14 @@ export const AREAS_CONFIG: AreaConfig[] = [
             description: "Gestión de conductores y documentación vehicular",
             icon: Users,
             href: "/areas/logistics/drivers",
+            status: ModuleStatus.ACTIVE
+          },
+          {
+            id: "driver-vehicles",
+            name: "Asignación de Vehículos",
+            description: "Gestiona la relación entre conductores y vehículos",
+            icon: LinkIcon,
+            href: "/areas/logistics/configuration/driver-vehicles",
             status: ModuleStatus.ACTIVE
           }
         ]

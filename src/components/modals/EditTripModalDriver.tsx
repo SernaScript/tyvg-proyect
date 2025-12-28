@@ -112,7 +112,7 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
       if (response.ok) {
         const tripData = await response.json()
         setTrip(tripData)
-        
+
         // Verificar que el viaje no esté aprobado
         if (tripData.isApproved) {
           setErrors({ submit: 'No se puede editar un viaje que ya está aprobado' })
@@ -187,7 +187,7 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
       }
       return
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))

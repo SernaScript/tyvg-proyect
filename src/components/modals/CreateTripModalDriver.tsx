@@ -134,7 +134,7 @@ export function CreateTripModalDriver({ isOpen, onClose, onSuccess, driverId }: 
       }
       return
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
