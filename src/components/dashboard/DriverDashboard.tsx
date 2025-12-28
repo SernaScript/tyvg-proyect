@@ -26,6 +26,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { CreateTripModalDriver } from "@/components/modals/CreateTripModalDriver"
 import { EditTripModalDriver } from "@/components/modals/EditTripModalDriver"
+import { CreatePreoperationalInspectionModal } from "@/components/modals/CreatePreoperationalInspectionModal"
+import { ClipboardList } from "lucide-react"
 
 interface Trip {
   id: string
@@ -81,6 +83,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isCreateTripModalOpen, setIsCreateTripModalOpen] = useState(false)
   const [isEditTripModalOpen, setIsEditTripModalOpen] = useState(false)
+  const [isCreatePreoperationalModalOpen, setIsCreatePreoperationalModalOpen] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
   const [driverId, setDriverId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -258,8 +261,16 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
       </div>
 
       <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-        {/* Botón crear viaje */}
-        <div className="flex justify-end">
+        {/* Botones crear viaje y preoperacional */}
+        <div className="flex justify-end gap-3">
+          <Button
+            onClick={() => setIsCreatePreoperationalModalOpen(true)}
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-200 font-semibold px-6 py-6 h-auto"
+            disabled={!driverId}
+          >
+            <ClipboardList className="w-5 h-5 mr-2" />
+            Preoperacional
+          </Button>
           <Button
             onClick={() => setIsCreateTripModalOpen(true)}
             className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-200 font-semibold px-6 py-6 h-auto"
@@ -553,6 +564,18 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
             setSelectedTripId(null)
           }}
           tripId={selectedTripId}
+          driverId={driverId}
+        />
+      )}
+
+      {/* Modal de creación de preoperacional */}
+      {driverId && (
+        <CreatePreoperationalInspectionModal
+          isOpen={isCreatePreoperationalModalOpen}
+          onClose={() => setIsCreatePreoperationalModalOpen(false)}
+          onSuccess={() => {
+            setIsCreatePreoperationalModalOpen(false)
+          }}
           driverId={driverId}
         />
       )}
