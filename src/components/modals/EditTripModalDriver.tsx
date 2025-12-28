@@ -152,10 +152,16 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
       const response = await fetch(`/api/vehicles?isActive=true&driverId=${driverId}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('Vehicles fetched for driver:', driverId, 'Count:', data.length)
         setVehicles(data)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error fetching vehicles:', response.status, errorData)
+        setVehicles([])
       }
     } catch (error) {
       console.error('Error fetching vehicles:', error)
+      setVehicles([])
     }
   }
 
@@ -395,25 +401,37 @@ export function EditTripModalDriver({ isOpen, onClose, onSuccess, tripId, driver
             {/* Vehicle Selection */}
             <div className="space-y-2">
               <Label htmlFor="vehicleId">Vehículo (Placa) *</Label>
-              <Select value={formData.vehicleId} onValueChange={(value) => handleInputChange('vehicleId', value)}>
+              <Select value={formData.vehicleId} onValueChange={(value) => handleInputChange('vehicleId', value)} disabled={vehicles.length === 0}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un vehículo" />
+                  <SelectValue placeholder={vehicles.length === 0 ? "No hay vehículos asignados" : "Selecciona un vehículo"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      <div>
-                        <p className="font-medium">{vehicle.plate}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {vehicle.brand} {vehicle.model}
-                          {vehicle.capacityTons && ` • ${vehicle.capacityTons}T`}
-                          {vehicle.capacityM3 && ` • ${vehicle.capacityM3}m³`}
-                        </p>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {vehicles.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No hay vehículos asignados a este conductor
+                    </div>
+                  ) : (
+                    vehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        <div>
+                          <p className="font-medium">{vehicle.plate}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {vehicle.brand} {vehicle.model}
+                            {vehicle.capacityTons && ` • ${vehicle.capacityTons}T`}
+                            {vehicle.capacityM3 && ` • ${vehicle.capacityM3}m³`}
+                          </p>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {vehicles.length === 0 && (
+                <p className="text-sm text-amber-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este conductor no tiene vehículos asignados. Asigna vehículos desde la sección de conductores.
+                </p>
+              )}
               {errors.vehicleId && (
                 <p className="text-sm text-red-600 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />

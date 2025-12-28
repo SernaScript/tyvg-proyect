@@ -10,37 +10,53 @@ export async function GET(request: NextRequest) {
 
     // Si se proporciona driverId, filtrar solo vehículos asignados a ese conductor
     if (driverId) {
-      const driverVehicles = await prisma.driverVehicle.findMany({
-        where: {
-          driverId,
-          isActive: true,
-          vehicle: {
-            isActive: activeOnly !== false // Por defecto solo activos, a menos que se especifique lo contrario
-          }
-        },
-        include: {
-          vehicle: {
-            include: {
-              owner: {
-                select: {
-                  id: true,
-                  document: true,
-                  firstName: true,
-                  lastName: true
-                }
+      try {
+        // Usar $queryRaw para obtener los vehículos relacionados con el conductor
+        const driverVehiclesRaw = await prisma.$queryRaw<Array<{
+          vehicleId: string
+        }>>`
+          SELECT dv."vehicleId"
+          FROM driver_vehicles dv
+          WHERE dv."driverId" = ${driverId} 
+            AND dv."isActive" = true
+        `
+
+        console.log('Driver vehicles found:', driverVehiclesRaw.length, 'for driverId:', driverId)
+
+        const vehicleIds = driverVehiclesRaw.map(dv => dv.vehicleId)
+
+        if (vehicleIds.length === 0) {
+          console.log('No vehicles found for driver:', driverId)
+          return NextResponse.json([])
+        }
+
+        // Obtener los vehículos con sus owners, filtrando por isActive si se especifica
+        const vehicles = await prisma.vehicle.findMany({
+          where: {
+            id: { in: vehicleIds },
+            ...(activeOnly && { isActive: true })
+          },
+          include: {
+            owner: {
+              select: {
+                id: true,
+                document: true,
+                firstName: true,
+                lastName: true
               }
             }
-          }
-        },
-        orderBy: {
-          vehicle: {
+          },
+          orderBy: {
             plate: 'asc'
           }
-        }
-      })
+        })
 
-      const vehicles = driverVehicles.map(dv => dv.vehicle).filter(Boolean)
-      return NextResponse.json(vehicles)
+        console.log('Vehicles returned:', vehicles.length)
+        return NextResponse.json(vehicles)
+      } catch (error) {
+        console.error('Error in driver vehicles query:', error)
+        throw error
+      }
     }
 
     // Comportamiento original: obtener todos los vehículos
