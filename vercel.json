@@ -9,17 +9,10 @@
   },
   "build": {
     "env": {
-      "NODE_ENV": "production",
-      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
-      "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright",
-      "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "true",
-      "PLAYWRIGHT_SKIP_DEPENDENCY_INSTALLATION": "true",
-      "PLAYWRIGHT_DOWNLOAD_HOST": "https://playwright.azureedge.net",
-      "DEBIAN_FRONTEND": "noninteractive",
-      "CI": "true"
+      "NODE_ENV": "production"
     }
   },
   "outputDirectory": ".next",
-  "installCommand": "npm install --production=false && npm run install-playwright-vercel",
+  "installCommand": "npm install --production=false",
   "buildCommand": "npm run build"
 }
