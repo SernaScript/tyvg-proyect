@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { 
@@ -20,7 +21,8 @@ import {
   Clock,
   BarChart3,
   Route,
-  Package
+  Package,
+  AlertCircle
 } from "lucide-react"
 
 export default function LoginPage() {
@@ -28,6 +30,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -36,6 +39,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
     try {
       await login({
@@ -48,7 +52,7 @@ export default function LoginPage() {
       
     } catch (error) {
       console.error('Login error:', error)
-      alert(error instanceof Error ? error.message : 'Error al iniciar sesión')
+      setError(error instanceof Error ? error.message : 'Error al iniciar sesión')
     } finally {
       setIsLoading(false)
     }
@@ -59,6 +63,10 @@ export default function LoginPage() {
       ...formData,
       [e.target.name]: e.target.value
     })
+    // Limpiar el error cuando el usuario empiece a escribir
+    if (error) {
+      setError(null)
+    }
   }
 
   return (
@@ -95,6 +103,16 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && (
+                    <Alert variant="destructive" className="border-red-500 bg-red-50">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertTitle className="text-red-800 font-semibold">Error de autenticación</AlertTitle>
+                      <AlertDescription className="text-red-700">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-gray-700 font-medium">
                       Correo Electrónico
