@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { authenticateRequest, hasPermission } from '@/lib/auth';
 import { PermissionAction, RoleName } from '@/types/auth';
 import { EmailService } from '@/lib/EmailService';
+import { getBaseUrl } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
     
     try {
       const { randomBytes } = await import('crypto');
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+      const baseUrl = getBaseUrl(request);
       const loginUrl = `${baseUrl}/login`;
       
       // Generar token de reset para nuevo usuario

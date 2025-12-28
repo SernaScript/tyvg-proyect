@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'crypto';
 import { EmailService } from '@/lib/EmailService';
+import { getBaseUrl } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Enviar correo con el enlace de reset
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+    const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/reset-password/${token}`;
 
     let emailSent = false;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmailService } from '@/lib/EmailService';
+import { getBaseUrl } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,12 +29,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Enviar correo de prueba
+    const baseUrl = getBaseUrl(request);
     const emailSent = await EmailService.sendUserActivationEmail({
       email,
       name: 'Usuario de Prueba',
       password: 'password123',
       roleName: 'Administrador',
-      loginUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/login`
+      loginUrl: `${baseUrl}/login`
     });
 
     if (emailSent) {
