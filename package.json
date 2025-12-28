@@ -5,11 +5,6 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "npm run clean:cache && prisma generate && next build",
-    "build:with-playwright": "npm run clean:cache && prisma generate && next build",
-    "install-playwright": "tsx scripts/install-playwright.ts",
-    "install-playwright-deps": "tsx scripts/install-playwright-deps.ts",
-    "install-playwright-simple": "tsx scripts/install-playwright-simple.ts",
-    "install-playwright-vercel": "tsx scripts/install-playwright-vercel.ts",
     "start": "next start",
     "lint": "eslint",
     "clean:cache": "tsx scripts/clean-cache.ts",
