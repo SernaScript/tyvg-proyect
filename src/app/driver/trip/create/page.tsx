@@ -130,14 +130,38 @@ export default function CreateTripPage() {
     }
   }
 
+  const normalizeDecimalInput = (value: string): string => {
+    // Permitir solo números, punto y coma
+    const cleaned = value.replace(/[^0-9.,]/g, '')
+    
+    // Convertir todas las comas a puntos
+    let normalized = cleaned.replace(/,/g, '.')
+    
+    // Contar cuántos puntos hay
+    const dotCount = (normalized.match(/\./g) || []).length
+    
+    // Si hay más de un punto, mantener solo el primero
+    if (dotCount > 1) {
+      const firstDotIndex = normalized.indexOf('.')
+      normalized = normalized.substring(0, firstDotIndex + 1) + normalized.substring(firstDotIndex + 1).replace(/\./g, '')
+    }
+    
+    // Validar formato: números opcionales, un punto opcional, números opcionales
+    const numericRegex = /^[0-9]*\.?[0-9]*$/
+    if (normalized === '' || numericRegex.test(normalized)) {
+      return normalized
+    }
+    
+    // Si no pasa la validación, devolver el valor anterior
+    return formData.quantity
+  }
+
   const handleInputChange = (field: string, value: string) => {
     if (field === 'quantity') {
-      const numericRegex = /^[0-9]*\.?[0-9]*$/
-      if (value === '' || numericRegex.test(value)) {
-        setFormData(prev => ({ ...prev, [field]: value }))
-        if (errors[field]) {
-          setErrors(prev => ({ ...prev, [field]: '' }))
-        }
+      const normalized = normalizeDecimalInput(value)
+      setFormData(prev => ({ ...prev, [field]: normalized }))
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }))
       }
       return
     }
@@ -264,7 +288,7 @@ export default function CreateTripPage() {
               <CardTitle className="text-sm">Información Básica</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="date" className="text-xs">Fecha *</Label>
                 <Input
                   id="date"
@@ -276,7 +300,7 @@ export default function CreateTripPage() {
                   className="h-8 text-xs"
                 />
                 {errors.date && (
-                  <p className="text-[10px] text-red-600 flex items-center gap-1">
+                  <p className="text-[10px] text-red-600 flex items-center gap-1 mt-0.5">
                     <AlertCircle className="h-3 w-3" />
                     {errors.date}
                   </p>
