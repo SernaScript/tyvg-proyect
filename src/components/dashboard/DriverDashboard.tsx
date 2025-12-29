@@ -5,13 +5,13 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Calendar, 
-  MapPin, 
-  Truck, 
-  Package, 
-  Clock, 
-  CheckCircle2, 
+import {
+  Calendar,
+  MapPin,
+  Truck,
+  Package,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   Camera,
   LogOut,
@@ -24,9 +24,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
-import { CreateTripModalDriver } from "@/components/modals/CreateTripModalDriver"
 import { EditTripModalDriver } from "@/components/modals/EditTripModalDriver"
-import { CreatePreoperationalInspectionModal } from "@/components/modals/CreatePreoperationalInspectionModal"
 import { ClipboardList } from "lucide-react"
 
 interface Trip {
@@ -81,7 +79,6 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isCreateTripModalOpen, setIsCreateTripModalOpen] = useState(false)
   const [isEditTripModalOpen, setIsEditTripModalOpen] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
   const [driverId, setDriverId] = useState<string | null>(null)
@@ -121,7 +118,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
       // Paginación
       params.append('page', currentPage.toString())
       params.append('limit', tripsPerPage.toString())
-      
+
       // The endpoint now automatically filters by the current driver
       const response = await fetch(`/api/trips?${params.toString()}`)
       if (response.ok) {
@@ -188,7 +185,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
       try {
         const params = new URLSearchParams()
         params.append('limit', '1000') // Obtener todos para estadísticas
-        
+
         const response = await fetch(`/api/trips?${params.toString()}`)
         if (response.ok) {
           const data = await response.json()
@@ -271,7 +268,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
             Preoperacional
           </Button>
           <Button
-            onClick={() => setIsCreateTripModalOpen(true)}
+            onClick={() => router.push('/driver/trip/create')}
             className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-200 font-semibold px-6 py-6 h-auto"
             disabled={!driverId}
           >
@@ -334,11 +331,10 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
               setStatusFilter('all')
               setCurrentPage(1)
             }}
-            className={`whitespace-nowrap transition-all duration-200 ${
-              statusFilter === 'all' 
-                ? 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md' 
+            className={`whitespace-nowrap transition-all duration-200 ${statusFilter === 'all'
+                ? 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md'
                 : 'hover:bg-orange-50 hover:border-orange-300'
-            }`}
+              }`}
           >
             Todos
           </Button>
@@ -349,11 +345,10 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
               setStatusFilter('pending')
               setCurrentPage(1)
             }}
-            className={`whitespace-nowrap transition-all duration-200 ${
-              statusFilter === 'pending' 
-                ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-md' 
+            className={`whitespace-nowrap transition-all duration-200 ${statusFilter === 'pending'
+                ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-md'
                 : 'hover:bg-yellow-50 hover:border-yellow-300'
-            }`}
+              }`}
           >
             Pendientes
           </Button>
@@ -364,11 +359,10 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
               setStatusFilter('approved')
               setCurrentPage(1)
             }}
-            className={`whitespace-nowrap transition-all duration-200 ${
-              statusFilter === 'approved' 
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md' 
+            className={`whitespace-nowrap transition-all duration-200 ${statusFilter === 'approved'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md'
                 : 'hover:bg-green-50 hover:border-green-300'
-            }`}
+              }`}
           >
             Aprobados
           </Button>
@@ -390,7 +384,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
               </div>
               <p className="text-gray-700 font-semibold text-lg mb-2">No hay viajes registrados</p>
               <p className="text-sm text-gray-500">
-                {statusFilter !== 'all' 
+                {statusFilter !== 'all'
                   ? 'No hay viajes con este estado'
                   : 'Crea tu primer viaje usando el botón de arriba'}
               </p>
@@ -399,8 +393,8 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {trips.map((trip) => (
-              <Card 
-                key={trip.id} 
+              <Card
+                key={trip.id}
                 className="bg-white border border-gray-200/80 shadow-sm hover:shadow-md hover:border-orange-300/50 transition-all duration-200 group"
               >
                 <CardContent className="p-3">
@@ -427,14 +421,14 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                           Editar
                         </Button>
                       )}
-                      <Badge 
+                      <Badge
                         className={`${getStatusColor(trip.isApproved)} font-medium px-2 py-1 text-xs shadow-sm`}
                       >
                         {getStatusText(trip.isApproved)}
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     {/* Fecha */}
                     <div className="flex items-center gap-2">
@@ -443,7 +437,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                         {formatDateShort(trip.date)}
                       </span>
                     </div>
-                    
+
                     {/* Proyecto */}
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-purple-600 flex-shrink-0" />
@@ -451,7 +445,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                         {trip.project.name}
                       </span>
                     </div>
-                    
+
                     {/* Material y Cantidad */}
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -489,7 +483,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                 <ChevronLeft className="h-4 w-4" />
                 Anterior
               </Button>
-              
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNumber
@@ -502,11 +496,11 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                   } else {
                     pageNumber = currentPage - 2 + i
                   }
-                  
+
                   if (pageNumber < 1 || pageNumber > totalPages) {
                     return null
                   }
-                  
+
                   return (
                     <Button
                       key={pageNumber}
@@ -520,7 +514,7 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
                   )
                 }).filter(Boolean)}
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -535,19 +529,6 @@ export function DriverDashboard({ user }: DriverDashboardProps) {
           </div>
         )}
       </div>
-
-      {/* Modal de creación de viaje */}
-      {driverId && (
-        <CreateTripModalDriver
-          isOpen={isCreateTripModalOpen}
-          onClose={() => setIsCreateTripModalOpen(false)}
-          onSuccess={() => {
-            fetchTrips()
-            setIsCreateTripModalOpen(false)
-          }}
-          driverId={driverId}
-        />
-      )}
 
       {/* Modal de edición de viaje */}
       {driverId && selectedTripId && (
