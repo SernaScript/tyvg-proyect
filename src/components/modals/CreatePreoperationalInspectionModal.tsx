@@ -43,9 +43,9 @@ interface CreatePreoperationalInspectionModalProps {
   driverId?: string // ID del conductor (para cuando se usa desde DriverDashboard)
 }
 
-export function CreatePreoperationalInspectionModal({ 
-  isOpen, 
-  onClose, 
+export function CreatePreoperationalInspectionModal({
+  isOpen,
+  onClose,
   onSuccess,
   driverId: propDriverId
 }: CreatePreoperationalInspectionModalProps) {
@@ -82,7 +82,7 @@ export function CreatePreoperationalInspectionModal({
       if (response.ok) {
         const data = await response.json()
         setItems(data.filter((item: PreoperationalItem) => item.isActive))
-        
+
         // Inicializar detalles de items
         const initialDetails: Record<number, ItemDetail> = {}
         data.filter((item: PreoperationalItem) => item.isActive).forEach((item: PreoperationalItem) => {
@@ -116,7 +116,7 @@ export function CreatePreoperationalInspectionModal({
   // Cargar vehículos activos (si hay driverId, solo los asignados a ese conductor)
   const fetchVehicles = async () => {
     try {
-      const url = propDriverId 
+      const url = propDriverId
         ? `/api/vehicles?active=true&driverId=${propDriverId}`
         : '/api/vehicles?active=true'
       const response = await fetch(url)
@@ -243,11 +243,11 @@ export function CreatePreoperationalInspectionModal({
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={handleClose}
     >
-      <Card 
+      <Card
         className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -265,7 +265,7 @@ export function CreatePreoperationalInspectionModal({
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Información básica */}
@@ -285,8 +285,8 @@ export function CreatePreoperationalInspectionModal({
               {!propDriverId ? (
                 <div className="space-y-2">
                   <Label htmlFor="driverId">Conductor *</Label>
-                  <Select 
-                    value={formData.driverId} 
+                  <Select
+                    value={formData.driverId}
                     onValueChange={(value) => handleInputChange('driverId', value)}
                     required
                   >
@@ -324,8 +324,8 @@ export function CreatePreoperationalInspectionModal({
 
               <div className="space-y-2">
                 <Label htmlFor="vehicleId">Vehículo *</Label>
-                <Select 
-                  value={formData.vehicleId} 
+                <Select
+                  value={formData.vehicleId}
                   onValueChange={(value) => handleInputChange('vehicleId', value)}
                   required
                 >
@@ -392,7 +392,7 @@ export function CreatePreoperationalInspectionModal({
               <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
                 {items.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No hay items preoperacionales activos. 
+                    No hay items preoperacionales activos.
                     <Button
                       type="button"
                       variant="link"
@@ -421,7 +421,7 @@ export function CreatePreoperationalInspectionModal({
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 whitespace-nowrap">
-                              {detail.passed ? 'Bien' : 'Mal'}
+                              {detail.passed ? 'Sí' : 'No'}
                             </span>
                             <Switch
                               checked={detail.passed}

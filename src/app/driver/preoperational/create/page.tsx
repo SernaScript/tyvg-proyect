@@ -327,7 +327,7 @@ export default function CreatePreoperationalInspectionPage() {
                                                     <p className="text-xs font-medium leading-tight">{item.name}</p>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-[10px] text-gray-500">
-                                                            {detail.passed ? 'Bien' : 'Mal'}
+                                                            {detail.passed ? 'Sí' : 'No'}
                                                         </span>
                                                         <Switch
                                                             checked={detail.passed}
