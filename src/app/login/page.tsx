@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
-import { 
+import {
   Truck,
   Lock,
   Mail,
@@ -46,10 +46,10 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password
       })
-      
+
       // El login del contexto ya maneja la redirección
       // No necesitamos hacer router.push aquí
-      
+
     } catch (error) {
       console.error('Login error:', error)
       setError(error instanceof Error ? error.message : 'Error al iniciar sesión')
@@ -70,74 +70,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-orange-50 selection:bg-orange-200 relative overflow-hidden">
+      {/* Background Gradients */}
+      <div className="fixed inset-0 -z-10 h-full w-full bg-white bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
+        <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-orange-400 opacity-20 blur-[100px]"></div>
+        <div className="absolute right-0 top-0 -z-10 h-full w-full bg-[radial-gradient(circle_800px_at_100%_200px,#ffedd5,transparent)]"></div>
+        <div className="absolute bottom-0 left-0 -z-10 h-[500px] w-[500px] rounded-full bg-blue-400 opacity-10 blur-[120px]"></div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Volver al inicio
+        <div className="flex items-center justify-between mb-8 md:mb-12">
+          <Link href="/" className="group flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors px-4 py-2 rounded-full hover:bg-white/50 hover:backdrop-blur-sm">
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Volver al inicio</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <Truck className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2.5 bg-white/40 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/20 shadow-sm">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-md">
+              <Truck className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">TYVG</span>
+            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-orange-900">
+              TYVG
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
           {/* Left Side - Login Form */}
-          <div className="max-w-md mx-auto w-full">
-            <Card className="shadow-xl border-0">
-              <CardHeader className="text-center pb-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Lock className="w-8 h-8 text-white" />
+          <div className="max-w-md mx-auto w-full order-2 lg:order-1">
+            <Card className="rounded-3xl shadow-2xl border-0 bg-white/70 backdrop-blur-xl ring-1 ring-gray-900/5 overflow-hidden">
+              <CardHeader className="text-center pb-8 pt-8">
+                <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <Lock className="w-8 h-8 text-orange-600" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
                   Acceso al Portal
                 </CardTitle>
-                <CardDescription className="text-gray-600">
-                  Ingresa como proveedor o afiliado de obras
+                <CardDescription className="text-gray-500 text-base">
+                  Ingresa tus credenciales para continuar
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-8 pb-10">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {error && (
-                    <Alert variant="destructive" className="border-red-500 bg-red-50">
+                    <Alert variant="destructive" className="border-red-500/20 bg-red-50/50 backdrop-blur-sm">
                       <AlertCircle className="h-4 w-4 text-red-600" />
-                      <AlertTitle className="text-red-800 font-semibold">Error de autenticación</AlertTitle>
-                      <AlertDescription className="text-red-700">
+                      <AlertTitle className="text-red-800 font-semibold text-sm">Error de acceso</AlertTitle>
+                      <AlertDescription className="text-red-700 text-sm mt-1">
                         {error}
                       </AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-700 font-medium">
+                    <Label htmlFor="email" className="text-gray-700 font-medium pl-1">
                       Correo Electrónico
                     </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative group">
+                      <div className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                        <Mail className="h-full w-full" />
+                      </div>
                       <Input
                         id="email"
                         name="email"
                         type="email"
-                        placeholder="proveedor@transportes.com"
+                        placeholder="ejemplo@correo.com"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="pl-10 h-12"
+                        className="pl-11 h-12 bg-white/50 border-gray-200 focus:border-orange-500 focus:ring-orange-500/20 rounded-xl transition-all duration-200"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-gray-700 font-medium">
+                    <Label htmlFor="password" className="text-gray-700 font-medium pl-1">
                       Contraseña
                     </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative group">
+                      <div className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                        <Lock className="h-full w-full" />
+                      </div>
                       <Input
                         id="password"
                         name="password"
@@ -145,139 +158,131 @@ export default function LoginPage() {
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="pl-10 pr-10 h-12"
+                        className="pl-11 pr-11 h-12 bg-white/50 border-gray-200 focus:border-orange-500 focus:ring-orange-500/20 rounded-xl transition-all duration-200"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded-full hover:bg-gray-100"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center space-x-2">
                       <input
                         id="remember"
                         type="checkbox"
-                        title="Recordar sesión"
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
                       />
-                      <Label htmlFor="remember" className="text-sm text-gray-600">
+                      <Label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer select-none">
                         Recordarme
                       </Label>
                     </div>
-                    <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
-                      ¿Olvidaste tu contraseña?
+                    <Link href="/forgot-password" className="text-sm font-medium text-orange-600 hover:text-orange-700 underline-offset-4 hover:underline transition-all">
+                      ¿Recuperar clave?
                     </Link>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full h-12 text-lg font-medium bg-orange-600 hover:bg-orange-700"
+                    className="w-full h-12 text-lg font-medium bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 shadow-lg shadow-orange-200 hover:shadow-xl hover:shadow-orange-300 transition-all duration-300 transform hover:-translate-y-0.5 rounded-xl"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Accediendo al portal...
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Autenticando...</span>
                       </div>
                     ) : (
-                      "Acceder al Portal"
+                      <span className="flex items-center justify-center gap-2">
+                        Acceder
+                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                      </span>
                     )}
                   </Button>
                 </form>
 
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-center text-sm text-gray-600">
-                    ¿No estás registrado como proveedor?{" "}
-                    <Link href="/contact" className="text-orange-600 hover:text-orange-800 font-medium">
-                      Solicita tu registro
-                    </Link>
+                <div className="mt-8 text-center">
+                  <p className="text-sm text-gray-500">
+                    ¿No tienes una cuenta activa?
                   </p>
+                  <Link href="/contact" className="inline-block mt-2 text-sm font-semibold text-gray-900 hover:text-orange-600 transition-colors">
+                    Solicitar registro de proveedor →
+                  </Link>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Demo Credentials */}
-            <Card className="mt-6 bg-orange-50 border-orange-200">
-              <CardContent className="p-4">
-                <h4 className="font-semibold text-orange-900 mb-2">Credenciales de Demostración</h4>
-                <div className="space-y-1 text-sm text-orange-800">
-                  <p><strong>Email:</strong> proveedor@demo.com</p>
-                  <p><strong>Contraseña:</strong> demo123</p>
-                </div>
-                <p className="text-xs text-orange-600 mt-2">
-                  Usa estas credenciales para explorar el portal
-                </p>
               </CardContent>
             </Card>
           </div>
 
           {/* Right Side - Features */}
-          <div className="space-y-8">
+          <div className="space-y-10 order-1 lg:order-2 text-center lg:text-left">
             <div>
-              <Badge variant="secondary" className="mb-4 bg-orange-100 text-orange-800 border-orange-300">
-                <Truck className="w-4 h-4 mr-1" />
-                Portal de Transporte
-              </Badge>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Bienvenido de vuelta
+              <div className="inline-flex items-center justify-center lg:justify-start gap-2 mb-6 px-4 py-1.5 rounded-full bg-orange-100/50 border border-orange-200/50 backdrop-blur-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                </span>
+                <span className="text-sm font-medium text-orange-800">Sistema Seguro</span>
+              </div>
+              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+                Gestiona tu operación <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-800">
+                  sin límites
+                </span>
               </h1>
-              <p className="text-xl text-gray-600">
-                Accede a tu portal especializado para la gestión de operaciones de transporte de carga por carretera
+              <p className="text-lg text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                Una plataforma unificada para el control total de tus viajes, documentación y facturación.
               </p>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Route className="w-6 h-6 text-orange-600" />
+            <div className="grid gap-4 max-w-lg mx-auto lg:mx-0">
+              {[
+                {
+                  title: "Gestión de Rutas Inteligente",
+                  desc: "Optimización y seguimiento en tiempo real",
+                  icon: Route,
+                  color: "blue"
+                },
+                {
+                  title: "Control Documental",
+                  desc: "Digitalización segura de toda tu carga",
+                  icon: Package,
+                  color: "orange"
+                },
+                {
+                  title: "Analytics Avanzado",
+                  desc: "Reportes detallados de rendimiento",
+                  icon: BarChart3,
+                  color: "purple"
+                }
+              ].map((item, i) => (
+                <div key={i} className="group flex items-start gap-4 p-4 rounded-2xl bg-white/40 border border-white/40 hover:bg-white/60 hover:border-white/60 hover:shadow-lg transition-all duration-300">
+                  <div className={`w-12 h-12 rounded-xl bg-${item.color}-50 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                    <item.icon className={`w-6 h-6 text-${item.color}-600`} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+                    <p className="text-sm text-gray-600">{item.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Gestión de Rutas</h3>
-                  <p className="text-gray-600">
-                    Optimiza tus rutas de transporte y reduce costos operativos con nuestro sistema inteligente
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Package className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Control de Carga</h3>
-                  <p className="text-gray-600">
-                    Seguimiento en tiempo real de tu carga y documentación digital completa
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Reportes Operacionales</h3>
-                  <p className="text-gray-600">
-                    Análisis detallados de rendimiento, costos y eficiencia de tu flota
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-2xl p-6 text-white">
-              <h3 className="font-bold text-xl mb-2">¿Necesitas ayuda?</h3>
-              <p className="text-orange-100 mb-4">
-                Nuestro equipo especializado está disponible para apoyarte en tus operaciones
-              </p>
-              <Button variant="secondary" size="sm">
-                Contactar Soporte
-              </Button>
+            <div className="hidden lg:block pt-4">
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs overflow-hidden">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300"></div>
+                    </div>
+                  ))}
+                </div>
+                <p>Confían en nosotros más de <strong className="text-gray-900">120+ proveedores</strong></p>
+              </div>
             </div>
           </div>
         </div>
