@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { AreaLayout } from '@/components/layout/AreaLayout'
 import { Button } from '@/components/ui/button'
@@ -15,23 +15,24 @@ import {
   Plus,
   Search,
   MoreHorizontal,
-  Calendar,
   Truck,
   User,
-  CheckCircle,
-  AlertCircle,
-  Package,
+  CheckCircle2,
   Eye,
   Edit,
   Trash2,
-  DollarSign,
   Filter,
-  X
+  X,
+  Wallet,
+  Clock,
+  Building2,
+  Package
 } from 'lucide-react'
 import { ViewTripModal } from '@/components/modals/ViewTripModal'
 import { EditTripModal } from '@/components/modals/EditTripModal'
 import { DeleteTripModal } from '@/components/modals/DeleteTripModal'
 import { Trip, MeasureType } from '@/types/trip'
+import { cn } from '@/lib/utils'
 
 export default function TripsPage() {
   const router = useRouter()
@@ -48,12 +49,12 @@ export default function TripsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<string>('')
   const [selectedTripInfo, setSelectedTripInfo] = useState<{
-    incomingReceiptNumber?: string
+    waybillNumber?: string
     projectName: string
     clientName: string
-    date: Date
-    isApproved: boolean
-  } | null>(null)
+    scheduledDate: Date
+    status: string
+  } | undefined>(undefined)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchTrips = async () => {
@@ -68,8 +69,6 @@ export default function TripsPage() {
       const response = await fetch(`/api/trips?${params}`)
       if (response.ok) {
         const data = await response.json()
-        // El endpoint devuelve un objeto con { trips, total, page, limit, totalPages }
-        // Necesitamos extraer el array 'trips'
         setTrips(data.trips || [])
       }
     } catch (error) {
@@ -108,11 +107,11 @@ export default function TripsPage() {
   const handleDeleteTrip = (trip: Trip) => {
     setSelectedTripId(trip.id)
     setSelectedTripInfo({
-      incomingReceiptNumber: trip.incomingReceiptNumber,
+      waybillNumber: trip.incomingReceiptNumber,
       projectName: trip.project?.name || 'N/A',
       clientName: trip.project?.client?.name || 'N/A',
-      date: trip.date,
-      isApproved: trip.isApproved
+      scheduledDate: trip.date,
+      status: trip.isApproved ? 'Aprobado' : 'Pendiente'
     })
     setIsDeleteModalOpen(true)
   }
@@ -128,7 +127,7 @@ export default function TripsPage() {
         fetchTrips()
         setIsDeleteModalOpen(false)
         setSelectedTripId('')
-        setSelectedTripInfo(null)
+        setSelectedTripInfo(undefined)
       } else {
         const errorData = await response.json()
         alert(`Error al eliminar el viaje: ${errorData.message}`)
@@ -146,7 +145,7 @@ export default function TripsPage() {
     setIsEditModalOpen(false)
     setIsDeleteModalOpen(false)
     setSelectedTripId('')
-    setSelectedTripInfo(null)
+    setSelectedTripInfo(undefined)
   }
 
   const handleModalSuccess = () => {
@@ -165,7 +164,8 @@ export default function TripsPage() {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount)
   }
 
@@ -180,35 +180,38 @@ export default function TripsPage() {
     }
   }
 
-  const filteredTrips = trips.filter(trip => {
-    const matchesSearch =
-      !searchTerm ||
-      trip.incomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.outcomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.project?.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.driver?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.vehicle?.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.material?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTrips = useMemo(() => {
+    return trips.filter(trip => {
+      const matchesSearch =
+        !searchTerm ||
+        trip.incomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.outcomingReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.project?.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.driver?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.vehicle?.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.material?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesApproved = isApprovedFilter === 'all' ||
-      (isApprovedFilter === 'true' && trip.isApproved) ||
-      (isApprovedFilter === 'false' && !trip.isApproved)
+      const matchesApproved = isApprovedFilter === 'all' ||
+        (isApprovedFilter === 'true' && trip.isApproved) ||
+        (isApprovedFilter === 'false' && !trip.isApproved)
 
-    const matchesDateFrom = !dateFromFilter || new Date(trip.date) >= new Date(dateFromFilter)
-    const matchesDateTo = !dateToFilter || new Date(trip.date) <= new Date(dateToFilter)
+      const matchesDateFrom = !dateFromFilter || new Date(trip.date) >= new Date(dateFromFilter)
+      const matchesDateTo = !dateToFilter || new Date(trip.date) <= new Date(dateToFilter)
 
-    return matchesSearch && matchesApproved && matchesDateFrom && matchesDateTo
-  })
+      return matchesSearch && matchesApproved && matchesDateFrom && matchesDateTo
+    })
+  }, [trips, searchTerm, isApprovedFilter, dateFromFilter, dateToFilter])
+
 
 
   if (loading) {
     return (
       <AreaLayout areaId="logistics" moduleId="trips">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Cargando viajes...</p>
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground animate-pulse">Cargando viajes...</p>
           </div>
         </div>
       </AreaLayout>
@@ -217,59 +220,55 @@ export default function TripsPage() {
 
   return (
     <AreaLayout areaId="logistics" moduleId="trips">
-      <div className="space-y-6">
+      <div className="space-y-8 animate-in fade-in duration-500 pb-10">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Gestión de Viajes</h1>
-            <p className="text-muted-foreground">
-              Crea y gestiona los viajes de transporte
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Gestión de Logística</h1>
+            <p className="text-muted-foreground mt-1">
+              Control y seguimiento de viajes, materiales y facturación.
             </p>
           </div>
-          <Button onClick={() => router.push('/areas/logistics/trips/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Crear Viaje
+          <Button
+            onClick={() => router.push('/areas/logistics/trips/create')}
+            size="lg"
+            className="shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nuevo Viaje
           </Button>
         </div>
 
-        {/* Search and Filters Toggle */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Buscar por recibo, proyecto, cliente, conductor, placa o material..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch()
-                      }
-                    }}
-                    className="pl-10"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                  />
-                </div>
+        {/* Search and Filters */}
+        <Card className="shadow-sm border-muted/60">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar por recibo, obra, cliente, conductor o placa..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="pl-10 h-10 bg-muted/30 border-muted-foreground/20 focus:bg-background transition-colors"
+                />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSearch} variant="default">
+              <div className="flex gap-2 items-center overflow-x-auto pb-2 lg:pb-0 font-medium">
+                <Button onClick={handleSearch} variant="default" size="sm" className="h-10 px-4">
                   <Search className="h-4 w-4 mr-2" />
                   Buscar
                 </Button>
                 <Button
                   onClick={() => setShowFilters(!showFilters)}
                   variant={showFilters ? "default" : "outline"}
+                  size="sm"
+                  className={cn("h-10 px-4", showFilters && "bg-secondary text-secondary-foreground hover:bg-secondary/80")}
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
                 {(searchTerm || isApprovedFilter !== 'all' || dateFromFilter || dateToFilter) && (
-                  <Button onClick={handleClearFilters} variant="outline">
+                  <Button onClick={handleClearFilters} variant="ghost" size="sm" className="h-10 px-4 text-red-500 hover:text-red-600 hover:bg-red-50">
                     <X className="h-4 w-4 mr-2" />
                     Limpiar
                   </Button>
@@ -277,33 +276,35 @@ export default function TripsPage() {
               </div>
             </div>
 
-            {/* Filters Panel */}
+            {/* Expanded Filters */}
             {showFilters && (
-              <div className="mt-4 pt-4 border-t space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="mt-6 pt-6 border-t animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="dateFrom">Fecha Desde</Label>
+                    <Label htmlFor="dateFrom" className="text-xs font-semibold uppercase text-muted-foreground">Fecha Desde</Label>
                     <Input
                       id="dateFrom"
                       type="date"
                       value={dateFromFilter}
                       onChange={(e) => setDateFromFilter(e.target.value)}
+                      className="bg-muted/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dateTo">Fecha Hasta</Label>
+                    <Label htmlFor="dateTo" className="text-xs font-semibold uppercase text-muted-foreground">Fecha Hasta</Label>
                     <Input
                       id="dateTo"
                       type="date"
                       value={dateToFilter}
                       onChange={(e) => setDateToFilter(e.target.value)}
+                      className="bg-muted/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="isApproved">Estado de Aprobación</Label>
+                    <Label htmlFor="isApproved" className="text-xs font-semibold uppercase text-muted-foreground">Estado</Label>
                     <Select value={isApprovedFilter} onValueChange={setIsApprovedFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Estado de Aprobación" />
+                      <SelectTrigger className="bg-muted/30">
+                        <SelectValue placeholder="Todos los estados" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
@@ -318,96 +319,114 @@ export default function TripsPage() {
           </CardContent>
         </Card>
 
-        {/* Trips Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Viajes ({filteredTrips.length})</CardTitle>
-            <CardDescription>
-              Lista de viajes registrados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Fecha</TableHead>
-                    <TableHead className="text-xs">Material</TableHead>
-                    <TableHead className="text-xs">Obra</TableHead>
-                    <TableHead className="text-xs">Cliente</TableHead>
-                    <TableHead className="text-xs">Conductor</TableHead>
-                    <TableHead className="text-xs">Placa</TableHead>
-                    <TableHead className="text-xs">Cantidad</TableHead>
-                    <TableHead className="text-xs">Precio Venta</TableHead>
-                    <TableHead className="text-xs">Aprobado</TableHead>
-                    <TableHead className="w-[70px] text-xs"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTrips.length === 0 ? (
+        {/* Content Area */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              Resultados ({filteredTrips.length})
+            </h2>
+            <div className="text-sm text-muted-foreground">
+              Ordenador por fecha (reciente)
+            </div>
+          </div>
+
+          {filteredTrips.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="p-4 rounded-full bg-muted mb-4">
+                  <Truck className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No se encontraron viajes</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                  {searchTerm || isApprovedFilter !== 'all'
+                    ? 'Intenta ajustar los filtros de búsqueda para encontrar lo que necesitas.'
+                    : 'Aún no hay viajes registrados en el sistema.'
+                  }
+                </p>
+                {!searchTerm && isApprovedFilter === 'all' && (
+                  <Button onClick={() => router.push('/areas/logistics/trips/create')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Primer Viaje
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block rounded-xl border bg-card shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/40 hover:bg-muted/40">
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8">
-                        <div className="text-center">
-                          <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">No hay viajes</h3>
-                          <p className="text-muted-foreground mb-4">
-                            {searchTerm || isApprovedFilter !== 'all'
-                              ? 'No se encontraron viajes con los filtros aplicados'
-                              : 'Comienza creando tu primer viaje'
-                            }
-                          </p>
-                          {!searchTerm && isApprovedFilter === 'all' && (
-                            <Button onClick={() => router.push('/areas/logistics/trips/create')}>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Crear Viaje
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableHead className="font-semibold">Fecha</TableHead>
+                      <TableHead className="font-semibold">Detalle</TableHead>
+                      <TableHead className="font-semibold">Destino/Cliente</TableHead>
+                      <TableHead className="font-semibold">Transporte</TableHead>
+                      <TableHead className="font-semibold text-right">Cantidad</TableHead>
+                      <TableHead className="font-semibold text-right">Valor</TableHead>
+                      <TableHead className="font-semibold text-center">Estado</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
-                  ) : (
-                    filteredTrips.map((trip) => (
-                      <TableRow key={trip.id}>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTrips.map((trip) => (
+                      <TableRow key={trip.id} className="group hover:bg-muted/30 transition-colors">
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs">{formatDate(trip.date)}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{formatDate(trip.date)}</span>
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {new Date(trip.date).toLocaleDateString('es-CO', { weekday: 'long' })}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium text-sm">{trip.material?.name || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                              <Package className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{trip.material?.name || 'Material N/A'}</p>
+                              {trip.incomingReceiptNumber && (
+                                <p className="text-xs text-muted-foreground">Recibo: {trip.incomingReceiptNumber}</p>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium text-sm">{trip.project?.name || 'N/A'}</p>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-sm font-medium">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="truncate max-w-[150px]" title={trip.project?.name}>{trip.project?.name || 'Sin Obra'}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span className="truncate max-w-[150px]" title={trip.project?.client?.name}>{trip.project?.client?.name || 'Sin Cliente'}</span>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium text-sm">{trip.project?.client?.name || 'N/A'}</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-medium">{trip.vehicle?.plate || '---'}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={trip.driver?.name}>{trip.driver?.name || 'Sin Conductor'}</span>
+                          </div>
                         </TableCell>
-                        <TableCell>
-                          <p className="font-medium text-sm">{trip.driver?.name || 'N/A'}</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="font-medium text-sm">{trip.vehicle?.plate || 'N/A'}</p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs">
+                        <TableCell className="text-right">
+                          <Badge variant="outline" className="font-mono font-medium">
                             {trip.quantity} {getMeasureText(trip.measure)}
-                          </div>
+                          </Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="text-xs font-medium">
+                        <TableCell className="text-right">
+                          <span className="font-semibold text-sm text-foreground">
                             {formatCurrency(trip.salePrice)}
-                          </div>
+                          </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {trip.isApproved ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 border-emerald-200">
                               Aprobado
                             </Badge>
                           ) : (
-                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                              <AlertCircle className="h-3 w-3 mr-1" />
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200">
                               Pendiente
                             </Badge>
                           )}
@@ -415,7 +434,7 @@ export default function TripsPage() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -429,7 +448,7 @@ export default function TripsPage() {
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-red-600"
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/30"
                                 onClick={() => handleDeleteTrip(trip)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -439,23 +458,91 @@ export default function TripsPage() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-      {/* View Trip Modal */}
+              {/* Mobile Card List View */}
+              <div className="md:hidden space-y-4">
+                {filteredTrips.map((trip) => (
+                  <Card key={trip.id} className="overflow-hidden shadow-sm active:shadow-md transition-shadow">
+                    <CardHeader className="p-4 pb-2 bg-muted/20 border-b flex flex-row items-center justify-between space-y-0">
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono text-sm font-bold bg-background px-2 py-1 rounded border">
+                          {trip.vehicle?.plate || '---'}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{formatDate(trip.date)}</span>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewTrip(trip.id)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalles
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditTrip(trip.id)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteTrip(trip)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-bold text-base flex items-center gap-2">
+                            {trip.material?.name}
+                            {trip.isApproved ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-amber-500" />
+                            )}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">{trip.project?.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">{formatCurrency(trip.salePrice)}</p>
+                          <p className="text-xs text-muted-foreground">{trip.quantity} {getMeasureText(trip.measure)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t mt-2">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[120px]">{trip.driver?.name || 'Sin Conductor'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[120px]">{trip.project?.client?.name || 'Sin Cliente'}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div >
+
       <ViewTripModal
         isOpen={isViewModalOpen}
         onClose={handleModalClose}
         tripId={selectedTripId}
       />
 
-      {/* Edit Trip Modal */}
       <EditTripModal
         isOpen={isEditModalOpen}
         onClose={handleModalClose}
@@ -463,7 +550,6 @@ export default function TripsPage() {
         tripId={selectedTripId}
       />
 
-      {/* Delete Trip Modal */}
       <DeleteTripModal
         isOpen={isDeleteModalOpen}
         onClose={handleModalClose}
@@ -471,6 +557,6 @@ export default function TripsPage() {
         tripInfo={selectedTripInfo || undefined}
         loading={deleteLoading}
       />
-    </AreaLayout>
+    </AreaLayout >
   )
 }
